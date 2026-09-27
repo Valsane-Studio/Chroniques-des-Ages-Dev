@@ -1,1 +1,1 @@
-/* Ajoute ici les découvertes du journal du nouveau livre. */
+/* Nouveau livre : journal à écrire. */

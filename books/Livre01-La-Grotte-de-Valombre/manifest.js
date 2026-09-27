@@ -7,30 +7,30 @@ BookManifestRegistry.register({
   title:'La Grotte de Valombre',
   pitch:'Sir Aldren a disparu. Les réponses se trouvent sous Valombre.',
   status:'available',
-  actionLabel:'Jouer',
+  actionLabel:'Découvrir',
+  access:{mode:'free'},
   cover:'assets/presentation.jpg',
   libraryImage:'assets/bibliotheque.jpg',
-  coverCandidates:['assets/presentation.jpg'],
+  preview:{
+    image:'assets/presentation.jpg',
+    situation:'Valombre est ton village, tu y as grandi, tu connais ses rues, ses habitants et ses habitudes.\n\nLorsque Sir Aldren de Rochebrune disparaît, ce monde familier commence pourtant à révéler des secrets que tu n’avais jamais soupçonnés.',
+    adventure:'Enquête médiévale, exploration, choix de route, combats et découverte progressive d’un monde enfoui.',
+    dangers:'Pièges, créatures et une mystérieuse terre noire dont l’influence grandit à mesure que tu t’enfonces sous la cité.'
+  },
   bookScript:'book.js',
   journalScript:'journal.js',
   extraScripts:['map.js'],
   themeStylesheet:'assets/theme.css',
-  contentVersion:1,
-  assetVersion:181,
-
-
+  contentVersion:125,
+  assetVersion:186,
   theme:{
     buttonTexture:'assets/textures/texture-bouton.jpg',
 
     statsTexture:'assets/textures/texture-caracteristiques.jpg',
     parchmentTexture:'assets/textures/texture-parchemin.jpg',
     icons:{
-      vie:'assets/icons/vie.png',
-      dexterite:'assets/icons/dexterite.png',
-      force:'assets/icons/force.png',
-      arme:'assets/icons/arme.png',
-      protection:'assets/icons/protection.png',
-      terreNoire:'assets/icons/terre-noire.png'
+      vie:'assets/icons/vie.png', dexterite:'assets/icons/dexterite.png', force:'assets/icons/force.png',
+      arme:'assets/icons/arme.png', protection:'assets/icons/protection.png', special:'assets/icons/special.png'
     }
   }
 });

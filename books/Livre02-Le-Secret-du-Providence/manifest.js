@@ -1,20 +1,29 @@
 BookManifestRegistry.register({
   id:'livre02',
-  runtimeId:'livre02',
+  runtimeId:'providence-02',
   number:2,
   label:'Livre 02',
   kicker:'APHANES · Livre 02',
   title:'Le Secret du Providence',
-  pitch:'Un navire marchand a disparu. Sa trace conduit vers une mer où les récits deviennent moins certains.',
-  status:'planned',
-  statusLabel:'Bientôt disponible',
+  pitch:'Un navire marchand a disparu. Sa trace conduit vers une île que personne n’aurait dû chercher.',
+  status:'available',
+  actionLabel:'Découvrir',
+  access:{mode:'free'},
   cover:'assets/presentation.jpg',
   libraryImage:'assets/bibliotheque.jpg',
+  preview:{
+    image:'assets/presentation.jpg',
+    situation:'Port Royal, 1719. Le Providence, navire marchand d’Edmund Harcourt, a disparu avec vingt-sept hommes. La Royal Navy t’envoie retrouver sa trace.',
+    adventure:'Aventure maritime mêlant enquête, navigation, commandement et exploration, avec une montée progressive vers le surnaturel, les mythes et les légendes de marins.',
+    dangers:'Récifs, pirates, combats, mer imprévisible et phénomènes que les marins préfèrent évoquer à voix basse.'
+  },
   coverCandidates:['assets/presentation.jpg'],
   bookScript:'book.js',
   journalScript:'journal.js',
-  contentVersion:1,
-  assetVersion:1,
+  extraScripts:['map.js'],
+  themeStylesheet:'assets/theme.css',
+  contentVersion:23,
+  assetVersion:7,
   theme:{
     buttonTexture:'assets/textures/texture-bouton.jpg',
 
@@ -26,7 +35,7 @@ BookManifestRegistry.register({
       force:'assets/icons/force.png',
       arme:'assets/icons/arme.png',
       protection:'assets/icons/protection.png',
-      terreNoire:'assets/icons/terre-noire.png'
+      special:'assets/icons/special.png'
     }
   }
 });

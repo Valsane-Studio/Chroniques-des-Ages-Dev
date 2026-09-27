@@ -1,14 +1,43 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#10181c">
-  <title>APHANES — Les Chemins perdus — Valsane Studio</title>
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles/app.css?v=206">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#10191f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-title" content="APHANES" />
+  <meta name="application-name" content="APHANES" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="description" content="APHANES — Les Chemins perdus." />
+  <title>APHANES — Les Chemins perdus</title>
+  <script id="initial-view-prepaint">
+  (function(){
+    try{
+      var v=localStorage.getItem('livre-interactif.library.view') || sessionStorage.getItem('livre-interactif.library.view');
+      var inBook=(v==='book'||v==='book01');
+      document.documentElement.setAttribute('data-initial-view',inBook?'book':'home');
+    }catch(e){
+      document.documentElement.setAttribute('data-initial-view','home');
+    }
+  })();
+  </script>
+  <style id="initial-view-prepaint-style">
+    html[data-initial-view="book"] #libraryHome{display:none!important}
+    html[data-initial-view="book"] body.library-home-open .app-shell,
+    html[data-initial-view="book"] .app-shell{display:block!important}
+    html[data-initial-view="home"] .app-shell{display:none!important}
+  </style>
+    <link rel="stylesheet" href="./styles/reference-01.css?v=ref176">
+  <link rel="stylesheet" href="./styles/reference-02.css?v=ref176">
+  <link rel="stylesheet" href="./styles/reference-03.css?v=ref176">
+  <link rel="stylesheet" href="./styles/reference-04.css?v=ref176">
+  <link rel="stylesheet" href="./styles/reference-05.css?v=206">
 </head>
 <body class="library-home-open">
+
   <section id="libraryHome" class="library-home" aria-labelledby="libraryHomeTitle">
     <div class="library-home-stage">
       
@@ -52,14 +81,12 @@
           <h1 id="libraryHomeTitle">Choisis ton aventure</h1>
         </header>
 
-        <div class="library-book-list" id="libraryBookList">
-          <div class="library-loading">Chargement de la bibliothèque…</div>
-        </div>
+        <div class="library-book-list" id="libraryBookList"></div>
       </div>
     </div>
   </section>
 
-    <div id="libraryPreviewBackdrop" class="library-preview-backdrop hidden" aria-hidden="true">
+  <div id="libraryPreviewBackdrop" class="library-preview-backdrop hidden" aria-hidden="true">
     <article class="library-preview-card" role="dialog" aria-modal="true" aria-labelledby="libraryPreviewTitle">
       <button id="libraryPreviewClose" class="library-preview-close" type="button" aria-label="Fermer">×</button>
 
@@ -86,116 +113,401 @@
           <p id="libraryPreviewDangers"></p>
         </div>
 
+        <p id="libraryPreviewAccess" class="library-preview-access hidden"></p>
         <button id="libraryPreviewAction" class="library-preview-action" type="button">Commencer l’aventure</button>
       </div>
     </article>
   </div>
 
-<main class="app-shell" id="gameApp">
-    <header class="book-header">
-      <div class="book-heading">
-        <div id="bookEyebrow" class="book-eyebrow">APHANES</div>
-        <h1 id="bookTitle">Livre</h1>
+<div class="app-shell">
+<header class="topbar">
+      <div class="topbar-book-meta" aria-hidden="true">
+        <div class="eyebrow" id="bookEyebrow">APHANES · Livre 01</div>
+        <h1 id="bookTitle">La Grotte de Valombre</h1>
       </div>
-      <button id="menuBtn" class="icon-button" type="button" aria-label="Ouvrir la navigation">☰</button>
     </header>
 
-    <section class="reader-card">
-      <div class="chapter-head">
-        <div id="chapterNumber" class="chapter-number"></div>
-        <h2 id="chapterTitle" class="chapter-title"></h2>
-      </div>
-
-      <figure id="imageFrame" class="image-frame">
-        <img id="storyImage" class="story-image hidden" alt="">
-        <div id="imagePlaceholder" class="image-placeholder">
-          <span>Illustration</span>
-          <small id="imageLabel"></small>
+    <main id="game" class="game" aria-live="polite" data-design="livre-jeu-80s">
+      <section class="image-frame" id="imageFrame">
+        <div class="book-page-banner image-banner" id="pageBannerImage" aria-hidden="true">
+          <div class="book-page-banner-kicker">APHANES · Livre 01</div>
+          <div class="book-page-banner-title">La Grotte de Valombre</div>
         </div>
-      </figure>
+        <img id="storyImage" class="story-image hidden" alt="" />
+<div class="image-placeholder" id="imagePlaceholder">
+          <span>IMAGE À VENIR</span>
+          <small id="imageLabel">La-Grotte-de-Valombre-001</small>
+        </div>
+      </section>
 
-      <article id="storyText" class="story-text"></article>
-      <div id="choices" class="choices"></div>
-      <div id="statusTags" class="status-tags"></div>
-    </section>
+      <section class="story-card">
+        <h2 id="chapterTitle"></h2>
+        <div id="storyText" class="story-text"></div>
+        <div id="statusTags" class="status-tags"></div>
+        <div id="choices" class="choices"></div>
+
+        <div class="page-footer-meta" aria-label="Informations du livre et numéro de page">
+          <div class="book-page-banner card-banner" id="pageBannerCard" aria-hidden="true">
+            <div class="book-page-banner-kicker">APHANES · Livre 01</div>
+            <div class="book-page-banner-title">La Grotte de Valombre</div>
+          </div>
+          <div class="chapter-number" id="chapterNumber"></div>
+        </div>
+      </section>
+    </main>
 
     <footer class="footer">
-      <button id="characterBtn" class="footer-btn footer-character-hidden" type="button">Fiche perso</button>
-      <button id="inventoryBtn" class="footer-btn" type="button">Inventaire <span id="inventoryCount">0</span></button>
+      <button id="characterBtn" class="footer-btn footer-character-hidden" aria-hidden="true" tabindex="-1">Fiche perso</button>
+      <button id="inventoryBtn" class="footer-btn">Inventaire <span id="inventoryCount">0</span></button>
       <button id="journalBtn" class="footer-btn" type="button">Journal de bord</button>
-      <button id="restartBtn" class="footer-btn footer-square" type="button" aria-label="Recommencer" title="Recommencer">↻</button>
-      <button id="libraryReturnBtn" class="footer-btn footer-square" type="button" aria-label="Accueil" title="Accueil">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10.8 12 5l7.5 5.8v8.2a.8.8 0 0 1-.8.8h-4.4v-5.2H9.7V19a.8.8 0 0 1-.8.8H5.3a.8.8 0 0 1-.8-.8z"/></svg>
+      <button id="restartBtn" class="footer-btn restart-icon-btn" type="button" aria-label="Recommencer l’aventure" title="Recommencer l’aventure">↻</button>
+      <button id="libraryReturnBtn" class="footer-btn footer-home-btn" type="button" aria-label="Retour à la bibliothèque" title="Retour à la bibliothèque">
+        <svg class="footer-icon-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4.5 10.8L12 5l7.5 5.8v8.2a.8.8 0 0 1-.8.8h-4.4v-5.2H9.7V19a.8.8 0 0 1-.8.8H5.3a.8.8 0 0 1-.8-.8z"></path>
+        </svg>
       </button>
     </footer>
-  </main>
-
-  <div id="drawerBackdrop" class="backdrop hidden"></div>
-  <aside id="drawer" class="drawer" aria-hidden="true">
-    <div class="drawer-head">
-      <h3>Pages · TEST</h3>
-      <button id="closeDrawerBtn" class="icon-button" type="button">×</button>
-    </div>
-    <div id="pageNavList" class="page-nav-list"></div>
-  </aside>
-
-  <div id="modalBackdrop" class="backdrop hidden"></div>
-  <section id="modal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-head">
-      <h3 id="modalTitle"></h3>
-      <button id="closeModalBtn" class="icon-button" type="button">×</button>
-    </div>
-    <div id="modalContent" class="modal-content"></div>
-  </section>
-
-  <section id="journalPanel" class="journal-panel hidden" aria-hidden="true">
-    <div class="journal-shell">
-      <div class="journal-head">
-        <div>
-          <div class="journal-kicker">APHANES</div>
-          <h3>Journal de bord</h3>
-        </div>
-        <button id="journalCloseBtn" class="icon-button" type="button">×</button>
-      </div>
-      <p id="journalCount" class="journal-count"></p>
-      <div id="journalList" class="journal-list"></div>
-    </div>
-  </section>
-
-  <div id="restartConfirmBackdrop" class="confirm-backdrop hidden" aria-hidden="true">
-    <section class="confirm-dialog" role="dialog" aria-modal="true">
-      <p>Souhaitez-vous vraiment recommencer l’aventure au début ?</p>
-      <div class="confirm-actions">
-        <button id="restartConfirmNo" type="button">Non</button>
-        <button id="restartConfirmYes" type="button">Oui</button>
-      </div>
-    </section>
   </div>
 
-  <script src="./engine/core.js?v=1"></script>
-  <script src="./app/catalog.js?v=1"></script>
-  <script src="./app/library.js?v=197"></script>
-  <script src="./app/bootstrap.js?v=193"></script>
+
+  <section id="journalPanel" class="journal-panel hidden" role="dialog" aria-modal="true" aria-labelledby="journalTitle" aria-hidden="true">
+    <div class="journal-sheet">
+      <header class="journal-head">
+        <div><div class="journal-kicker">LA GROTTE DE VALOMBRE · TES DÉCOUVERTES</div><h3 id="journalTitle">Journal de bord</h3></div>
+        <button id="journalCloseBtn" class="journal-close" type="button" aria-label="Fermer le journal">×</button>
+      </header>
+      <div class="journal-content" id="journalContent" tabindex="0" aria-label="Découvertes de ton aventure">
+        <p class="journal-count" id="journalCount" aria-live="polite"></p>
+        <div class="journal-list" id="journalList"></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="modalBackdrop" class="backdrop hidden"></div>
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <div class="drawer-head">
+        <h3 id="modalTitle">Inventaire</h3>
+        <button id="closeModalBtn" class="icon-btn">×</button>
+      </div>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+
+  <div id="restartConfirmBackdrop" class="restart-confirm-backdrop hidden" aria-hidden="true">
+    <div class="restart-confirm-card" role="dialog" aria-modal="true" aria-labelledby="restartConfirmTitle">
+      <h3 id="restartConfirmTitle">Recommencer l’aventure</h3>
+      <p>Souhaitez-vous vraiment recommencer l’aventure au début ?</p>
+      <div class="restart-confirm-actions">
+        <button id="restartConfirmYes" type="button">Oui</button>
+        <button id="restartConfirmNo" type="button">Non</button>
+      </div>
+    </div>
+  </div>
+
+
+
+
   <script>
-  (function(){
-    const restartBtn=document.getElementById('restartBtn');
-    const backdrop=document.getElementById('restartConfirmBackdrop');
-    const yes=document.getElementById('restartConfirmYes');
-    const no=document.getElementById('restartConfirmNo');
-    const close=()=>{backdrop.classList.add('hidden');backdrop.setAttribute('aria-hidden','true');};
-    restartBtn.addEventListener('click',e=>{
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      backdrop.classList.remove('hidden');
-      backdrop.setAttribute('aria-hidden','false');
-    },true);
-    no.addEventListener('click',close);
-    backdrop.addEventListener('click',e=>{if(e.target===backdrop)close();});
-    yes.addEventListener('click',()=>{
-      try{sessionStorage.setItem('livre-interactif.restart-request','1')}catch(e){}
-      location.reload();
+  (function () {
+    const storyImage = document.getElementById('storyImage');
+    const imageFrame = document.getElementById('imageFrame');
+    const imagePlaceholder = document.getElementById('imagePlaceholder');
+
+    if (!storyImage || !imageFrame) return;
+
+    function syncFrameClass() {
+      const hasSrc = !!storyImage.getAttribute('src');
+      const imageVisible = !storyImage.classList.contains('hidden') && hasSrc;
+      const placeholderVisible = imagePlaceholder &&
+        !imagePlaceholder.classList.contains('hidden') &&
+        getComputedStyle(imagePlaceholder).display !== 'none';
+
+      imageFrame.classList.toggle('has-story-image', imageVisible && !placeholderVisible);
+    }
+
+    storyImage.addEventListener('load', syncFrameClass);
+    storyImage.addEventListener('error', syncFrameClass);
+
+    new MutationObserver(syncFrameClass).observe(storyImage, {
+      attributes: true,
+      attributeFilter: ['class', 'src', 'style']
     });
+
+    if (imagePlaceholder) {
+      new MutationObserver(syncFrameClass).observe(imagePlaceholder, {
+        attributes: true,
+        attributeFilter: ['class', 'style']
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', syncFrameClass);
+    window.addEventListener('load', syncFrameClass);
+    setTimeout(syncFrameClass, 60);
   })();
   </script>
+
+
+  
+
+
+  
+
+
+  <script>
+  (function () {
+    const storyImage = document.getElementById('storyImage');
+    const imageFrame = document.getElementById('imageFrame');
+    const imagePlaceholder = document.getElementById('imagePlaceholder');
+
+    if (!storyImage || !imageFrame) return;
+
+    function syncStoryImageState() {
+      const hasSrc = !!storyImage.getAttribute('src');
+      const imageVisible = !storyImage.classList.contains('hidden') && hasSrc;
+      const placeholderVisible = imagePlaceholder &&
+        !imagePlaceholder.classList.contains('hidden') &&
+        getComputedStyle(imagePlaceholder).display !== 'none';
+
+      imageFrame.classList.toggle(
+        'has-story-image',
+        imageVisible && !placeholderVisible
+      );
+    }
+
+    storyImage.addEventListener('load', syncStoryImageState);
+    storyImage.addEventListener('error', syncStoryImageState);
+
+    new MutationObserver(syncStoryImageState).observe(storyImage, {
+      attributes: true,
+      attributeFilter: ['class', 'src', 'style']
+    });
+
+    if (imagePlaceholder) {
+      new MutationObserver(syncStoryImageState).observe(imagePlaceholder, {
+        attributes: true,
+        attributeFilter: ['class', 'style']
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', syncStoryImageState);
+    window.addEventListener('load', syncStoryImageState);
+    setTimeout(syncStoryImageState, 60);
+  })();
+  </script>
+
+
+
+
+
+  <script>
+  (function () {
+    function reorganiseStatCard(tag) {
+      if (!tag || tag.dataset.statLayout165 === '1') return;
+
+      const copy = tag.querySelector('.tag-copy');
+      const icon = tag.querySelector('.tag-icon');
+      const value = tag.querySelector('strong');
+      if (!copy || !icon || !value) return;
+
+      let label = tag.querySelector('.tag-label');
+      let labelText = '';
+
+      if (label) {
+        labelText = label.textContent.trim();
+      } else {
+        const small = copy.querySelector('small');
+        if (small) {
+          const clone = small.cloneNode(true);
+          clone.querySelectorAll('.tag-icon').forEach(el => el.remove());
+          labelText = clone.textContent.trim();
+        }
+      }
+
+      if (!labelText) return;
+
+      const labelLine = document.createElement('span');
+      labelLine.className = 'tag-label stat-label-line';
+      labelLine.textContent = labelText;
+
+      const valueLine = document.createElement('span');
+      valueLine.className = 'stat-value-line';
+
+      valueLine.appendChild(icon);
+      valueLine.appendChild(value);
+
+      copy.replaceChildren(labelLine, valueLine);
+      tag.dataset.statLayout165 = '1';
+    }
+
+    function updateAllStats(root) {
+      (root || document).querySelectorAll('.status-tags .tag, .hero-sheet-tag-grid .tag')
+        .forEach(reorganiseStatCard);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      updateAllStats(document);
+
+      const observer = new MutationObserver(function () {
+        updateAllStats(document);
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    });
+
+    window.addEventListener('load', function () {
+      updateAllStats(document);
+    });
+
+    setTimeout(function () {
+      updateAllStats(document);
+    }, 100);
+  })();
+  </script>
+
+
+  <script>
+  (function () {
+    const choicesRoot = document.getElementById('choices');
+
+    function fixChoiceButton(btn) {
+      if (!btn || !btn.classList.contains('choice-btn')) return;
+
+      const indexEl = btn.querySelector(':scope > .choice-index');
+      if (indexEl) indexEl.remove();
+
+      const copy = btn.querySelector(':scope > .choice-copy');
+      if (!copy) return;
+
+      const dest = copy.querySelector('.choice-dest');
+      if (dest) {
+        btn.appendChild(dest);
+      }
+    }
+
+    function fixAllChoices() {
+      if (!choicesRoot) return;
+      choicesRoot.querySelectorAll('.choice-btn').forEach(fixChoiceButton);
+    }
+
+    if (choicesRoot) {
+      new MutationObserver(fixAllChoices).observe(choicesRoot, {
+        childList: true,
+        subtree: true
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', fixAllChoices);
+    window.addEventListener('load', fixAllChoices);
+    setTimeout(fixAllChoices, 50);
+    setTimeout(fixAllChoices, 200);
+  })();
+  </script>
+  <script src="./engine/core.js?v=multi-book-6"></script>
+  <script src="./app/catalog.js?v=multi-book-6"></script>
+  <script src="./app/access.js?v=multi-book-14"></script>
+  <script src="./app/library.js?v=197"></script>
+  <script src="./app/bootstrap.js?v=multi-book-34"></script>
+
+  <!-- Le reset est géré par le moteur du livre actif. -->
+<script>
+(function(){
+  const imageBanner = document.getElementById('pageBannerImage');
+  const cardBanner = document.getElementById('pageBannerCard');
+  const storyImage = document.getElementById('storyImage');
+  const imagePlaceholder = document.getElementById('imagePlaceholder');
+
+  function hasVisibleImage(){
+    if(!storyImage) return false;
+    const src = storyImage.getAttribute('src');
+    const imgVisible = !storyImage.classList.contains('hidden') && !!src;
+    const placeholderVisible = imagePlaceholder && !imagePlaceholder.classList.contains('hidden') && getComputedStyle(imagePlaceholder).display !== 'none';
+    return imgVisible && !placeholderVisible;
+  }
+
+  function syncBookBanner(){
+    const showOnImage = hasVisibleImage();
+    if(imageBanner) imageBanner.style.display = showOnImage ? 'block' : 'none';
+    if(cardBanner) cardBanner.style.display = showOnImage ? 'none' : 'block';
+  }
+
+  const observer = new MutationObserver(syncBookBanner);
+  if(storyImage) observer.observe(storyImage, {attributes:true, attributeFilter:['class','src','style']});
+  if(imagePlaceholder) observer.observe(imagePlaceholder, {attributes:true, attributeFilter:['class','style']});
+  document.addEventListener('DOMContentLoaded', syncBookBanner);
+  window.addEventListener('load', syncBookBanner);
+  document.addEventListener('click', function(){ setTimeout(syncBookBanner, 0); }, true);
+  setTimeout(syncBookBanner, 50);
+  setTimeout(syncBookBanner, 250);
+  setTimeout(syncBookBanner, 700);
+})();
+</script>
+
+<script>
+(function(){
+  function normalizeLabel(str){
+    return (str || '')
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function iconClassFromLabel(label){
+    const key = normalizeLabel(label);
+    if(key.startsWith('vie')) return 'icon-vie';
+    if(key.startsWith('dexterite')) return 'icon-dexterite';
+    if(key.startsWith('force')) return 'icon-force';
+    if(key.startsWith('arme')) return 'icon-arme';
+    if(key.startsWith('protection')) return 'icon-protection';
+    if(key.startsWith('terre noire') || key.startsWith('terre-noire') || key.startsWith('soldats') || key.startsWith('groupe')) return 'icon-special';
+    return '';
+  }
+
+  function patchHeroTags(root=document){
+    root.querySelectorAll('.status-tags .tag').forEach(tag => {
+      const labelEl = tag.querySelector('.tag-label');
+      const iconEl = tag.querySelector('.tag-icon');
+      if(!labelEl || !iconEl) return;
+      const iconClass = iconClassFromLabel(labelEl.textContent);
+      if(!iconClass) return;
+      iconEl.className = 'tag-icon icon-jpg ' + iconClass;
+      iconEl.textContent = '';
+      iconEl.setAttribute('aria-hidden', 'true');
+    });
+  }
+
+  function patchEnemyTags(root=document){
+    root.querySelectorAll('.enemy-card-stats > div').forEach(box => {
+      const labelEl = Array.from(box.querySelectorAll('span')).find(el => !el.classList.contains('enemy-icon'));
+      const iconEl = box.querySelector('.enemy-icon');
+      if(!labelEl || !iconEl) return;
+      const iconClass = iconClassFromLabel(labelEl.textContent);
+      if(!iconClass) return;
+      iconEl.className = 'enemy-icon icon-jpg ' + iconClass;
+      iconEl.textContent = '';
+      iconEl.setAttribute('aria-hidden', 'true');
+    });
+  }
+
+  function applyIconPatch(root=document){
+    patchHeroTags(root);
+    patchEnemyTags(root);
+  }
+
+  const observer = new MutationObserver(() => applyIconPatch(document));
+  observer.observe(document.documentElement, { childList:true, subtree:true });
+  document.addEventListener('DOMContentLoaded', () => applyIconPatch(document));
+  window.addEventListener('load', () => applyIconPatch(document));
+  setTimeout(() => applyIconPatch(document), 50);
+  setTimeout(() => applyIconPatch(document), 250);
+  setTimeout(() => applyIconPatch(document), 700);
+})();
+</script>
+
 </body>
 </html>

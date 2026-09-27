@@ -1,68 +1,64 @@
-/* Démarrage générique multi-livres. */
 (async function(){
-  'use strict';
-
-  const config=window.LIBRARY_CONFIG||{books:[]};
-  const params=new URLSearchParams(window.location.search);
-
-  await LibraryApp.loadAllManifests();
-  await LibraryApp.renderLibrary();
-
-  let requestedId=params.get('book');
-  if(!requestedId&&config.standalone){
-    const first=LibraryApp.configEntries().find(entry=>entry.visible!==false)||LibraryApp.configEntries()[0];
-    if(first) requestedId=first.id;
+'use strict';
+const VIEW_KEY='livre-interactif.library.view';
+const BOOK_KEY='livre-interactif.library.book';
+const home=document.getElementById('libraryHome');
+const returnBtn=document.getElementById('libraryReturnBtn');
+let loadedBookId=null;
+function rememberView(v){try{localStorage.setItem(VIEW_KEY,v);sessionStorage.setItem(VIEW_KEY,v);}catch(e){}}
+function rememberedView(){try{return localStorage.getItem(VIEW_KEY)||sessionStorage.getItem(VIEW_KEY);}catch(e){return null;}}
+function rememberBook(id){try{localStorage.setItem(BOOK_KEY,id);sessionStorage.setItem(BOOK_KEY,id);}catch(e){}}
+function rememberedBook(){try{return localStorage.getItem(BOOK_KEY)||sessionStorage.getItem(BOOK_KEY);}catch(e){return null;}}
+function showHome(rem=true){
+  document.documentElement.setAttribute('data-initial-view','home');
+  home?.classList.remove('hidden');
+  document.body.classList.add('library-home-open');
+  document.body.classList.remove('library-book-open');
+  if(rem)rememberView('home'); window.scrollTo(0,0);
+}
+function showBook(id,rem=true){
+  document.documentElement.setAttribute('data-initial-view',id||'book');
+  home?.classList.add('hidden');
+  document.body.classList.remove('library-home-open');
+  document.body.classList.add('library-book-open');
+  if(rem){rememberView('book');if(id)rememberBook(id);} window.scrollTo(0,0);
+}
+async function loadBook(id){
+  if(loadedBookId){
+    if(loadedBookId===id){showBook(id,true);return;}
+    rememberBook(id);rememberView('book');location.reload();return;
   }
+  const e=LibraryApp.byId(id);if(!e)return;
+  const m=await LibraryApp.manifest(e);
+  if(!m||(m.status||'available')!=='available')return;
+  if(!LibraryApp.canOpen(m)){
+    showHome(true);
+    LibraryApp.showPreview?.(e,m);
+    return;
+  }
+  window.COLLECTION_CATALOG={version:4,defaultBookId:m.runtimeId||m.id};
+  const root=document.documentElement,base=`./books/${e.folder}/`;
+  const assetUrl=path=>{
+    const u=new URL(`${base}${path}`,document.baseURI);
+    u.searchParams.set('v',String(m.assetVersion||1));
+    return u.href;
+  };
+  if(m.theme?.buttonTexture)root.style.setProperty('--ui-button-texture',`url("${assetUrl(m.theme.buttonTexture)}")`,'important');
 
-  const homeBtn=document.getElementById('libraryReturnBtn');
-  if(homeBtn) homeBtn.addEventListener('click',LibraryApp.goHome);
-
-  if(!requestedId){ LibraryApp.showHome(); return; }
-
-  const entry=LibraryApp.entryById(requestedId);
-  if(!entry){ LibraryApp.showHome(); return; }
-
-  let manifest;
-  try{ manifest=await LibraryApp.ensureManifest(entry); }
-  catch(e){ console.error(e); LibraryApp.showHome(); return; }
-
-  if(!manifest||(manifest.status||'available')!=='available'){ LibraryApp.showHome(); return; }
-
-  window.ACTIVE_BOOK_MANIFEST=manifest;
-  window.ACTIVE_LIBRARY_ENTRY=entry;
-
-  const root=document.documentElement;
-  const theme=manifest.theme||{};
-  const bookAsset=rel=>LibraryApp.resolveBookAsset(entry,rel);
-
-  if(theme.buttonTexture) root.style.setProperty('--ui-button-texture',`url("${bookAsset(theme.buttonTexture)}")`);
-
-  if(theme.statsTexture) root.style.setProperty('--ui-stats-texture',`url("${bookAsset(theme.statsTexture)}")`);
-  if(theme.parchmentTexture) root.style.setProperty('--ui-parchment-texture',`url("${bookAsset(theme.parchmentTexture)}")`);
-
-  window.COLLECTION_CATALOG={version:1,defaultBookId:manifest.runtimeId||manifest.id};
-
-  try{
-    await LibraryApp.loadScript(`${bookAsset(manifest.bookScript||'book.js')}?v=${manifest.contentVersion||1}`);
-    if(manifest.journalScript) await LibraryApp.loadScript(`${bookAsset(manifest.journalScript)}?v=${manifest.contentVersion||1}`);
-    for(const script of (manifest.extraScripts||[])) await LibraryApp.loadScript(`${bookAsset(script)}?v=${manifest.contentVersion||1}`);
-  }catch(e){ console.error(e); LibraryApp.showHome(); return; }
-
-  const runtimeBook=BookRegistry.get(manifest.runtimeId||manifest.id);
-  if(!runtimeBook){ LibraryApp.showHome(); return; }
-
-  try{
-    if(sessionStorage.getItem('livre-interactif.restart-request')==='1'){
-      sessionStorage.removeItem('livre-interactif.restart-request');
-      const prefixes=[`ldveh.book.${runtimeBook.id}.save.v`,`ldveh.book.${runtimeBook.id}.checkpoint.v`];
-      const exactKeys=[...(runtimeBook.legacyStorageKeys||[]),...(runtimeBook.legacyCheckpointKeys||[])];
-      Object.keys(localStorage).forEach(key=>{
-        if(prefixes.some(prefix=>key.startsWith(prefix))||exactKeys.includes(key)) localStorage.removeItem(key);
-      });
-    }
-  }catch(e){}
-
-  LibraryApp.showBook();
-  try{ await LibraryApp.loadScript('./engine/reader.js?v=multi-book-24'); }
-  catch(e){ console.error(e); LibraryApp.showHome(); }
+  if(m.theme?.statsTexture)root.style.setProperty('--ui-stats-texture',`url("${assetUrl(m.theme.statsTexture)}")`,'important');
+  if(m.theme?.parchmentTexture)root.style.setProperty('--ui-parchment-texture',`url("${assetUrl(m.theme.parchmentTexture)}")`,'important');
+  const vars={vie:'--ui-icon-vie',dexterite:'--ui-icon-dexterite',force:'--ui-icon-force',arme:'--ui-icon-arme',protection:'--ui-icon-protection',special:'--ui-icon-special'};
+  for(const [k,v] of Object.entries(vars)){if(m.theme?.icons?.[k])root.style.setProperty(v,`url("${assetUrl(m.theme.icons[k])}")`,'important');}
+  if(m.themeStylesheet)await new Promise((ok,ko)=>{const l=document.createElement('link');l.rel='stylesheet';l.href=`${base}${m.themeStylesheet}?v=${m.assetVersion||1}`;l.onload=ok;l.onerror=ko;document.head.appendChild(l);});
+  await LibraryApp.script(`${base}${m.bookScript||'book.js'}?v=${m.contentVersion||1}`);
+  if(m.journalScript)await LibraryApp.script(`${base}${m.journalScript}?v=${m.contentVersion||1}`);
+  for(const x of (m.extraScripts||[]))await LibraryApp.script(`${base}${x}?v=${m.contentVersion||1}`);
+  await LibraryApp.script('./engine/reader.js?v=multi-book-24');
+  loadedBookId=id;rememberBook(id);showBook(id,true);
+}
+LibraryApp.open=loadBook;
+await LibraryApp.render();
+returnBtn?.addEventListener('click',()=>showHome(true));
+const oldView=rememberedView(),wanted=rememberedBook()||'livre01';
+if(oldView==='book'||oldView==='book01')await loadBook(oldView==='book01'?'livre01':wanted);else showHome(false);
 })();

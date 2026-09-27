@@ -12,7 +12,7 @@ const PAGE_BY_NODE = BOOK.pageByNode;
 const padPage = BOOK.padPage;
 const STORAGE_KEY = `ldveh.book.${BOOK.id}.save.v${BOOK.saveVersion || 1}`;
 const CHECKPOINT_KEY = `ldveh.book.${BOOK.id}.checkpoint.v${BOOK.saveVersion || 1}`;
-const SERIES_KEY = `ldveh.series.${BOOK.seriesId || BOOK.id}.profile.v2`;
+const SERIES_KEY = `ldveh.series.${BOOK.seriesId}.profile.v2`;
 
 const chapterNumber = document.getElementById('chapterNumber');
 const chapterTitle = document.getElementById('chapterTitle');
@@ -42,44 +42,30 @@ const journalPanel = document.getElementById('journalPanel');
 const journalCloseBtn = document.getElementById('journalCloseBtn');
 const bookTitle = document.getElementById('bookTitle');
 const bookEyebrow = document.getElementById('bookEyebrow');
+const restartConfirmBackdrop = document.getElementById('restartConfirmBackdrop');
+const restartConfirmYes = document.getElementById('restartConfirmYes');
+const restartConfirmNo = document.getElementById('restartConfirmNo');
 
-const manifest = window.ACTIVE_BOOK_MANIFEST || {};
 bookTitle.textContent = BOOK.title;
-bookEyebrow.textContent = manifest.kicker || BOOK.libraryLabel || `Livre ${String(manifest.number || BOOK.libraryNumber || BOOK.episode || 1).padStart(2,'0')}`;
-document.title = `${BOOK.title} — Chroniques des Âges`;
-
-document.querySelectorAll('.book-page-banner-kicker').forEach(el => {
-  el.textContent = manifest.kicker || BOOK.libraryLabel || `Livre ${String(manifest.number || BOOK.libraryNumber || BOOK.episode || 1).padStart(2,'0')}`;
-});
-document.querySelectorAll('.book-page-banner-title').forEach(el => {
-  el.textContent = BOOK.title;
-});
-const journalKicker = document.querySelector('#journalPanel .journal-kicker');
-if (journalKicker) journalKicker.textContent = `${BOOK.title.toUpperCase()} · TES DÉCOUVERTES`;
-const drawerTitle = document.querySelector('#drawer .drawer-head h3');
-if (drawerTitle) drawerTitle.textContent = `Pages · TEST — ${BOOK.title}`;
+bookEyebrow.textContent = BOOK.readerEyebrow || ('Chroniques d’un autre temps - ' + (BOOK.libraryLabel || ('Livre ' + String(BOOK.libraryNumber || 1).padStart(2,'0'))));
+document.title = `${BOOK.title} — Livre-jeu`;
 
 function defaultSeriesProfile() {
-  const base = {
+  const defaults = BOOK.seriesProfileDefaults || {};
+  const defaultGender = defaults.heroGender === 'male' ? 'male' : 'female';
+  const defaultName = defaults.heroName || (defaultGender === 'male' ? 'Aubin' : 'Aélis');
+  return {
     version: 2,
-    seriesId: BOOK.seriesId || BOOK.id,
+    seriesId: BOOK.seriesId,
+    heroGender: defaultGender,
+    heroName: defaultName,
+    baseStats: {
+      maxHp: defaults.baseStats?.maxHp ?? (Number.isFinite(BOOK.initialMaxHp) ? BOOK.initialMaxHp : 18),
+      force: defaults.baseStats?.force ?? 8,
+      dexterity: defaults.baseStats?.dexterity ?? 13
+    },
     memory: {},
     completedBooks: []
-  };
-  if (BOOK.seriesProfileDefaults && typeof BOOK.seriesProfileDefaults === 'object') {
-    return {
-      ...base,
-      ...BOOK.seriesProfileDefaults,
-      baseStats: {
-        ...(BOOK.seriesProfileDefaults.baseStats || {})
-      }
-    };
-  }
-  return {
-    ...base,
-    baseStats: {
-      maxHp: Number.isFinite(BOOK.initialMaxHp) ? BOOK.initialMaxHp : 18
-    }
   };
 }
 
@@ -87,6 +73,11 @@ function loadSeriesProfile() {
   try {
     const saved = localStorage.getItem(SERIES_KEY);
     const profile = saved ? { ...defaultSeriesProfile(), ...JSON.parse(saved) } : defaultSeriesProfile();
+    // V68.64 : un ancien profil pouvait mémoriser les +3 PV du collier comme base.
+    // On restaure le maximum initial défini par le livre sans effacer les choix du héros.
+    if (Number.isFinite(BOOK.initialMaxHp)) {
+      profile.baseStats = { ...defaultSeriesProfile().baseStats, ...(profile.baseStats || {}), maxHp: BOOK.initialMaxHp };
+    }
     if (typeof BOOK.normalizeSeriesProfile === 'function') BOOK.normalizeSeriesProfile(profile);
     return profile;
   } catch { return defaultSeriesProfile(); }
@@ -95,10 +86,10 @@ let seriesProfile = loadSeriesProfile();
 
 function defaultState() { return BOOK.createInitialState(seriesProfile); }
 
-function normalizeLoadedState(loaded) {
-  if (typeof BOOK.normalizeLoadedState !== 'function') return false;
-  try { return !!BOOK.normalizeLoadedState(loaded); }
-  catch (e) { return false; }
+function normalizeLoadedBookState(loaded) {
+  if (!loaded || typeof loaded !== 'object') return false;
+  if (typeof BOOK.normalizeLoadedState === 'function') return !!BOOK.normalizeLoadedState(loaded);
+  return false;
 }
 
 function migrateLegacySaveIfNeeded() {
@@ -138,7 +129,7 @@ function loadState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(previous));
     }
     const loaded = { ...defaultState(), ...previous };
-    if (normalizeLoadedState(loaded)) localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
+    if (normalizeLoadedBookState(loaded)) localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
     return loaded;
   } catch { return defaultState(); }
 }
@@ -150,20 +141,16 @@ function saveSeriesProfile() {
 function syncSeriesFromState() {
   if (typeof BOOK.syncSeriesProfile === 'function') {
     BOOK.syncSeriesProfile(state, seriesProfile);
-    saveSeriesProfile();
-    return;
+  } else {
+    const defaults = BOOK.seriesProfileDefaults || {};
+    seriesProfile.heroGender = state.heroGender === 'male' ? 'male' : 'female';
+    seriesProfile.heroName = state.heroName || defaults.heroName || seriesProfile.heroName;
+    seriesProfile.baseStats = {
+      maxHp: Number.isFinite(BOOK.initialMaxHp) ? BOOK.initialMaxHp : (state.maxHp || seriesProfile.baseStats.maxHp),
+      force: state.baseForce || seriesProfile.baseStats.force,
+      dexterity: state.baseDexterity || seriesProfile.baseStats.dexterity
+    };
   }
-
-  if ('heroGender' in state) seriesProfile.heroGender = state.heroGender;
-  if ('heroName' in state) seriesProfile.heroName = state.heroName;
-
-  if (!seriesProfile.baseStats || typeof seriesProfile.baseStats !== 'object') {
-    seriesProfile.baseStats = {};
-  }
-  if (Number.isFinite(BOOK.initialMaxHp)) seriesProfile.baseStats.maxHp = BOOK.initialMaxHp;
-  if (Number.isFinite(state.baseForce)) seriesProfile.baseStats.force = state.baseForce;
-  if (Number.isFinite(state.baseDexterity)) seriesProfile.baseStats.dexterity = state.baseDexterity;
-
   if (typeof BOOK.exportSeriesMemory === 'function') {
     seriesProfile.memory = { ...seriesProfile.memory, ...BOOK.exportSeriesMemory(state) };
   }
@@ -198,9 +185,9 @@ function restartFromCheckpoint() {
       localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(previous));
     }
     state = { ...defaultState(), ...previous };
-    if (normalizeLoadedState(state)) localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(state));
+    if (normalizeLoadedBookState(state)) localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(state));
     state.journal = journalBackup || state.journal || '';
-    saveState(); closeDrawer(); closeModal(); closeJournal(); render();
+    saveState(); closeRestartConfirm(); closeDrawer(); closeModal(); closeJournal(); render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (e) { restartGame(); }
 }
@@ -241,12 +228,7 @@ function loadPageImage(pageNumber, title) {
   imagePlaceholder.style.display = 'grid';
   storyImage.alt = title ? `Illustration — ${title}` : `Illustration page ${padPage(pageNumber)}`;
   const extensions = BOOK.imageExtensions || ['webp','png','jpg','jpeg'];
-  const assetBases = Array.isArray(BOOK.assetBases) && BOOK.assetBases.length
-    ? BOOK.assetBases
-    : [BOOK.assetBase];
-  const attempts = assetBases.flatMap(assetBase =>
-    candidates.flatMap(candidate => extensions.map(ext => `${assetBase}/${candidate}.${ext}`))
-  );
+  const attempts = candidates.flatMap(candidate => extensions.map(ext => `${BOOK.assetBase}/${candidate}.${ext}`));
   let index = 0;
   const tryNext = () => {
     if (token !== pageImageLoadToken) return;
@@ -302,17 +284,10 @@ function currentRunJournalEntries() {
 function appendAdventureConclusion(renderNodeId) {
   const cfg = BOOK.conclusion;
   if (!cfg) return;
-
-  const successNodes = new Set(cfg.successNodes || []);
-  const deathNodes = new Set(cfg.deathNodes || []);
-  const success = successNodes.has(renderNodeId);
-
-  let death = !success && deathNodes.has(renderNodeId);
-  if (!success && !death && cfg.deathOnZeroHp !== false && Number(state.hp) <= 0) death = true;
-  if (!success && !death && typeof cfg.isDeath === 'function') {
-    try { death = !!cfg.isDeath(state, renderNodeId); } catch (e) {}
-  }
-
+  const success = Array.isArray(cfg.successNodes) && cfg.successNodes.includes(renderNodeId);
+  const explicitDeath = Array.isArray(cfg.deathNodes) && cfg.deathNodes.includes(renderNodeId);
+  const ruleDeath = typeof cfg.isDeath === 'function' ? !!cfg.isDeath(state, renderNodeId) : false;
+  const death = !success && (explicitDeath || ruleDeath || state.hp <= 0);
   if (!success && !death) return;
 
   const notice = document.createElement('section');
@@ -320,12 +295,10 @@ function appendAdventureConclusion(renderNodeId) {
 
   const title = document.createElement('h3');
   title.textContent = success ? (cfg.successTitle || 'Une fin possible') : (cfg.deathTitle || 'Votre aventure s’achève ici');
-
   const copy = document.createElement('p');
   copy.textContent = success
     ? (cfg.successText || 'Vous avez découvert l’une des fins possibles de cette aventure.')
-    : (cfg.deathText || 'C’est la fin de votre aventure. Vous pouvez recommencer et tenter d’autres choix.');
-
+    : (cfg.deathText || 'C’est la fin de votre aventure. Vous pouvez recommencer et faire d’autres choix.');
   notice.append(title, copy);
   storyText.appendChild(notice);
 
@@ -337,30 +310,26 @@ function appendAdventureConclusion(renderNodeId) {
   recapTitle.textContent = cfg.journalTitle || 'Ce que votre journal révèle';
   const entries = currentRunJournalEntries();
   recap.appendChild(recapTitle);
-
   if (!entries.length) {
     const empty = document.createElement('p');
     empty.className = 'ending-journal-empty';
-    empty.textContent = cfg.journalEmptyText || 'Vous avez atteint cette fin sans consigner de découverte majeure dans votre journal.';
+    empty.textContent = 'Vous avez atteint cette fin sans consigner de découverte majeure dans votre journal.';
     recap.appendChild(empty);
   } else {
-    const list = document.createElement('div');
-    list.className = 'ending-journal-list';
     entries.forEach(entry => {
-      const item = document.createElement('article');
-      item.className = 'ending-journal-entry';
-      const heading = document.createElement('h4');
-      heading.textContent = STORY[entry.page]?.title?.trim() || entry.title;
-      const text = document.createElement('p');
-      text.textContent = entry.text;
-      item.append(heading, text);
-      list.appendChild(item);
+      const article = document.createElement('article');
+      article.className = 'ending-journal-entry';
+      const h = document.createElement('h4');
+      h.textContent = STORY[entry.page]?.title?.trim() || entry.title;
+      const p = document.createElement('p');
+      p.textContent = entry.text;
+      article.append(h,p);
+      recap.appendChild(article);
     });
-    recap.appendChild(list);
   }
-
   storyText.appendChild(recap);
 }
+
 function renderJournal() {
   journalList.replaceChildren();
   const entries = currentRunJournalEntries();
@@ -418,14 +387,14 @@ function resolvePendingDice() {
 
 function render() {
   const renderNodeId = typeof BOOK.resolveRenderNode === 'function'
-    ? (BOOK.resolveRenderNode(state, state.node) || state.node)
+    ? BOOK.resolveRenderNode(state, state.node)
     : state.node;
-  const alternateView = renderNodeId !== state.node;
+  const transformedView = renderNodeId !== state.node;
   const node = STORY[renderNodeId] || STORY.start;
-  const pendingDice = !alternateView && state.pendingDice?.destination === state.node ? state.pendingDice : null;
+  const pendingDice = !transformedView && state.pendingDice?.destination === state.node ? state.pendingDice : null;
   if (node.sheet) {
     ++pageImageLoadToken; // annule une éventuelle image de la page précédente
-    chapterNumber.textContent = BOOK.sheetLabel || 'FICHE DU PERSONNAGE';
+    chapterNumber.textContent = BOOK.sheetLabel || 'FICHE DU HÉROS';
     imageFrame.classList.add('hidden');
   } else {
     const mappedPage = PAGE_BY_NODE[renderNodeId];
@@ -468,12 +437,14 @@ function render() {
 
   appendAdventureConclusion(renderNodeId);
 
-  document.querySelectorAll('[data-book-profile-input], .hero-gender-input').forEach(input => {
+  document.querySelectorAll('.hero-gender-input').forEach(input => {
     input.addEventListener('change', event => {
       if (typeof BOOK.handleProfileInputChange === 'function') {
         BOOK.handleProfileInputChange(state, event.target);
-      } else if (event.target.classList.contains('hero-gender-input')) {
-        state.heroGender = event.target.value;
+      } else {
+        state.heroGender = event.target.value === 'male' ? 'male' : 'female';
+        const defaults = BOOK.seriesProfileDefaults || {};
+        state.heroName = defaults.heroName || state.heroName;
       }
       saveState();
       render();
@@ -483,28 +454,36 @@ function render() {
   inventoryCount.textContent = Object.keys(state.inventory).length;
   statusTags.innerHTML = '';
   if (!node.sheet) {
-    const stats = typeof BOOK.statusStats === 'function' ? (BOOK.statusStats(state) || []) : [];
+    const stats = typeof BOOK.statusStats === 'function'
+      ? BOOK.statusStats(state)
+      : (() => {
+          const protection = BOOK.rules && typeof BOOK.rules.currentProtection === 'function' ? BOOK.rules.currentProtection(state) : 0;
+          const hpRatio = state.maxHp > 0 ? state.hp / state.maxHp : 0;
+          const compactWeapon = state.weapon === 'none' ? '0' : `+${combatPower(state)}`;
+          return [
+            {icon:'♥', label:'Vie', value:`${state.hp}/${state.maxHp}`, cls: hpRatio <= .3 ? 'status-critical' : hpRatio <= .55 ? 'status-warning' : ''},
+            {icon:'◆', label:'Dextérité', value:String(currentDexterity(state))},
+            {icon:'⚔', label:'Force', value:String(currentForce(state))},
+            {icon:'†', label:'Arme', value:compactWeapon},
+            {icon:'🛡', label:'Protection', value:String(protection)}
+          ];
+        })();
     stats.forEach(stat => {
       const tag = document.createElement('span');
       tag.className = `tag ${stat.cls || ''}`.trim();
-      tag.innerHTML = `<span class="tag-copy"><small><span class="tag-icon">${stat.icon || ''}</span><span class="tag-label">${stat.label || ''}</span></small><strong>${stat.value ?? ''}</strong></span>`;
+      tag.innerHTML = `<span class="tag-copy"><small><span class="tag-icon">${stat.icon}</span><span class="tag-label">${stat.label}</span></small><strong>${stat.value}</strong></span>`;
       statusTags.appendChild(tag);
     });
   }
 
-  let availableChoices;
-  if (pendingDice) {
-    availableChoices = [{label:'Jeter les dés', action:'resolveDice'}];
-  } else {
-    const override = typeof BOOK.choiceOverride === 'function'
-      ? BOOK.choiceOverride(state, node, renderNodeId)
-      : null;
-    availableChoices = Array.isArray(override)
-      ? override
-      : (Number(state.hp) <= 0 && !node.sheet
-          ? fatalChoices()
-          : (typeof node.choices === 'function' ? node.choices(state) : (node.choices || [])));
-  }
+  const overriddenChoices = typeof BOOK.choiceOverride === 'function' ? BOOK.choiceOverride(state, node) : null;
+  const availableChoices = pendingDice
+    ? [{label:'Jeter les dés', action:'resolveDice'}]
+    : overriddenChoices
+      ? overriddenChoices
+      : state.hp <= 0 && !node.sheet
+        ? fatalChoices()
+        : typeof node.choices === 'function' ? node.choices(state) : (node.choices || []);
   choices.innerHTML = '';
   availableChoices.forEach((choice, i) => {
     const btn = document.createElement('button');
@@ -562,9 +541,26 @@ function render() {
   });
 }
 
+function openRestartConfirm() {
+  if (!restartConfirmBackdrop) return restartGame();
+  restartConfirmBackdrop.classList.remove('hidden');
+  restartConfirmBackdrop.setAttribute('aria-hidden','false');
+  try { restartConfirmNo?.focus(); } catch (e) {}
+}
+function closeRestartConfirm() {
+  if (!restartConfirmBackdrop) return;
+  restartConfirmBackdrop.classList.add('hidden');
+  restartConfirmBackdrop.setAttribute('aria-hidden','true');
+}
+
 function restartGame() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(CHECKPOINT_KEY);
+    if (BOOK.resetSeriesOnRestart) localStorage.removeItem(SERIES_KEY);
+  } catch (e) {}
+  if (BOOK.resetSeriesOnRestart) seriesProfile = defaultSeriesProfile();
   state = defaultState();
-  try { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(CHECKPOINT_KEY); } catch (e) {}
   saveState(); closeDrawer(); closeModal(); closeJournal(); render();
   try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0,0); }
 }
@@ -608,12 +604,10 @@ function pageNavigationEntries() {
     .map(([nodeId, pageNumber]) => ({
       nodeId,
       pageNumber,
-      // Le titre visible du récit est la source de vérité. Le libellé TEST
-      // sert uniquement de description quand la page n'a pas de titre.
-      // Le prologue conserve son libellé explicite dans la navigation.
-      title: (pageNumber === 0 ? BOOK.navigationTitles?.[nodeId] : STORY[nodeId]?.title?.trim())
-        || BOOK.navigationTitles?.[nodeId]
-        || `Page ${padPage(pageNumber)}`
+      // Le libellé de navigation appartient uniquement à l'outil de travail.
+      // Il peut donc être différent du titre narratif, sans jamais apparaître sur le parchemin.
+      title: BOOK.navigationTitles?.[nodeId]?.trim()
+        || 'Titre de travail à définir'
     }))
     .sort((a, b) => a.pageNumber - b.pageNumber);
 }
@@ -678,13 +672,28 @@ inventoryBtn.addEventListener('click', openInventory);
 characterBtn.addEventListener('click', openCharacterSheet);
 journalBtn.addEventListener('click', openJournal);
 journalCloseBtn.addEventListener('click', closeJournal);
-restartBtn.addEventListener('click', restartGame);
+restartBtn.addEventListener('click', openRestartConfirm);
 if (menuBtn) menuBtn.addEventListener('click', openDrawer);
 if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', closeDrawer);
 if (drawerBackdrop) drawerBackdrop.addEventListener('click', closeDrawer);
 closeModalBtn.addEventListener('click', closeModal);
 modalBackdrop.addEventListener('click', closeModal);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); closeModal(); closeJournal(); } });
+restartConfirmYes?.addEventListener('click', () => {
+  closeRestartConfirm();
+  restartGame();
+});
+restartConfirmNo?.addEventListener('click', closeRestartConfirm);
+restartConfirmBackdrop?.addEventListener('click', e => {
+  if (e.target === restartConfirmBackdrop) closeRestartConfirm();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeRestartConfirm();
+    closeDrawer();
+    closeModal();
+    closeJournal();
+  }
+});
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(() => {});
 render();

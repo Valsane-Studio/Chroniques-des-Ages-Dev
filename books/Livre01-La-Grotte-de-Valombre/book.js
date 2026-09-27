@@ -831,7 +831,7 @@ const STORY = {
           </div>
           <div class="tag">
             <span class="tag-copy">
-              <small><span class="tag-icon icon-jpg icon-terre-noire" aria-hidden="true"></span>Terre noire</small>
+              <small><span class="tag-icon icon-jpg icon-special" aria-hidden="true"></span>Terre noire</small>
               <strong>${contaminationLevel(state)}/13</strong>
             </span>
           </div>
@@ -6682,9 +6682,8 @@ const STORY = {
       const healing = Number.isInteger(state.lastHealingDie)
         ? `<div class="dice-result"><p class="roll-number">Dernière potion</p><div class="dice-faces">${renderDie(state.lastHealingDie)}</div><p><strong>+${state.lastHealingDie} point${state.lastHealingDie > 1 ? 's' : ''} de Vie</strong></p><p>Vie : <strong>${state.hp} / ${state.maxHp}</strong></p></div>`
         : '';
-      const testPanel = testInventoryHtml(state);
       const earth = contaminationLevel(state)>0 ? `<div class="inventory-equipment-card"><strong>Terre noire : ${contaminationLevel(state)}/13</strong><p>${state.flags.physicianNotesRead ? "0–3 : appel puissant · 4–8 : équilibre précaire · 9–12 : transformation imminente · 13 : transformation." : "Effets inconnus."}</p></div>` : "";
-      return equipment + earth + testPanel + healing;
+      return equipment + earth + healing;
     },
 
     actionHtml(id, item, state) {
@@ -6921,7 +6920,7 @@ const STORY = {
             <span class="tag-copy"><small><span class="tag-icon icon-jpg icon-protection" aria-hidden="true"></span><span class="tag-label">Protection</span></small><strong>${currentProtection(state)}</strong></span>
           </div>
           <div class="character-stat-card">
-            <span class="tag-copy"><small><span class="tag-icon icon-jpg icon-terre-noire" aria-hidden="true"></span><span class="tag-label">Terre noire</span></small><strong>${contaminationLevel(state)}/13</strong></span>
+            <span class="tag-copy"><small><span class="tag-icon icon-jpg icon-special" aria-hidden="true"></span><span class="tag-label">Terre noire</span></small><strong>${contaminationLevel(state)}/13</strong></span>
           </div>
         </div>
         <div class="character-modal-equipment">
@@ -6943,117 +6942,11 @@ const STORY = {
     title: 'La Grotte de Valombre',
     description: 'Première aventure de la série de l’Écuyer.',
     access: 'free',
-    contentVersion: 122,
+    contentVersion: 123,
     pageMapVersion: 86,
-    saveVersion: 23,
-    libraryNumber: 1,
-    libraryLabel: 'Livre 01',
-    sheetLabel: 'FICHE DU PERSONNAGE',
-
+    saveVersion: 26,
     assetBase: './books/Livre01-La-Grotte-de-Valombre/images',
-    assetBases: [
-      './books/Livre01-La-Grotte-de-Valombre/images'
-    ],
     uiAssetBase: './books/Livre01-La-Grotte-de-Valombre/assets',
-
-    seriesProfileDefaults: {
-      heroGender: 'female',
-      heroName: 'Aélis',
-      baseStats: { maxHp: 18, force: 8, dexterity: 13 }
-    },
-
-    normalizeSeriesProfile(profile) {
-      profile.baseStats = {
-        ...(profile.baseStats || {}),
-        maxHp: 18
-      };
-    },
-
-    normalizeLoadedState(loaded) {
-      if (!loaded || typeof loaded !== 'object') return false;
-      const allowedMax = 18 + (loaded.flags?.collarEquipped ? 3 : 0);
-      if (!Number.isFinite(loaded.maxHp) || loaded.maxHp <= allowedMax) return false;
-      const extra = loaded.maxHp - allowedMax;
-      loaded.maxHp = allowedMax;
-      loaded.hp = Math.max(0, Math.min(allowedMax, (Number.isFinite(loaded.hp) ? loaded.hp : allowedMax) - extra));
-      return true;
-    },
-
-    syncSeriesProfile(state, profile) {
-      profile.heroGender = state.heroGender === 'male' ? 'male' : 'female';
-      profile.heroName = state.heroName || (profile.heroGender === 'male' ? 'Aubin' : 'Aélis');
-      profile.baseStats = {
-        maxHp: 18,
-        force: state.baseForce || 8,
-        dexterity: state.baseDexterity || 13
-      };
-      profile.memory = { ...(profile.memory || {}) };
-    },
-
-    handleProfileInputChange(state, input) {
-      if (!input || !input.classList.contains('hero-gender-input')) return;
-      setHeroIdentity(state, input.value === 'male' ? 'male' : 'female');
-    },
-
-    onReenterNode(id, state, node) {
-      if (id === 'c115' && state.flags?.knightFate === 'locked' &&
-          !state.flags.knightWellAttackDone && typeof node.onEnter === 'function') {
-        node.onEnter(state);
-      }
-    },
-
-    resolveRenderNode(state, currentNode) {
-      const node = STORY[currentNode];
-      return state.flags?.blackEarthTransformed && !(node && node.sheet)
-        ? 'c219'
-        : currentNode;
-    },
-
-    statusStats(state) {
-      const protection = currentProtection(state);
-      const hpRatio = state.maxHp > 0 ? state.hp / state.maxHp : 0;
-      const earth = Number(state.contamination || 0);
-      const compactWeapon = state.weapon === 'none' ? '0' : `+${combatPower(state)}`;
-
-      return [
-        { icon:'♥', label:'Vie', value:`${state.hp}/${state.maxHp}`, cls: hpRatio <= .3 ? 'status-critical' : hpRatio <= .55 ? 'status-warning' : '' },
-        { icon:'◆', label:'Dextérité', value:String(currentDexterity(state)) },
-        { icon:'⚔', label:'Force', value:String(currentForce(state)) },
-        { icon:'†', label:'Arme', value:compactWeapon },
-        { icon:'🛡', label:'Protection', value:String(protection) },
-        { icon:'●', label:'Terre noire', value:`${earth}/13`, cls: earth >= 12 ? 'status-critical' : earth >= 9 ? 'status-warning' : '' }
-      ];
-    },
-
-    choiceOverride(state, node) {
-      if (state.flags?.blackEarthTransformed && !node.sheet) {
-        return [
-          { label:'Reprendre au dernier point de sauvegarde', action:'checkpoint' },
-          { label:'Recommencer depuis le début', action:'restart' }
-        ];
-      }
-      return null;
-    },
-
-    afterDamageRoll(state, key) {
-      if (key === 'c12' && !state.flags.gaspardEarthRegistered) {
-        state.flags.gaspardEarthRegistered = true;
-        raiseContamination(state, 1);
-      }
-    },
-
-    conclusion: {
-      successNodes: ['c215', 'c217', 'c218'],
-      deathNodes: ['c216', 'c221'],
-      isDeath: state => !!state.flags?.blackEarthTransformed,
-      successTitle: 'Une fin possible',
-      deathTitle: 'Votre aventure s’achève ici',
-      successText: 'Vous avez découvert l’une des fins possibles de La Grotte de Valombre. Pour en apprendre davantage sur cette histoire, vous pouvez recommencer l’aventure, emprunter de nouveaux passages et faire d’autres choix.',
-      deathText: 'C’est la fin de votre aventure. Vous n’avez pas réussi à résoudre l’énigme de Valombre. Vous pouvez recommencer l’aventure, faire de nouveaux choix, emprunter de nouveaux passages et tenter de libérer votre village.',
-      journalTitle: 'Ce que votre journal révèle',
-      showJournalRecap: true
-    },
-
     showMissingIllustrationPlaceholder: true, // uniquement pour la version Travail
     story: STORY,
     pageOrder: PAGE_ORDER,
@@ -7088,6 +6981,18 @@ const STORY = {
     createInitialState,
     migrateState: migratePageNumbersV78,
     rules: { currentForce, currentDexterity, combatPower, weaponLabel, currentProtection, maxProtection, applyDamage, raiseContamination },
+    statusStats(state) {
+      const hpRatio = state.maxHp > 0 ? state.hp / state.maxHp : 0;
+      const compactWeapon = state.weapon === 'none' ? '0' : `+${combatPower(state)}`;
+      return [
+        {icon:'♥', label:'Vie', value:`${state.hp}/${state.maxHp}`, cls: hpRatio <= .3 ? 'status-critical' : hpRatio <= .55 ? 'status-warning' : ''},
+        {icon:'◆', label:'Dextérité', value:String(currentDexterity(state))},
+        {icon:'⚔', label:'Force', value:String(currentForce(state))},
+        {icon:'†', label:'Arme', value:compactWeapon},
+        {icon:'🛡', label:'Protection', value:String(currentProtection(state))},
+        {icon:'●', label:'Terre noire', value:`${contaminationLevel(state)}/13`}
+      ];
+    },
     characterSheetHtml,
     inventory,
     checkpoints: [
