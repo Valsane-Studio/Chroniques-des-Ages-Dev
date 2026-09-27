@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#10181c">
+  <title>APHANES — Les Chemins perdus — Valsane Studio</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles/app.css?v=206">
+</head>
+<body class="library-home-open">
+  <section id="libraryHome" class="library-home" aria-labelledby="libraryHomeTitle">
+    <div class="library-home-stage">
+      
+      <div class="library-home-inner">
+        <div class="library-brand" aria-label="APHANES — Les Chemins perdus">
+        <svg class="library-brand-art" viewBox="0 0 1200 300" role="img" aria-labelledby="aphanesBrandTitle">
+          <title id="aphanesBrandTitle">APHANES — Les Chemins perdus</title>
+          <defs>
+            <pattern id="aphanesStoneTexture" patternUnits="userSpaceOnUse" width="1200" height="300">
+              <image href="./books/Livre01-La-Grotte-de-Valombre/assets/textures/texture-bouton.jpg"
+                     x="0" y="0" width="1200" height="300"
+                     preserveAspectRatio="xMidYMid slice" />
+            </pattern>
+            <filter id="aphanesTextDepth" x="-20%" y="-30%" width="140%" height="160%">
+              <feDropShadow dx="0" dy="4" stdDeviation="3.4" flood-color="#000000" flood-opacity=".62"/>
+            </filter>
+          </defs>
+
+          <text class="library-brand-svg-title"
+                x="600" y="174"
+                text-anchor="middle"
+                fill="url(#aphanesStoneTexture)"
+                stroke="#081217"
+                stroke-width="2.3"
+                paint-order="stroke fill"
+                filter="url(#aphanesTextDepth)">APHANES</text>
+
+          <text class="library-brand-svg-subtitle"
+                x="600" y="247"
+                text-anchor="middle"
+                fill="url(#aphanesStoneTexture)"
+                stroke="#081217"
+                stroke-width="1.15"
+                paint-order="stroke fill"
+                filter="url(#aphanesTextDepth)">LES CHEMINS PERDUS</text>
+        </svg>
+      </div>
+
+        <header class="library-home-copy">
+          <div class="library-home-kicker">Bibliothèque</div>
+          <h1 id="libraryHomeTitle">Choisis ton aventure</h1>
+        </header>
+
+        <div class="library-book-list" id="libraryBookList">
+          <div class="library-loading">Chargement de la bibliothèque…</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+    <div id="libraryPreviewBackdrop" class="library-preview-backdrop hidden" aria-hidden="true">
+    <article class="library-preview-card" role="dialog" aria-modal="true" aria-labelledby="libraryPreviewTitle">
+      <button id="libraryPreviewClose" class="library-preview-close" type="button" aria-label="Fermer">×</button>
+
+      <div class="library-preview-media">
+        <img id="libraryPreviewImage" class="library-preview-image" alt="" />
+      </div>
+
+      <div class="library-preview-copy">
+        <div id="libraryPreviewKicker" class="library-preview-kicker"></div>
+        <h2 id="libraryPreviewTitle"></h2>
+
+        <div class="library-preview-section">
+          <div class="library-preview-label">Situation</div>
+          <p id="libraryPreviewSituation"></p>
+        </div>
+
+        <div class="library-preview-section">
+          <div class="library-preview-label">Type d’aventure</div>
+          <p id="libraryPreviewAdventure"></p>
+        </div>
+
+        <div class="library-preview-section">
+          <div class="library-preview-label">Dangers</div>
+          <p id="libraryPreviewDangers"></p>
+        </div>
+
+        <button id="libraryPreviewAction" class="library-preview-action" type="button">Commencer l’aventure</button>
+      </div>
+    </article>
+  </div>
+
+<main class="app-shell" id="gameApp">
+    <header class="book-header">
+      <div class="book-heading">
+        <div id="bookEyebrow" class="book-eyebrow">APHANES</div>
+        <h1 id="bookTitle">Livre</h1>
+      </div>
+      <button id="menuBtn" class="icon-button" type="button" aria-label="Ouvrir la navigation">☰</button>
+    </header>
+
+    <section class="reader-card">
+      <div class="chapter-head">
+        <div id="chapterNumber" class="chapter-number"></div>
+        <h2 id="chapterTitle" class="chapter-title"></h2>
+      </div>
+
+      <figure id="imageFrame" class="image-frame">
+        <img id="storyImage" class="story-image hidden" alt="">
+        <div id="imagePlaceholder" class="image-placeholder">
+          <span>Illustration</span>
+          <small id="imageLabel"></small>
+        </div>
+      </figure>
+
+      <article id="storyText" class="story-text"></article>
+      <div id="choices" class="choices"></div>
+      <div id="statusTags" class="status-tags"></div>
+    </section>
+
+    <footer class="footer">
+      <button id="characterBtn" class="footer-btn footer-character-hidden" type="button">Fiche perso</button>
+      <button id="inventoryBtn" class="footer-btn" type="button">Inventaire <span id="inventoryCount">0</span></button>
+      <button id="journalBtn" class="footer-btn" type="button">Journal de bord</button>
+      <button id="restartBtn" class="footer-btn footer-square" type="button" aria-label="Recommencer" title="Recommencer">↻</button>
+      <button id="libraryReturnBtn" class="footer-btn footer-square" type="button" aria-label="Accueil" title="Accueil">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10.8 12 5l7.5 5.8v8.2a.8.8 0 0 1-.8.8h-4.4v-5.2H9.7V19a.8.8 0 0 1-.8.8H5.3a.8.8 0 0 1-.8-.8z"/></svg>
+      </button>
+    </footer>
+  </main>
+
+  <div id="drawerBackdrop" class="backdrop hidden"></div>
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawer-head">
+      <h3>Pages · TEST</h3>
+      <button id="closeDrawerBtn" class="icon-button" type="button">×</button>
+    </div>
+    <div id="pageNavList" class="page-nav-list"></div>
+  </aside>
+
+  <div id="modalBackdrop" class="backdrop hidden"></div>
+  <section id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3 id="modalTitle"></h3>
+      <button id="closeModalBtn" class="icon-button" type="button">×</button>
+    </div>
+    <div id="modalContent" class="modal-content"></div>
+  </section>
+
+  <section id="journalPanel" class="journal-panel hidden" aria-hidden="true">
+    <div class="journal-shell">
+      <div class="journal-head">
+        <div>
+          <div class="journal-kicker">APHANES</div>
+          <h3>Journal de bord</h3>
+        </div>
+        <button id="journalCloseBtn" class="icon-button" type="button">×</button>
+      </div>
+      <p id="journalCount" class="journal-count"></p>
+      <div id="journalList" class="journal-list"></div>
+    </div>
+  </section>
+
+  <div id="restartConfirmBackdrop" class="confirm-backdrop hidden" aria-hidden="true">
+    <section class="confirm-dialog" role="dialog" aria-modal="true">
+      <p>Souhaitez-vous vraiment recommencer l’aventure au début ?</p>
+      <div class="confirm-actions">
+        <button id="restartConfirmNo" type="button">Non</button>
+        <button id="restartConfirmYes" type="button">Oui</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="./engine/core.js?v=1"></script>
+  <script src="./app/catalog.js?v=1"></script>
+  <script src="./app/library.js?v=197"></script>
+  <script src="./app/bootstrap.js?v=193"></script>
+  <script>
+  (function(){
+    const restartBtn=document.getElementById('restartBtn');
+    const backdrop=document.getElementById('restartConfirmBackdrop');
+    const yes=document.getElementById('restartConfirmYes');
+    const no=document.getElementById('restartConfirmNo');
+    const close=()=>{backdrop.classList.add('hidden');backdrop.setAttribute('aria-hidden','true');};
+    restartBtn.addEventListener('click',e=>{
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      backdrop.classList.remove('hidden');
+      backdrop.setAttribute('aria-hidden','false');
+    },true);
+    no.addEventListener('click',close);
+    backdrop.addEventListener('click',e=>{if(e.target===backdrop)close();});
+    yes.addEventListener('click',()=>{
+      try{sessionStorage.setItem('livre-interactif.restart-request','1')}catch(e){}
+      location.reload();
+    });
+  })();
+  </script>
+</body>
+</html>
