@@ -1,0 +1,40 @@
+name: Synchroniser depuis TEST
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/sync-from-test.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout DEV
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Récupérer la version TEST
+        run: |
+          git clone --depth 1 https://github.com/Valsane-Studio/Chroniques-des-Ages-Test.git /tmp/aphanes-test
+          rsync -a --delete \
+            --exclude '.git/' \
+            --exclude '.github/workflows/' \
+            /tmp/aphanes-test/ ./
+
+      - name: Conserver l'identité DEV et enregistrer la copie
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Aucun changement à synchroniser."
+          else
+            git commit -m "Synchronise DEV avec la version TEST actuelle"
+            git push origin main
+          fi
