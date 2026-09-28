@@ -7230,9 +7230,16 @@ const STORY = {
     checkpoints: [
       { node: 'c20', label: 'Entrée de la grotte', onlyIfNone: true },
       { node: 'c201', label: 'La caverne des condamnés' },
-      { node: 'c223', label: 'La faille' }
+      { node: 'c209', label: 'L’entrée du labyrinthe' }
     ],
-    testCheckpointForNode: id => /^c(?:22[3-9]|23[0-5])$/.test(id) ? 'c223' : null,
+    testCheckpointForNode: id => /^c(?:22[3-9]|23[0-5])$/.test(id) ? 'c209' : null,
+    normalizeCheckpoint(saved) {
+      if (saved.node !== 'c223' || saved.currentCheckpoint !== 'La faille') return false;
+      saved.node = 'c209';
+      saved.currentCheckpoint = 'L’entrée du labyrinthe';
+      saved.flags = { ...saved.flags, finalMazeTurns:0, finalMazeFound:false, finalMazeLast:null };
+      return true;
+    },
     legacyStorageKeys: ['ldveh.book.ecuyer-01.save.v1', 'ldveh.book.ecuyer-01-valombre.save.v1', 'valombre_save_v12_3d6_stats18'],
     legacyCheckpointKeys: ['ldveh.book.ecuyer-01.checkpoint.v1', 'ldveh.book.ecuyer-01-valombre.checkpoint.v1', 'valombre_checkpoint_v12_3d6_stats18'],
     exportSeriesMemory(state) {
