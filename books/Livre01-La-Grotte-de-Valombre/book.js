@@ -9,41 +9,47 @@ const ENEMIES = {
     name: 'MASSE DANS L’OMBRE',
     maxHp: 6,
     force: 8,
-    dexterity: 5
+    dexterity: 5,
+    damage: 2
   },
   rochebrumeMissing: {
     name: 'DISPARU DE ROCHEBRUME',
     maxHp: 3,
-    force: 3,
-    dexterity: 8
+    force: 6,
+    dexterity: 10,
+    damage: 1
   },
   bridgeWalker: {
     name: 'MARCHEUR SOUS LE PONT',
     maxHp: 5,
     force: 8,
-    dexterity: 10
+    dexterity: 10,
+    damage: 2
   },
   isletCrawler: {
     name: 'RAMPANT DE L’ÎLOT',
     maxHp: 12,
-    force: 18,
-    dexterity: 5
+    force: 12,
+    dexterity: 5,
+    damage: 4
   },
   observationPrisoner: {
     name: 'CHEVALIER TRANSFORMÉ',
     maxHp: 8,
-    force: 8,
-    dexterity: 9
+    force: 10,
+    dexterity: 7,
+    damage: 2
   },
   observationPrisonerCorridor: {
     name: 'CHEVALIER ENRAGÉ',
     maxHp: 8,
     force: 12,
-    dexterity: 9
+    dexterity: 5,
+    damage: 3
   },
-  labyrinthWanderer: { name: 'ERRANT DU DÉDALE', maxHp: 8, force: 9, dexterity: 10 },
-  labyrinthCaiman: { name: 'RAMPANT DE LA CORNICHE', maxHp: 7, force: 9, dexterity: 10 },
-  reserveRat: { name: 'RAT DÉFORMÉ', maxHp: 6, force: 6, dexterity: 8, noContamination: true }
+  labyrinthWanderer: { name: 'ERRANT DU DÉDALE', maxHp: 8, force: 10, dexterity: 8, damage: 2 },
+  labyrinthCaiman: { name: 'RAMPANT DE LA CORNICHE', maxHp: 7, force: 10, dexterity: 8, damage: 2 },
+  reserveRat: { name: 'RAT DÉFORMÉ', maxHp: 6, force: 6, dexterity: 10, damage: 1, noContamination: true }
 };
 
 function roll2D6() {
@@ -66,8 +72,12 @@ function combatState(state, key, enemy) {
   return combat;
 }
 
-function forceDamageBonus(force) {
-  return Math.max(1, Math.floor(Math.max(0, Number(force) || 0) / 4));
+const HERO_BASE_DAMAGE = 2;
+function heroCombatDamage(state) {
+  return HERO_BASE_DAMAGE + (state.weapon === 'none' ? 0 : combatPower(state));
+}
+function enemyCombatDamage(enemy) {
+  return enemy.damage + (Number.isFinite(enemy.weaponPower) ? enemy.weaponPower : 0);
 }
 
 // Le bouclier encaisse avant les pièces d'armure déjà portées.
@@ -196,14 +206,14 @@ function fightRound(state, key, enemy) {
   const enemyDice = roll2D6();
   const heroDexterity = currentDexterity(state);
   const enemyDexterity = enemy.dexterity;
-  const heroAttack = heroDexterity + heroDice[0] + heroDice[1];
-  const enemyAttack = enemyDexterity + enemyDice[0] + enemyDice[1];
+  const heroForce = currentForce(state);
+  const enemyForce = enemy.force;
+  const heroAttack = heroDexterity + heroForce + heroDice[0] + heroDice[1];
+  const enemyAttack = enemyDexterity + enemyForce + enemyDice[0] + enemyDice[1];
   const heroWeaponPower = state.weapon && state.weapon !== 'none' ? combatPower(state) : 0;
-  const heroForceBonus = forceDamageBonus(currentForce(state));
-  const heroDamage = heroForceBonus + heroWeaponPower;
+  const heroDamage = heroCombatDamage(state);
   const enemyWeaponPower = Number.isFinite(enemy.weaponPower) ? enemy.weaponPower : 0;
-  const enemyForceBonus = forceDamageBonus(enemy.force);
-  const enemyDamage = enemyForceBonus + enemyWeaponPower;
+  const enemyDamage = enemyCombatDamage(enemy);
 
   let outcome = 'tie';
   let damage = 0;
@@ -236,12 +246,10 @@ function fightRound(state, key, enemy) {
     enemyDexterity,
     heroAttack,
     enemyAttack,
-    heroForce: currentForce(state),
-    heroForceBonus,
+    heroForce,
     heroWeaponPower,
     heroDamage,
-    enemyForce: enemy.force,
-    enemyForceBonus,
+    enemyForce,
     enemyWeaponPower,
     enemyDamage,
     damage,
@@ -325,7 +333,7 @@ function enemyCardHtml(state, key, enemy) {
         <div><span class="enemy-icon">◆</span><span>Dextérité</span><strong>${enemy.dexterity}</strong></div>
         <div><span class="enemy-icon">⚔</span><span>Force</span><strong>${enemy.force}</strong></div>
         <div><span class="enemy-icon">†</span><span>Arme</span><strong>${enemy.weaponName || 'Aucune'}</strong></div>
-        <div><span class="enemy-icon">✦</span><span>Dégâts</span><strong>${forceDamageBonus(enemy.force) + (Number.isFinite(enemy.weaponPower) ? enemy.weaponPower : 0)}</strong></div>
+        <div><span class="enemy-icon">✦</span><span>Dégâts</span><strong>${enemyCombatDamage(enemy)}</strong></div>
       </div>
     </div>`;
   return enemyHtml;
@@ -337,11 +345,11 @@ function combatRoundHtml(state, key, enemy) {
   if (!r) return '';
 
   const heroDamageDetail = r.heroWeaponPower > 0
-    ? `Bonus de Force ${r.heroForceBonus} + Puissance de l’arme ${r.heroWeaponPower}`
-    : `Bonus de Force ${r.heroForceBonus}`;
+    ? `Dégâts de base ${HERO_BASE_DAMAGE} + Puissance de l’arme ${r.heroWeaponPower}`
+    : `Dégâts de base ${HERO_BASE_DAMAGE}`;
   const enemyDamageDetail = r.enemyWeaponPower > 0
-    ? `Bonus de Force ${r.enemyForceBonus} + Puissance de l’arme ${r.enemyWeaponPower}`
-    : `Bonus de Force ${r.enemyForceBonus}`;
+    ? `Dégâts ${r.enemyDamage - r.enemyWeaponPower} + Puissance de l’arme ${r.enemyWeaponPower}`
+    : `Dégâts ${r.enemyDamage}`;
 
   const outcomeText = r.outcome === 'hero'
     ? `<strong>Tu remportes l’échange.</strong><br>Tu infliges <strong>${r.damage}</strong> point${r.damage > 1 ? 's' : ''} de dégâts <span class="combat-detail">(${heroDamageDetail})</span>.${combat.hp <= 0 && r.damage > 0 ? '<br><strong>La créature s’effondre. Elle est morte.</strong>' : ''}`
@@ -361,14 +369,14 @@ function combatRoundHtml(state, key, enemy) {
         <div class="combat-side">
           <strong>TOI</strong>
           <div class="combat-dice">${renderDie(r.heroDice[0])}${renderDie(r.heroDice[1])}</div>
-          <p>Dextérité ${r.heroDexterity} + dés ${r.heroDice[0] + r.heroDice[1]}</p>
+          <p>Dextérité ${r.heroDexterity} + Force ${r.heroForce} + dés ${r.heroDice[0] + r.heroDice[1]}</p>
           <p class="combat-total">Attaque : <strong>${r.heroAttack}</strong></p>
         </div>
         <div class="combat-versus">VS</div>
         <div class="combat-side">
           <strong>${enemy.name}</strong>
           <div class="combat-dice">${renderDie(r.enemyDice[0])}${renderDie(r.enemyDice[1])}</div>
-          <p>Dextérité ${r.enemyDexterity} + dés ${r.enemyDice[0] + r.enemyDice[1]}</p>
+          <p>Dextérité ${r.enemyDexterity} + Force ${r.enemyForce} + dés ${r.enemyDice[0] + r.enemyDice[1]}</p>
           <p class="combat-total">Attaque : <strong>${r.enemyAttack}</strong></p>
         </div>
       </div>
@@ -589,6 +597,7 @@ function finalPassageRecovery(s) {
 function finalPassageDiceHtml(result) {
   return result ? `<div class="dice-result"><p>Dextérité : ${result.threshold} · Dés : ${result.total}</p><div class="dice-faces">${result.dice.map(renderDie).join('')}</div><p><strong>${result.success ? 'Réussite' : 'Échec'}</strong></p></div>` : '';
 }
+const FINAL_KNIGHT_STATS = { dexterity: 7, force: 12, damage: 3, armor: 2 };
 function ensureFinalKnights(s) {
   if (!s.flags.finalKnights || !Array.isArray(s.flags.finalKnights.hp))
     s.flags.finalKnights = {hp:[10,10], last:null, contaminated:false, balanceVersion:2, phase:'duel'};
@@ -620,23 +629,23 @@ function finalKnightsRound(s, target, blade) {
     const heroDice=roll2D6();
     const foeDice=roll2D6();
     dice=heroDice;
-    const heroScore=currentDexterity(s)+heroDice[0]+heroDice[1];
-    const foeScore=11+foeDice[0]+foeDice[1];
+    const heroScore=currentDexterity(s)+currentForce(s)+heroDice[0]+heroDice[1];
+    const foeScore=FINAL_KNIGHT_STATS.dexterity+FINAL_KNIGHT_STATS.force+foeDice[0]+foeDice[1];
     if (heroScore>foeScore) {
-      const rawDamage=forceDamageBonus(currentForce(s))+(s.weapon==='none'?0:combatPower(s));
-      const damage=Math.max(1,rawDamage-2);
+      const rawDamage=heroCombatDamage(s);
+      const damage=Math.max(1,rawDamage-FINAL_KNIGHT_STATS.armor);
       fight.hp[target]=Math.max(0,fight.hp[target]-damage);
-      messages.push(`Tu touches le chevalier ${target+1} : ${damage} dégâts après les 2 points absorbés par son armure.`);
+      messages.push(`Tu touches le chevalier ${target+1} : ${damage} dégâts après les ${FINAL_KNIGHT_STATS.armor} points absorbés par son armure.`);
     } else if (heroScore<foeScore) {
-      const hit=applyDamage(s,3);
+      const hit=applyDamage(s,FINAL_KNIGHT_STATS.damage);
       if(hit.hpLost>0&&!fight.contaminated){raiseContamination(s,1);fight.contaminated=true;}
       messages.push(`Le chevalier ${target+1} te frappe : ${hit.absorbed} absorbé, ${hit.hpLost} Vie perdue.`);
     } else messages.push(`Tu pares le coup du chevalier ${target+1}.`);
     const other=1-target;
     if(fight.hp[other]>0&&s.hp>0){
       const otherDice=roll2D6();
-      if(11+otherDice[0]+otherDice[1]>heroScore){
-        const hit=applyDamage(s,3);
+      if(FINAL_KNIGHT_STATS.dexterity+FINAL_KNIGHT_STATS.force+otherDice[0]+otherDice[1]>heroScore){
+        const hit=applyDamage(s,FINAL_KNIGHT_STATS.damage);
         if(hit.hpLost>0&&!fight.contaminated){raiseContamination(s,1);fight.contaminated=true;}
         messages.push(`L’autre chevalier t’attaque : ${hit.absorbed} absorbé, ${hit.hpLost} Vie perdue.`);
       }else messages.push('Tu évites le coup du second chevalier.');
@@ -708,7 +717,7 @@ function equipVeilleurCollar(state) {
   raiseContamination(state, 1); // La poudre entre sous la peau lors de la fixation.
   addItem(state, 'collier_vitalite', 'Collier de vitalité', 'Incrusté dans la peau : +3 Vie maximale et actuelle, −1 Dextérité, +1 contamination à la pose. L’arracher retire les 3 points supplémentaires et cause 1 blessure.');
 }
-const SENTINELS = { maxHp: 4, dexterity: 8, force: 4, name: 'SENTINELLE NOIRE' };
+const SENTINELS = { maxHp: 4, dexterity: 10, force: 6, damage: 1, name: 'SENTINELLE NOIRE' };
 function ensureSentinels(state) {
   if (!state.sentinelFight || !Array.isArray(state.sentinelFight.hp))
     state.sentinelFight = { hp: [4, 4], round: 0, last: null };
@@ -716,7 +725,7 @@ function ensureSentinels(state) {
 }
 function sentinelCardsHtml(state) {
   const f = ensureSentinels(state);
-  const enemyHtml = `<div class="enemy-card"><div class="enemy-card-title">DEUX SENTINELLES NOIRES</div><div class="enemy-card-stats"><div><span>Sentinelle 1</span><strong>${f.hp[0]}/4 Vie</strong></div><div><span>Sentinelle 2</span><strong>${f.hp[1]}/4 Vie</strong></div><div><span>Dextérité</span><strong>8 chacune</strong></div><div><span>Force</span><strong>4 chacune</strong></div><div><span>Dégâts</span><strong>1 chacune</strong></div></div></div>`;
+  const enemyHtml = `<div class="enemy-card"><div class="enemy-card-title">DEUX SENTINELLES NOIRES</div><div class="enemy-card-stats"><div><span>Sentinelle 1</span><strong>${f.hp[0]}/4 Vie</strong></div><div><span>Sentinelle 2</span><strong>${f.hp[1]}/4 Vie</strong></div><div><span>Dextérité</span><strong>${SENTINELS.dexterity} chacune</strong></div><div><span>Force</span><strong>${SENTINELS.force} chacune</strong></div><div><span>Dégâts</span><strong>${SENTINELS.damage} chacune</strong></div></div></div>`;
   return enemyHtml;
 }
 function sentinelRound(state, target, blade) {
@@ -743,16 +752,16 @@ function sentinelRound(state, target, blade) {
     report.push('Tu restes hors de portée. Aucune des sentinelles ne riposte pendant ce lancer.');
   } else {
     heroDice = roll2D6();
-    heroScore = currentDexterity(state) + heroDice[0] + heroDice[1];
+    heroScore = currentDexterity(state) + currentForce(state) + heroDice[0] + heroDice[1];
     targetDice = roll2D6();
-    targetScore = SENTINELS.dexterity + targetDice[0] + targetDice[1];
+    targetScore = SENTINELS.dexterity + SENTINELS.force + targetDice[0] + targetDice[1];
     if (heroScore > targetScore) {
-      const damage = Math.min(f.hp[target], forceDamageBonus(currentForce(state)) + (state.weapon === 'none' ? 0 : combatPower(state)));
+      const damage = Math.min(f.hp[target], heroCombatDamage(state));
       f.hp[target] -= damage;
       report.push(`Tu touches la sentinelle ${target + 1} : ${damage} dégâts.`);
       if (f.hp[target] <= 0 && damage > 0) report.push(`La sentinelle ${target + 1} s’effondre. Elle est morte.`);
     } else if (heroScore < targetScore) {
-      const result = applyDamage(state, 1);
+      const result = applyDamage(state, SENTINELS.damage);
       if (result.hpLost > 0 && !f.contaminated) { raiseContamination(state, 1); f.contaminated = true; }
       report.push(`La sentinelle ${target + 1} te touche : ${result.absorbed} absorbé, ${result.hpLost} Vie perdue.`);
     } else report.push(`Tu pares la sentinelle ${target + 1} : égalité, aucun dégât.`);
@@ -760,10 +769,10 @@ function sentinelRound(state, target, blade) {
     for (let i = 0; i < 2; i++) {
       if (f.hp[i] <= 0 || i === target || state.hp <= 0) continue;
       const enemyDice = roll2D6();
-      const enemyScore = SENTINELS.dexterity + enemyDice[0] + enemyDice[1];
+      const enemyScore = SENTINELS.dexterity + SENTINELS.force + enemyDice[0] + enemyDice[1];
       otherSentinelRolls.push({ index: i, dice: [...enemyDice], score: enemyScore });
       if (enemyScore > heroScore) {
-        const result = applyDamage(state, 1);
+        const result = applyDamage(state, SENTINELS.damage);
         if (result.hpLost > 0 && !f.contaminated) { raiseContamination(state, 1); f.contaminated = true; }
         report.push(`La sentinelle ${i + 1} t'attaque : ${result.absorbed} absorbé, ${result.hpLost} Vie perdue.`);
       } else report.push(`Tu évites l'attaque de la sentinelle ${i + 1}.`);
@@ -803,11 +812,11 @@ function sentinelResultHtml(state) {
   const rolls = r.blade
     ? `<div class="combat-side"><strong>TON LANCER</strong>${diceHtml(r.heroDice)}<p>3 dés : ${heroTotal} · Dextérité : ${r.bladeDexterity}</p><p class="combat-total"><strong>${r.success ? 'Réussite' : 'Échec'}</strong></p></div>`
     : `<div class="combat-roll-grid">
-         <div class="combat-side"><strong>TOI</strong>${diceHtml(r.heroDice)}<p>Dextérité ${r.heroScore - heroTotal} + dés ${heroTotal}</p><p class="combat-total">Attaque : <strong>${r.heroScore}</strong></p></div>
+         <div class="combat-side"><strong>TOI</strong>${diceHtml(r.heroDice)}<p>Dextérité + Force ${r.heroScore - heroTotal} + dés ${heroTotal}</p><p class="combat-total">Attaque : <strong>${r.heroScore}</strong></p></div>
          <div class="combat-versus">VS</div>
-         <div class="combat-side"><strong>SENTINELLE ${r.target + 1}</strong>${diceHtml(r.targetDice)}${Array.isArray(r.targetDice) ? `<p>Dextérité ${SENTINELS.dexterity} + dés ${r.targetDice.reduce((a,b)=>a+b,0)}</p><p class="combat-total">Attaque : <strong>${r.targetScore}</strong></p>` : '<p>Jet adverse non conservé dans cette ancienne sauvegarde.</p>'}</div>
+         <div class="combat-side"><strong>SENTINELLE ${r.target + 1}</strong>${diceHtml(r.targetDice)}${Array.isArray(r.targetDice) ? `<p>Dextérité ${SENTINELS.dexterity} + Force ${SENTINELS.force} + dés ${r.targetDice.reduce((a,b)=>a+b,0)}</p><p class="combat-total">Attaque : <strong>${r.targetScore}</strong></p>` : '<p>Jet adverse non conservé dans cette ancienne sauvegarde.</p>'}</div>
        </div>
-       ${(r.otherSentinelRolls || []).map(a => `<div class="combat-secondary-roll"><strong>Attaque de la sentinelle ${a.index + 1}</strong>${diceHtml(a.dice)}<p>Dextérité ${SENTINELS.dexterity} + dés ${a.dice.reduce((x,y)=>x+y,0)} · Attaque : <strong>${a.score}</strong> contre ${r.heroScore}</p></div>`).join('')}`;
+       ${(r.otherSentinelRolls || []).map(a => `<div class="combat-secondary-roll"><strong>Attaque de la sentinelle ${a.index + 1}</strong>${diceHtml(a.dice)}<p>Dextérité ${SENTINELS.dexterity} + Force ${SENTINELS.force} + dés ${a.dice.reduce((x,y)=>x+y,0)} · Attaque : <strong>${a.score}</strong> contre ${r.heroScore}</p></div>`).join('')}`;
   return `<div class="combat-roll-result"><div class="combat-roll-title">${r.blade ? 'Lame de jet' : `Échange n° ${f.round}`}</div>${rolls}<div class="combat-outcome">${r.report.map(line=>`<p>${line}</p>`).join('')}</div><div class="combat-life-line">Ta Vie : <strong>${state.hp}/${state.maxHp}</strong> · Terre noire : <strong>${contaminationLevel(state)}/13</strong></div></div>`;
 }
 
@@ -932,15 +941,15 @@ const STORY = {
           <div class="hero-info-title">Tes caractéristiques</div>
           <p><strong>Vie :</strong> indique la santé du personnage. Lorsqu’elle atteint zéro, c’est la fin de votre aventure.</p>
           <p><strong>Protection :</strong> provient de certaines pièces d’équipement. Elle absorbe les dégâts avant la Vie et diminue lorsqu’elle encaisse un choc.</p>
-          <p><strong>Force :</strong> représente sa puissance physique. Elle contribue aux dégâts infligés et permet de forcer, retenir ou briser ce qui barre la route.</p>
+          <p><strong>Force :</strong> représente sa puissance physique. Elle s’ajoute à la Dextérité pour remporter les échanges, et permet aussi de forcer, retenir ou briser ce qui barre la route. Elle n’augmente pas directement les dégâts.</p>
           ${state.flags.physicianNotesRead ? "<p><strong>Terre noire :</strong> 0–3 : appel puissant, 4–8 : équilibre précaire, 9–12 : transformation imminente, 13 : transformation définitive.</p>" : ""}
           <p><strong>Dextérité :</strong> représente son aisance et ses réflexes. Elle permet de prendre l’avantage au combat, mais aussi d’éviter pièges, chutes et autres dangers. Elle peut être affectée par ce qui est porté, par exemple une arme lourde.</p>
-          <p><strong>Puissance de l’arme :</strong> valeur propre à l’arme équipée. Elle s’ajoute au bonus de Force lorsque le personnage remporte un échange.</p>
+          <p><strong>Puissance de l’arme :</strong> valeur propre à l’arme équipée. Elle augmente les dégâts infligés lorsque tu remportes un échange.</p>
         </div>
 
         <div class="combat-rules-card">
           <div class="combat-rules-title">Règles des combats</div>
-          <p><strong>Combats :</strong> personnage et adversaire lancent chacun 2 dés et ajoutent leur Dextérité.<br>Le meilleur score remporte l’échange.<br>En cas d’égalité, personne n’est blessé.<br>Le gagnant inflige son <strong>bonus de Force + la Puissance de son arme</strong> s’il en possède une.<br><span class="combat-detail">Bonus de Force = Force ÷ 4, arrondi à l’inférieur, avec un minimum de 1.</span></p>
+          <p><strong>Combats :</strong> personnage et adversaire lancent chacun 2 dés et ajoutent leur Dextérité et leur Force.<br>Le meilleur score remporte l’échange. En cas d’égalité, personne n’est blessé.<br>La Force aide à remporter l’échange, mais ne modifie pas les dégâts. Tes dégâts sont de <strong>2 + la Puissance de ton arme</strong> si tu en possèdes une. Les dégâts adverses sont indiqués sur leur fiche.</p>
         </div>
 
         <div class="hero-weapon">Au départ, tu ne portes encore aucune arme.</div>
@@ -5806,7 +5815,7 @@ const STORY = {
       const revival=f.phase==='revived'
         ? '<p>Tu avais abattu le premier. Dès que le second a été blessé, le premier s’est relevé derrière toi. Son armure craque autour d’un corps qui refuse de rester à terre. Si tu continues à frapper, combien de fois recommencera-t-il ?</p>'
         : '<p>Les deux anciens chevaliers te barrent le passage. Tu dois en viser un tandis que l’autre cherche une ouverture pour frapper. Leurs armures arrêtent une partie de tes coups, mais tes lames de jet peuvent atteindre les jointures.</p>';
-      return `${revival}<div class="enemy-card"><div class="enemy-card-title">ANCIENS CHEVALIERS</div><div class="enemy-card-stats"><div>Chevalier 1 <strong>${f.hp[0]}/10 Vie</strong></div><div>Chevalier 2 <strong>${f.hp[1]}/10 Vie</strong></div><div>Dextérité <strong>11 chacun</strong></div><div>Armure <strong>2 par coup</strong></div><div>Dégâts <strong>3 chacun</strong></div></div></div>${f.last?`<div class="combat-roll-result"><div class="combat-dice">${f.last.dice.map(renderDie).join('')}</div>${f.last.messages.map(m=>`<p>${m}</p>`).join('')}</div>`:''}${f.phase==='revived'?'<p>La sortie est de l’autre côté de la salle. Derrière toi, tu peux encore retrouver l’étroit passage par lequel tu es entré.</p>':''}`;
+      return `${revival}<div class="enemy-card"><div class="enemy-card-title">ANCIENS CHEVALIERS</div><div class="enemy-card-stats"><div>Chevalier 1 <strong>${f.hp[0]}/10 Vie</strong></div><div>Chevalier 2 <strong>${f.hp[1]}/10 Vie</strong></div><div>Dextérité <strong>${FINAL_KNIGHT_STATS.dexterity} chacun</strong></div><div>Force <strong>${FINAL_KNIGHT_STATS.force} chacun</strong></div><div>Armure <strong>${FINAL_KNIGHT_STATS.armor} par coup</strong></div><div>Dégâts <strong>${FINAL_KNIGHT_STATS.damage} chacun</strong></div></div></div>${f.last?`<div class="combat-roll-result"><div class="combat-dice">${f.last.dice.map(renderDie).join('')}</div>${f.last.messages.map(m=>`<p>${m}</p>`).join('')}</div>`:''}${f.phase==='revived'?'<p>La sortie est de l’autre côté de la salle. Derrière toi, tu peux encore retrouver l’étroit passage par lequel tu es entré.</p>':''}`;
     },
     choices:s=>{
       if(s.hp<=0)return terminalChoices();
@@ -7121,7 +7130,7 @@ const STORY = {
     const force = currentForce(state);
     const dexterity = currentDexterity(state);
     const weaponPower = state.weapon === 'none' ? 0 : combatPower(state);
-    const damage = forceDamageBonus(force) + weaponPower;
+    const damage = heroCombatDamage(state);
     const armor = [];
     ensureProtectionState(state);
     if (hasItem(state, 'casque_cabosse')) {
