@@ -177,6 +177,9 @@ function restartFromCheckpoint() {
     if (!saved) return restartGame();
     const journalBackup = state.journal || '';
     const previous = JSON.parse(saved);
+    if (typeof BOOK.normalizeCheckpoint === 'function' && BOOK.normalizeCheckpoint(previous)) {
+      localStorage.setItem(CHECKPOINT_KEY, JSON.stringify(previous));
+    }
     if (typeof BOOK.migrateState === 'function' && previous.pageMapVersion !== (BOOK.pageMapVersion || 58)) {
       try {
         if (!localStorage.getItem(`${CHECKPOINT_KEY}.backup-v68`)) localStorage.setItem(`${CHECKPOINT_KEY}.backup-v68`, saved);
@@ -642,7 +645,8 @@ function jumpToPageForTest(nodeId) {
     const checkpoint = (BOOK.checkpoints || []).find(cp => cp.node === testCheckpointNode);
     if (checkpoint) setCheckpoint({
       ...state, node: testCheckpointNode,
-      flags: { ...state.flags, finalRopeClimbed:false, finalKnights:null,
+      flags: { ...state.flags, finalMazeTurns:0, finalMazeFound:false, finalMazeLast:null,
+        finalRopeClimbed:false, finalKnights:null,
         finalPassageDex:null, finalPassageRecovery:null, finalPassageBruise:null,
         finalKnightsEscape:null }
     }, checkpoint.label);
