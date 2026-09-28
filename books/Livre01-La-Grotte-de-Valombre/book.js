@@ -5727,7 +5727,8 @@ const STORY = {
   },
   c223: {
     number:'PAGE 223',title:'La faille',
-    text:s=>`<p>La sortie du dédale donne sur une faille gigantesque. Tu n’en vois ni le fond ni la paroi opposée. Un courant d’air remonte de l’obscurité.</p>
+    text:s=>`<p>La sortie du dédale donne sur une faille gigantesque. Tu n’en vois pas le fond. Un courant d’air remonte de l’obscurité.</p>
+      <p>De l’autre côté, la paroi se perd dans une légère brume bleutée. Une grande ouverture semble mener à une autre pièce. Elle ne paraît pas si loin, mais même avec tout l’élan du monde, aucun saut ne pourrait t’y conduire. Tu dois trouver un autre moyen de traverser.</p>
       <p>Une petite échelle de corde, nouée à un anneau de fer, descend dans le vide. Sur la gauche, des prises irrégulières courent le long de la paroi, directement au-dessus du gouffre. Sur la droite, une fissure juste assez large pour t’y glisser s’enfonce dans la roche.</p>
       <p>Quelque part en contrebas, trois coups sourds résonnent. Le silence revient avant que tu puisses savoir d’où ils venaient.</p>
       `,
