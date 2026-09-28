@@ -578,7 +578,7 @@ function finalMazeRollHtml(s) {
   return `<div class="dice-result"><p class="roll-number">Passage ${r.attempt} · ${r.dice.length} dé${r.dice.length > 1 ? 's' : ''}</p><div class="dice-faces">${r.dice.map(renderDie).join('')}</div><p>Total : <strong>${r.total}</strong> · Seuil : <strong>${r.threshold}</strong></p><p><strong>${r.success ? 'Tu découvres la sortie.' : 'Le chemin se replie sur lui-même.'}</strong></p>${r.hpLoss ? '<p>La marche forcée rouvre tes blessures. <strong>−1 Vie.</strong></p>' : ''}</div>`;
 }
 function finalPassageDex(s) {
-  const success = roll3D6(s, 'Dextérité — traversée de la faille', currentDexterity(s));
+  const success = roll3D6(s, 'Dextérité — traversée de la faille', Math.min(4, currentDexterity(s)));
   s.flags.finalPassageDex = {success, dice:[...s.lastDice], total:s.lastTotal, threshold:s.lastStat};
   if (!success) s.flags.finalPassageBruise = applyDamage(s, 2);
 }
