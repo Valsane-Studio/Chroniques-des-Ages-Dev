@@ -7136,8 +7136,10 @@ const STORY = {
     inventory,
     checkpoints: [
       { node: 'c20', label: 'Entrée de la grotte', onlyIfNone: true },
-      { node: 'c201', label: 'La caverne des condamnés' }
+      { node: 'c201', label: 'La caverne des condamnés' },
+      { node: 'c223', label: 'La faille' }
     ],
+    testCheckpointForNode: id => /^c(?:22[3-9]|23[01])$/.test(id) ? 'c223' : null,
     legacyStorageKeys: ['ldveh.book.ecuyer-01.save.v1', 'ldveh.book.ecuyer-01-valombre.save.v1', 'valombre_save_v12_3d6_stats18'],
     legacyCheckpointKeys: ['ldveh.book.ecuyer-01.checkpoint.v1', 'ldveh.book.ecuyer-01-valombre.checkpoint.v1', 'valombre_checkpoint_v12_3d6_stats18'],
     exportSeriesMemory(state) {
