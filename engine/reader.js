@@ -631,10 +631,19 @@ function renderPageNavigation() {
 function jumpToPageForTest(nodeId) {
   if (!STORY[nodeId] || !Number.isInteger(PAGE_BY_NODE[nodeId])) return;
   // Outil de test : on change uniquement la page courante.
-  // Aucun effet de choix/onEnter/checkpoint antérieur n'est déclenché automatiquement.
+  // Le passage choisi reçoit son point de reprise sans simuler les anciens choix.
   state.pendingDice = null;
   state.node = nodeId;
   state.history.push(nodeId);
+  const testCheckpointNode = BOOK.testCheckpointForNode?.(nodeId);
+  if (testCheckpointNode && state.hp > 0) {
+    const checkpoint = (BOOK.checkpoints || []).find(cp => cp.node === testCheckpointNode);
+    if (checkpoint) setCheckpoint({
+      ...state, node: testCheckpointNode,
+      flags: { ...state.flags, finalRopeClimbed:false, finalKnights:null,
+        finalPassageDex:null, finalPassageRecovery:null, finalPassageBruise:null }
+    }, checkpoint.label);
+  } else if (state.hp > 0) maybeAutoCheckpoint(nodeId);
   saveState();
   closeDrawer();
   render();
