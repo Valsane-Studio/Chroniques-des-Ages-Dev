@@ -230,7 +230,7 @@ function fightRound(state, key, enemy) {
     outcome = 'enemy';
     damage = enemyDamage;
     const resolution = applyDamage(state, damage);
-    if (resolution.hpLost > 0 && !combat.contaminated && !enemy.noContamination) { raiseContamination(state, 1); combat.contaminated = true; }
+    if (resolution.hpLost > 0 && !combat.contaminated && !enemy.noContamination) { raiseContamination(state, 2); combat.contaminated = true; }
     protectionAbsorbed = resolution.absorbed;
     hpLost = resolution.hpLost;
     protectionBefore = resolution.protectionBefore;
@@ -638,7 +638,7 @@ function finalKnightsRound(s, target, blade) {
       messages.push(`Tu touches le chevalier ${target+1} : ${damage} dégâts après les ${FINAL_KNIGHT_STATS.armor} points absorbés par son armure.`);
     } else if (heroScore<foeScore) {
       const hit=applyDamage(s,FINAL_KNIGHT_STATS.damage);
-      if(hit.hpLost>0&&!fight.contaminated){raiseContamination(s,1);fight.contaminated=true;}
+      if(hit.hpLost>0&&!fight.contaminated){raiseContamination(s,2);fight.contaminated=true;}
       messages.push(`Le chevalier ${target+1} te frappe : ${hit.absorbed} absorbé, ${hit.hpLost} Vie perdue.`);
     } else messages.push(`Tu pares le coup du chevalier ${target+1}.`);
     const other=1-target;
@@ -646,7 +646,7 @@ function finalKnightsRound(s, target, blade) {
       const otherDice=roll2D6();
       if(FINAL_KNIGHT_STATS.dexterity+FINAL_KNIGHT_STATS.force+otherDice[0]+otherDice[1]>heroScore){
         const hit=applyDamage(s,FINAL_KNIGHT_STATS.damage);
-        if(hit.hpLost>0&&!fight.contaminated){raiseContamination(s,1);fight.contaminated=true;}
+        if(hit.hpLost>0&&!fight.contaminated){raiseContamination(s,2);fight.contaminated=true;}
         messages.push(`L’autre chevalier t’attaque : ${hit.absorbed} absorbé, ${hit.hpLost} Vie perdue.`);
       }else messages.push('Tu évites le coup du second chevalier.');
     }
@@ -767,7 +767,7 @@ function sentinelRound(state, target, blade) {
       if (f.hp[target] <= 0 && damage > 0) report.push(`La sentinelle ${target + 1} s’effondre. Elle est morte.`);
     } else if (heroScore < targetScore) {
       const result = applyDamage(state, SENTINELS.damage);
-      if (result.hpLost > 0 && !f.contaminated) { raiseContamination(state, 1); f.contaminated = true; }
+      if (result.hpLost > 0 && !f.contaminated) { raiseContamination(state, 2); f.contaminated = true; }
       report.push(`La sentinelle ${target + 1} te touche : ${result.absorbed} absorbé, ${result.hpLost} Vie perdue.`);
     } else report.push(`Tu pares la sentinelle ${target + 1} : égalité, aucun dégât.`);
     // Normal melee: the second sentinel gets an independent attack.
@@ -778,7 +778,7 @@ function sentinelRound(state, target, blade) {
       otherSentinelRolls.push({ index: i, dice: [...enemyDice], score: enemyScore });
       if (enemyScore > heroScore) {
         const result = applyDamage(state, SENTINELS.damage);
-        if (result.hpLost > 0 && !f.contaminated) { raiseContamination(state, 1); f.contaminated = true; }
+        if (result.hpLost > 0 && !f.contaminated) { raiseContamination(state, 2); f.contaminated = true; }
         report.push(`La sentinelle ${i + 1} t'attaque : ${result.absorbed} absorbé, ${result.hpLost} Vie perdue.`);
       } else report.push(`Tu évites l'attaque de la sentinelle ${i + 1}.`);
     }
