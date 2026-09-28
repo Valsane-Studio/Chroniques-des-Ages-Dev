@@ -7227,13 +7227,19 @@ const STORY = {
     pageByNode: PAGE_BY_NODE,
     navigationTitles: PAGE_NAV_TITLES,
     padPage,
-    imageBaseForPage: n => (n === 178 || n === 179 || n === 202 || n === 233 || n === 234)
-      ? 'La-Grotte-de-Valombre-Combat'
+    imageBaseForPage: n => (n === 233 || n === 234)
+      ? 'La-Grotte-de-Valombre-combat'
+      : (n === 178 || n === 179 || n === 202)
+        ? 'La-Grotte-de-Valombre-Combat'
       : `La-Grotte-de-Valombre-${padPage(n)}`,
     // Les pages 178, 179, 202, 233 et 234 réutilisent l’illustration de combat.
     // Toutes les autres pages continuent à utiliser exclusivement leur propre numéro.
     imageCandidatesForPage: (n, state) => {
-      if (n === 178 || n === 179 || n === 202 || n === 233 || n === 234) return [
+      if (n === 233 || n === 234) return [
+        'La-Grotte-de-Valombre-combat',
+        'pages/La-Grotte-de-Valombre-combat'
+      ];
+      if (n === 178 || n === 179 || n === 202) return [
         'La-Grotte-de-Valombre-Combat',
         'pages/La-Grotte-de-Valombre-Combat'
       ];
