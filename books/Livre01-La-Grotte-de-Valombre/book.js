@@ -5695,7 +5695,7 @@ const STORY = {
   c223: {
     number:'PAGE 223',title:'La faille',
     text:s=>`<p>La sortie du dédale donne sur une faille gigantesque. Tu n’en vois ni le fond ni la paroi opposée. Un courant d’air remonte de l’obscurité.</p>
-      <p>Une petite échelle de corde, nouée à un anneau de fer, descend dans le vide. Sur la gauche, une fissure dans la paroi offre quelques prises pour traverser. Sur la droite, une ouverture juste assez large pour t’y glisser s’enfonce dans la roche.</p>
+      <p>Une petite échelle de corde, nouée à un anneau de fer, descend dans le vide. Sur la gauche, des prises irrégulières courent le long de la paroi, directement au-dessus du gouffre. Sur la droite, une fissure juste assez large pour t’y glisser s’enfonce dans la roche.</p>
       <p>Quelque part en contrebas, trois coups sourds résonnent. Le silence revient avant que tu puisses savoir d’où ils venaient.</p>
       ${s.flags.finalRopeClimbed?'<p>Tu as remonté l’échelle. Elle ne t’apprendra rien de plus.</p>':''}`,
     choices:s=>[
@@ -5719,7 +5719,7 @@ const STORY = {
   },
   c226: {
     number:'PAGE 226',title:'Les prises dans la roche',
-    text:`<p>Tu te plaques contre la paroi et cherches une première prise. La fissure se resserre, s’élargit, puis se resserre encore. Tes pieds ne trouvent parfois qu’une saillie à peine visible. Tu ignores si cette voie mène réellement de l’autre côté.</p><p>À mi-chemin, la roche devient lisse. Il faut poursuivre au-dessus du vide.</p>`,
+    text:`<p>Tu te plaques contre la paroi et cherches une première prise. Sous tes pieds, il n’y a que le vide. Tu avances de côté, les doigts accrochés à la roche, en déplaçant ton poids d’une aspérité à la suivante.</p><p>Les prises deviennent plus rares. Par endroits, tes pieds ne trouvent qu’une saillie à peine visible. Tu n’oses pas regarder en bas. À mi-chemin, une portion presque lisse te barre la route. Pour atteindre la prise suivante, il faut lâcher une main et te déporter au-dessus du gouffre.</p>`,
     choices:[{label:'Jeter les dés — Dextérité',to:'c227',effect:finalPassageDex}]
   },
   c227: {
