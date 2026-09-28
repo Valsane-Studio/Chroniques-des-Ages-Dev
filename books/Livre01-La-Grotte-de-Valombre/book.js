@@ -5857,7 +5857,7 @@ const STORY = {
     text:s=>`${finalPassageDiceHtml(s.flags.finalKnightsEscape)}${s.flags.finalKnightsEscape?.success
       ? '<p>Tu attends que les deux épées se lèvent, puis tu te glisses entre les chevaliers. L’un d’eux tend le bras, trop tard. Tu franchis l’ouverture de l’autre côté de la salle sans te retourner.</p>'
       : `<p>Tu t’élances vers la sortie. Un chevalier te rattrape et son épée te frappe de plein fouet. Tu perds ${s.flags.finalKnightsEscape?.hpLost||0} Vie : il ne t’en reste que ${s.hp}. Tu parviens pourtant à te dégager et te traînes jusqu’à l’ouverture, hors de leur portée.</p>`}`,
-    choices:[{label:'Rejoindre la survivante',to:'c210'}]
+    choices:[{label:'Poursuivre dans la salle suivante',to:'c210'}]
   },
   c233: {
     number:'PAGE 235',title:'Le liquide blanc',
