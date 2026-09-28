@@ -7,22 +7,22 @@
 const ENEMIES = {
   shadowMass: {
     name: 'MASSE DANS L’OMBRE',
-    maxHp: 6,
-    force: 8,
-    dexterity: 5,
+    maxHp: 8,
+    force: 10,
+    dexterity: 9,
     damage: 2
   },
   rochebrumeMissing: {
     name: 'DISPARU DE ROCHEBRUME',
-    maxHp: 3,
-    force: 6,
-    dexterity: 10,
+    maxHp: 6,
+    force: 7,
+    dexterity: 13,
     damage: 1
   },
   bridgeWalker: {
     name: 'MARCHEUR SOUS LE PONT',
-    maxHp: 5,
-    force: 8,
+    maxHp: 8,
+    force: 11,
     dexterity: 10,
     damage: 2
   },
@@ -717,15 +717,20 @@ function equipVeilleurCollar(state) {
   raiseContamination(state, 1); // La poudre entre sous la peau lors de la fixation.
   addItem(state, 'collier_vitalite', 'Collier de vitalité', 'Incrusté dans la peau : +3 Vie maximale et actuelle, −1 Dextérité, +1 contamination à la pose. L’arracher retire les 3 points supplémentaires et cause 1 blessure.');
 }
-const SENTINELS = { maxHp: 4, dexterity: 10, force: 6, damage: 1, name: 'SENTINELLE NOIRE' };
+const SENTINELS = { maxHp: 6, dexterity: 12, force: 9, damage: 1, name: 'SENTINELLE NOIRE' };
 function ensureSentinels(state) {
   if (!state.sentinelFight || !Array.isArray(state.sentinelFight.hp))
-    state.sentinelFight = { hp: [4, 4], round: 0, last: null };
+    state.sentinelFight = { hp: [SENTINELS.maxHp, SENTINELS.maxHp], round: 0, last: null, balanceVersion: 3 };
+  if (state.sentinelFight.balanceVersion !== 3) {
+    state.sentinelFight.hp = state.sentinelFight.hp.map(hp => hp > 0 ? Math.min(SENTINELS.maxHp, hp + 2) : 0);
+    state.sentinelFight.last = null;
+    state.sentinelFight.balanceVersion = 3;
+  }
   return state.sentinelFight;
 }
 function sentinelCardsHtml(state) {
   const f = ensureSentinels(state);
-  const enemyHtml = `<div class="enemy-card"><div class="enemy-card-title">DEUX SENTINELLES NOIRES</div><div class="enemy-card-stats"><div><span>Sentinelle 1</span><strong>${f.hp[0]}/4 Vie</strong></div><div><span>Sentinelle 2</span><strong>${f.hp[1]}/4 Vie</strong></div><div><span>Dextérité</span><strong>${SENTINELS.dexterity} chacune</strong></div><div><span>Force</span><strong>${SENTINELS.force} chacune</strong></div><div><span>Dégâts</span><strong>${SENTINELS.damage} chacune</strong></div></div></div>`;
+  const enemyHtml = `<div class="enemy-card"><div class="enemy-card-title">DEUX SENTINELLES NOIRES</div><div class="enemy-card-stats"><div><span>Sentinelle 1</span><strong>${f.hp[0]}/${SENTINELS.maxHp} Vie</strong></div><div><span>Sentinelle 2</span><strong>${f.hp[1]}/${SENTINELS.maxHp} Vie</strong></div><div><span>Dextérité</span><strong>${SENTINELS.dexterity} chacune</strong></div><div><span>Force</span><strong>${SENTINELS.force} chacune</strong></div><div><span>Dégâts</span><strong>${SENTINELS.damage} chacune</strong></div></div></div>`;
   return enemyHtml;
 }
 function sentinelRound(state, target, blade) {
