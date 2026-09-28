@@ -5740,7 +5740,7 @@ const STORY = {
   },
   c224: {
     number:'PAGE 224',title:'Au bout de l’échelle',
-    text:`<p>Tu descends l’échelle. La roche disparaît derrière la brume et tes bras se raidissent. Au dernier barreau, tu n’as toujours pas atteint le fond. La brume est presque assez proche pour être touchée du pied. Tu ne distingues rien sous elle.</p><p>La corde s’arrête ici.</p>`,
+    text:`<p>Tu descends l’échelle. La roche disparaît derrière la brume et tes bras se raidissent. Au dernier barreau, tu n’as toujours pas atteint le fond. La brume est presque assez proche pour être touchée du pied. Tu ne distingues rien sous elle.</p><p>L’échelle s’arrête ici.</p>`,
     choices:[
       {label:'Sauter dans la brume, sans voir le fond',to:'c225',effect:s=>{s.hp=0;}},
       {label:'Remonter l’échelle',to:'c223'}
