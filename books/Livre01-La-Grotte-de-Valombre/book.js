@@ -591,8 +591,13 @@ function finalPassageDiceHtml(result) {
 }
 function ensureFinalKnights(s) {
   if (!s.flags.finalKnights || !Array.isArray(s.flags.finalKnights.hp))
-    s.flags.finalKnights = {hp:[6,6], last:null, contaminated:false};
-  return s.flags.finalKnights;
+    s.flags.finalKnights = {hp:[10,10], last:null, contaminated:false, balanceVersion:2};
+  const fight=s.flags.finalKnights;
+  if (fight.balanceVersion !== 2) {
+    fight.hp=fight.hp.map(hp=>hp>0?Math.min(10,hp+4):0);
+    fight.balanceVersion=2;
+  }
+  return fight;
 }
 function finalKnightsRound(s, target, blade) {
   const fight = ensureFinalKnights(s);
@@ -604,19 +609,20 @@ function finalKnightsRound(s, target, blade) {
     syncThrowingBlades(s);
     const hit=roll3D6(s, 'Dextérité — lame de jet', currentDexterity(s));
     dice=[...s.lastDice];
-    fight.hp[target]=Math.max(0,fight.hp[target]-(hit?3:0));
-    messages.push(hit?`Ta lame atteint le chevalier ${target+1} : 3 dégâts.`:`Ta lame manque le chevalier ${target+1}.`);
+    fight.hp[target]=Math.max(0,fight.hp[target]-(hit?5:0));
+    messages.push(hit?`Ta lame atteint le chevalier ${target+1} sous l’armure : 5 dégâts.`:`Ta lame manque le chevalier ${target+1}.`);
     messages.push('Tu restes hors de portée. Aucun des deux ne riposte pendant ce lancer.');
   } else {
     const heroDice=roll2D6();
     const foeDice=roll2D6();
     dice=heroDice;
     const heroScore=currentDexterity(s)+heroDice[0]+heroDice[1];
-    const foeScore=8+foeDice[0]+foeDice[1];
+    const foeScore=11+foeDice[0]+foeDice[1];
     if (heroScore>foeScore) {
-      const damage=forceDamageBonus(currentForce(s))+(s.weapon==='none'?0:combatPower(s));
+      const rawDamage=forceDamageBonus(currentForce(s))+(s.weapon==='none'?0:combatPower(s));
+      const damage=Math.max(1,rawDamage-2);
       fight.hp[target]=Math.max(0,fight.hp[target]-damage);
-      messages.push(`Tu touches le chevalier ${target+1} : ${damage} dégâts.`);
+      messages.push(`Tu touches le chevalier ${target+1} : ${damage} dégâts après les 2 points absorbés par son armure.`);
     } else if (heroScore<foeScore) {
       const hit=applyDamage(s,3);
       if(hit.hpLost>0&&!fight.contaminated){raiseContamination(s,1);fight.contaminated=true;}
@@ -625,7 +631,7 @@ function finalKnightsRound(s, target, blade) {
     const other=1-target;
     if(fight.hp[other]>0&&s.hp>0){
       const otherDice=roll2D6();
-      if(8+otherDice[0]+otherDice[1]>heroScore){
+      if(11+otherDice[0]+otherDice[1]>heroScore){
         const hit=applyDamage(s,3);
         if(hit.hpLost>0&&!fight.contaminated){raiseContamination(s,1);fight.contaminated=true;}
         messages.push(`L’autre chevalier t’attaque : ${hit.absorbed} absorbé, ${hit.hpLost} Vie perdue.`);
@@ -5752,7 +5758,7 @@ const STORY = {
     number:'PAGE 231',title:'Les anciens chevaliers',
     text:s=>{
       const f=ensureFinalKnights(s);
-      return `<p>Les deux anciens chevaliers te barrent le passage. Tu dois en viser un tandis que l’autre cherche une ouverture pour frapper.</p><div class="enemy-card"><div class="enemy-card-title">ANCIENS CHEVALIERS</div><div class="enemy-card-stats"><div>Chevalier 1 <strong>${f.hp[0]}/6 Vie</strong></div><div>Chevalier 2 <strong>${f.hp[1]}/6 Vie</strong></div><div>Dextérité <strong>8 chacun</strong></div><div>Dégâts <strong>3 chacun</strong></div></div></div>${f.last?`<div class="combat-roll-result"><div class="combat-dice">${f.last.dice.map(renderDie).join('')}</div>${f.last.messages.map(m=>`<p>${m}</p>`).join('')}</div>`:''}${f.hp.every(h=>h<=0)?'<p>Les épées tombent sur la pierre. Au-delà de la salle, une ouverture conduit de l’autre côté de la faille.</p>':''}`;
+      return `<p>Les deux anciens chevaliers te barrent le passage. Tu dois en viser un tandis que l’autre cherche une ouverture pour frapper. Leurs armures arrêtent une partie de tes coups, mais tes lames de jet peuvent atteindre les jointures.</p><div class="enemy-card"><div class="enemy-card-title">ANCIENS CHEVALIERS</div><div class="enemy-card-stats"><div>Chevalier 1 <strong>${f.hp[0]}/10 Vie</strong></div><div>Chevalier 2 <strong>${f.hp[1]}/10 Vie</strong></div><div>Dextérité <strong>11 chacun</strong></div><div>Armure <strong>2 par coup</strong></div><div>Dégâts <strong>3 chacun</strong></div></div></div>${f.last?`<div class="combat-roll-result"><div class="combat-dice">${f.last.dice.map(renderDie).join('')}</div>${f.last.messages.map(m=>`<p>${m}</p>`).join('')}</div>`:''}${f.hp.every(h=>h<=0)?'<p>Les épées tombent sur la pierre. Au-delà de la salle, une ouverture conduit de l’autre côté de la faille.</p>':''}`;
     },
     choices:s=>{
       if(s.hp<=0)return terminalChoices();
