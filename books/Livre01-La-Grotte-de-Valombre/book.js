@@ -5753,10 +5753,18 @@ const STORY = {
   c226: {
     number:'PAGE 226',title:'Les prises dans la roche',
     text:`<p>Tu te plaques contre la paroi et cherches une première prise. Sous tes pieds, il n’y a que le vide. Tu avances de côté, les doigts accrochés à la roche, en déplaçant ton poids d’une aspérité à la suivante.</p><p>Les prises deviennent plus rares. Par endroits, tes pieds ne trouvent qu’une saillie à peine visible. Tu n’oses pas regarder en bas. À mi-chemin, une portion presque lisse te barre la route. Pour atteindre la prise suivante, il faut lâcher une main et te déporter au-dessus du gouffre.</p>`,
-    choices:[{label:'Jeter les dés — Dextérité',to:'c227',effect:finalPassageDex}]
+    choices:[
+      {label:'Faire demi-tour',to:'c223'},
+      {label:'Tenter d’avancer',to:'c227'}
+    ]
   },
   c227: {
     number:'PAGE 227',title:'Au-dessus du gouffre',
+    text:`<p>Tu tends la main vers la prise suivante. Pour l’atteindre, tu dois quitter un instant l’appui qui te maintient contre la paroi. Sous tes pieds, le gouffre s’ouvre dans la brume.</p><p>Il faut éprouver ton équilibre et ta Dextérité.</p>`,
+    choices:[{label:'Jeter les dés — Dextérité',to:'c235',effect:finalPassageDex}]
+  },
+  c235: {
+    number:'PAGE 235',title:'La prise suivante',
     text:s=>s.flags.finalPassageDex?.success
       ? `${finalPassageDiceHtml(s.flags.finalPassageDex)}<p>Tu retrouves une prise de l’autre côté du passage lisse. La roche te permet enfin de poursuivre.</p>`
       : `${finalPassageDiceHtml(s.flags.finalPassageDex)}<p>Ton pied glisse. Tu bascules, mais tes doigts agrippent une aspérité. Le choc contre la paroi te coûte ${s.flags.finalPassageBruise?.hpLost||0} Vie${s.flags.finalPassageBruise?.absorbed?` (${s.flags.finalPassageBruise.absorbed} absorbé${s.flags.finalPassageBruise.absorbed>1?'s':''} par ta protection)`:''}. Tu restes suspendu au-dessus du gouffre.</p><p>Il te reste une chance de te hisser sur la prise.</p>`,
@@ -6075,6 +6083,7 @@ const STORY = {
     'c225': 'La chute',
     'c226': 'Les prises dans la roche',
     'c227': 'Au-dessus du gouffre',
+    'c235': 'La prise suivante',
     'c228': 'L’autre côté de la faille',
     'c229': 'La dernière prise',
     'c230': 'La longue salle',
@@ -6262,7 +6271,7 @@ const STORY = {
 };
 
   // L'ordre d'affichage peut changer ; les identifiants cN restent stables pour les liens et les sauvegardes.
-  const PAGE_ORDER = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15', 'c16', 'c17', 'c18', 'c19', 'c20', 'c21', 'c22', 'c23', 'c24', 'c25', 'c26', 'c27', 'c28', 'c29', 'c30', 'c31', 'c32', 'c33', 'c34', 'c35', 'c36', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c43', 'c44', 'c45', 'c46', 'c47', 'c48', 'c49', 'c50', 'c51', 'c52', 'c53', 'c54', 'c55', 'c56', 'c57', 'c58', 'c59', 'c60', 'c61', 'c62', 'c63', 'c64', 'c65', 'c66', 'c67', 'c68', 'c69', 'c70', 'c71', 'c72', 'c73', 'c74', 'c75', 'c76', 'c77', 'c78', 'c79', 'c80', 'c81', 'c82', 'c83', 'c84', 'c85', 'c86', 'c87', 'c88', 'c89', 'c90', 'c91', 'c92', 'c93', 'c94', 'c95', 'c96', 'c97', 'c98', 'c99', 'c100', 'c101', 'c102', 'c103', 'c138', 'c151', 'c196', 'c197', 'c198', 'c199', 'c200', 'c104', 'c105', 'c106', 'c107', 'c139', 'c184', 'c185', 'c186', 'c187', 'c188', 'c189', 'c108', 'c190', 'c140', 'c191', 'c192', 'c193', 'c194', 'c195', 'c109', 'c110', 'c111', 'c112', 'c113', 'c114', 'c115', 'c116', 'c117', 'c118', 'c119', 'c120', 'c121', 'c122', 'c123', 'c124', 'c125', 'c126', 'c127', 'c128', 'c129', 'c130', 'c131', 'c132', 'c133', 'c134', 'c135', 'c136', 'c137', 'c141', 'c142', 'c143', 'c144', 'c145', 'c146', 'c147', 'c148', 'c149', 'c150', 'c152', 'c153', 'c154', 'c155', 'c156', 'c157', 'c158', 'c159', 'c160', 'c161', 'c162', 'c163', 'c164', 'c165', 'c166', 'c167', 'c168', 'c169', 'c170', 'c171', 'c172', 'c173', 'c174', 'c175', 'c176', 'c177', 'c178', 'c179', 'c180', 'c181', 'c182', 'c183', 'c201', 'c202', 'c203', 'c204', 'c205', 'c206', 'c207', 'c208', 'c209', 'c210', 'c211', 'c212', 'c213', 'c220', 'c214', 'c218', 'c215', 'c216', 'c217', 'c219', 'c221', 'c222', 'c223', 'c224', 'c225', 'c226', 'c227', 'c228', 'c229', 'c230', 'c231', 'c232', 'c233', 'c234'];
+  const PAGE_ORDER = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15', 'c16', 'c17', 'c18', 'c19', 'c20', 'c21', 'c22', 'c23', 'c24', 'c25', 'c26', 'c27', 'c28', 'c29', 'c30', 'c31', 'c32', 'c33', 'c34', 'c35', 'c36', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c43', 'c44', 'c45', 'c46', 'c47', 'c48', 'c49', 'c50', 'c51', 'c52', 'c53', 'c54', 'c55', 'c56', 'c57', 'c58', 'c59', 'c60', 'c61', 'c62', 'c63', 'c64', 'c65', 'c66', 'c67', 'c68', 'c69', 'c70', 'c71', 'c72', 'c73', 'c74', 'c75', 'c76', 'c77', 'c78', 'c79', 'c80', 'c81', 'c82', 'c83', 'c84', 'c85', 'c86', 'c87', 'c88', 'c89', 'c90', 'c91', 'c92', 'c93', 'c94', 'c95', 'c96', 'c97', 'c98', 'c99', 'c100', 'c101', 'c102', 'c103', 'c138', 'c151', 'c196', 'c197', 'c198', 'c199', 'c200', 'c104', 'c105', 'c106', 'c107', 'c139', 'c184', 'c185', 'c186', 'c187', 'c188', 'c189', 'c108', 'c190', 'c140', 'c191', 'c192', 'c193', 'c194', 'c195', 'c109', 'c110', 'c111', 'c112', 'c113', 'c114', 'c115', 'c116', 'c117', 'c118', 'c119', 'c120', 'c121', 'c122', 'c123', 'c124', 'c125', 'c126', 'c127', 'c128', 'c129', 'c130', 'c131', 'c132', 'c133', 'c134', 'c135', 'c136', 'c137', 'c141', 'c142', 'c143', 'c144', 'c145', 'c146', 'c147', 'c148', 'c149', 'c150', 'c152', 'c153', 'c154', 'c155', 'c156', 'c157', 'c158', 'c159', 'c160', 'c161', 'c162', 'c163', 'c164', 'c165', 'c166', 'c167', 'c168', 'c169', 'c170', 'c171', 'c172', 'c173', 'c174', 'c175', 'c176', 'c177', 'c178', 'c179', 'c180', 'c181', 'c182', 'c183', 'c201', 'c202', 'c203', 'c204', 'c205', 'c206', 'c207', 'c208', 'c209', 'c210', 'c211', 'c212', 'c213', 'c220', 'c214', 'c218', 'c215', 'c216', 'c217', 'c219', 'c221', 'c222', 'c223', 'c224', 'c225', 'c226', 'c227', 'c235', 'c228', 'c229', 'c230', 'c231', 'c232', 'c233', 'c234'];
   const PAGE_BY_NODE = Object.fromEntries(PAGE_ORDER.map((id, i) => [id, i]));
   const padPage = n => String(n).padStart(3, '0');
 
@@ -7222,7 +7231,7 @@ const STORY = {
       { node: 'c201', label: 'La caverne des condamnés' },
       { node: 'c223', label: 'La faille' }
     ],
-    testCheckpointForNode: id => /^c(?:22[3-9]|23[0-4])$/.test(id) ? 'c223' : null,
+    testCheckpointForNode: id => /^c(?:22[3-9]|23[0-5])$/.test(id) ? 'c223' : null,
     legacyStorageKeys: ['ldveh.book.ecuyer-01.save.v1', 'ldveh.book.ecuyer-01-valombre.save.v1', 'valombre_save_v12_3d6_stats18'],
     legacyCheckpointKeys: ['ldveh.book.ecuyer-01.checkpoint.v1', 'ldveh.book.ecuyer-01-valombre.checkpoint.v1', 'valombre_checkpoint_v12_3d6_stats18'],
     exportSeriesMemory(state) {
