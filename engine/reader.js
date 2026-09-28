@@ -451,7 +451,8 @@ function render() {
     });
   });
 
-  inventoryCount.textContent = Object.keys(state.inventory).length;
+  inventoryCount.textContent = typeof BOOK.inventory?.displayEntries === 'function'
+    ? BOOK.inventory.displayEntries(state).length : Object.keys(state.inventory).length;
   statusTags.innerHTML = '';
   if (!node.sheet) {
     const stats = typeof BOOK.statusStats === 'function'
@@ -583,7 +584,8 @@ function openCharacterSheet() {
 function openInventory() {
   modal.dataset.panel = 'inventory';
   modalTitle.textContent = 'Inventaire';
-  const items = Object.entries(state.inventory);
+  const items = typeof BOOK.inventory?.displayEntries === 'function'
+    ? BOOK.inventory.displayEntries(state) : Object.entries(state.inventory);
   const topText = BOOK.inventory && BOOK.inventory.topLine ? BOOK.inventory.topLine(state) : '';
   const moneyLine = topText ? `<div class="inventory-topline">${topText}</div>` : '';
   const extraLine = BOOK.inventory && BOOK.inventory.extraHtml ? BOOK.inventory.extraHtml(state) : '';
@@ -641,7 +643,8 @@ function jumpToPageForTest(nodeId) {
     if (checkpoint) setCheckpoint({
       ...state, node: testCheckpointNode,
       flags: { ...state.flags, finalRopeClimbed:false, finalKnights:null,
-        finalPassageDex:null, finalPassageRecovery:null, finalPassageBruise:null }
+        finalPassageDex:null, finalPassageRecovery:null, finalPassageBruise:null,
+        finalKnightsEscape:null }
     }, checkpoint.label);
   } else if (state.hp > 0) maybeAutoCheckpoint(nodeId);
   saveState();
