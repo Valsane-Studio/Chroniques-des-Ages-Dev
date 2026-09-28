@@ -580,13 +580,11 @@ function finalMazeRollHtml(s) {
 function finalPassageDex(s) {
   const success = roll3D6(s, 'Dextérité — traversée de la faille', currentDexterity(s));
   s.flags.finalPassageDex = {success, dice:[...s.lastDice], total:s.lastTotal, threshold:s.lastStat};
-  s.flags.finalPassageStage = success ? 'ledge_safe' : 'ledge_slip';
   if (!success) s.flags.finalPassageBruise = applyDamage(s, 2);
 }
 function finalPassageRecovery(s) {
   const success = roll3D6(s, 'Dextérité — se rattraper', currentDexterity(s));
   s.flags.finalPassageRecovery = {success, dice:[...s.lastDice], total:s.lastTotal, threshold:s.lastStat};
-  s.flags.finalPassageStage = success ? 'ledge_safe' : 'fall';
 }
 function finalPassageDiceHtml(result) {
   return result ? `<div class="dice-result"><p>Dextérité : ${result.threshold} · Dés : ${result.total}</p><div class="dice-faces">${result.dice.map(renderDie).join('')}</div><p><strong>${result.success ? 'Réussite' : 'Échec'}</strong></p></div>` : '';
@@ -5668,23 +5666,6 @@ const STORY = {
   c209: {
     number:'PAGE 209',title:'Le labyrinthe impossible',
     text:s=>{
-      const stage=s.flags.finalPassageStage;
-      if(stage){
-        const crossroads=`<p>La sortie du dédale donne sur une faille gigantesque. Tu n’en vois ni le fond ni la paroi opposée. Un courant d’air remonte de l’obscurité.</p>
-          <p>Une petite échelle de corde, nouée à un anneau de fer, descend dans le vide. Sur la gauche, une fissure dans la paroi offre quelques prises pour traverser. Sur la droite, une ouverture juste assez large pour t’y glisser s’enfonce dans la roche.</p>`;
-        if(stage==='choice')return `${crossroads}${s.flags.finalRopeClimbed?'<p>Tu as remonté l’échelle. Elle ne t’apprendra rien de plus.</p>':''}<p>Quelque part en contrebas, trois coups sourds résonnent. Le silence revient avant que tu puisses savoir d’où ils venaient.</p>`;
-        if(stage==='rope')return `<p>Tu descends l’échelle. La roche disparaît derrière la brume et tes bras se raidissent. Au dernier barreau, tu n’as toujours pas atteint le fond. La brume est presque assez proche pour être touchée du pied. Tu ne distingues rien sous elle.</p><p>La corde s’arrête ici.</p>`;
-        if(stage==='rope_fall')return `<p>Tu lâches l’échelle. La brume t’enveloppe aussitôt. Dix secondes passent, puis vingt. Aucun sol, aucune eau. Le courant d’air hurle contre tes oreilles. Après plus de cinquante secondes, la chute s’achève au fond du gouffre. Tu ne vois jamais ce qui t’a attendu en bas.</p>`;
-        if(stage==='ledge')return `<p>Tu te plaques contre la paroi et cherches une première prise. La fissure se resserre, s’élargit, puis se resserre encore. Tes pieds ne trouvent parfois qu’une saillie à peine visible. Tu ignores si cette voie mène réellement de l’autre côté.</p><p>À mi-chemin, la roche devient lisse. Il faut poursuivre au-dessus du vide.</p>`;
-        if(stage==='ledge_slip')return `<p>Ton pied glisse. Tu bascules, mais tes doigts agrippent une aspérité. Le choc contre la paroi te coûte ${s.flags.finalPassageBruise?.hpLost||0} Vie${s.flags.finalPassageBruise?.absorbed?` (${s.flags.finalPassageBruise.absorbed} absorbé${s.flags.finalPassageBruise.absorbed>1?'s':''} par ta protection)`:''}. Tu restes suspendu au-dessus du gouffre.</p>${finalPassageDiceHtml(s.flags.finalPassageDex)}<p>Il te reste une chance de te hisser sur la prise.</p>`;
-        if(stage==='ledge_safe')return `${finalPassageDiceHtml(s.flags.finalPassageRecovery||s.flags.finalPassageDex)}<p>Centimètre après centimètre, tu atteins la fin de la fissure. Tes bras tremblent lorsque tu retrouves enfin un sol stable. Une galerie étroite rejoint le côté opposé de la faille. Au bout, une porte entrebâillée laisse passer une faible lumière.</p>`;
-        if(stage==='fall')return `${finalPassageDiceHtml(s.flags.finalPassageRecovery)}<p>La prise cède. Tu tombes dans le vide. La roche s’éloigne, puis la brume efface la dernière lumière. Ta chute ne s’interrompt qu’au fond du gouffre.</p>`;
-        if(stage==='chamber')return `<p>L’ouverture se resserre autour de toi, puis s’élargit assez pour te laisser avancer. Un second étranglement t’oblige à progresser de profil. Impossible de savoir si tu as choisi une issue ou une impasse.</p><p>La roche s’ouvre enfin sur une longue salle parallèle à la faille. C’est bon signe : elle doit mener de l’autre côté.</p><p>À peine en as-tu atteint le milieu que deux silhouettes déboulent de l’extrémité opposée. Sous leurs lourdes armures, leurs mouvements ont quelque chose de féroce, mais elles ont certainement été humaines autrefois. D’anciens chevaliers, à en juger par leurs épées massives.</p>${s.throwingBlades>0?`<p>Tu possèdes ${s.throwingBlades} lame${s.throwingBlades>1?'s':''} de jet. C’est probablement le moment de t’en servir si tu veux traverser cette salle.</p>`:''}<p>Tu ne peux plus leur échapper.</p>`;
-        if(stage==='fight'){
-          const f=ensureFinalKnights(s);
-          return `<p>Les deux anciens chevaliers te barrent le passage. Tu dois en viser un tandis que l’autre cherche une ouverture pour frapper.</p><div class="enemy-card"><div class="enemy-card-title">ANCIENS CHEVALIERS</div><div class="enemy-card-stats"><div>Chevalier 1 <strong>${f.hp[0]}/6 Vie</strong></div><div>Chevalier 2 <strong>${f.hp[1]}/6 Vie</strong></div><div>Dextérité <strong>8 chacun</strong></div><div>Dégâts <strong>3 chacun</strong></div></div></div>${f.last?`<div class="combat-roll-result"><div class="combat-dice">${f.last.dice.map(renderDie).join('')}</div>${f.last.messages.map(m=>`<p>${m}</p>`).join('')}</div>`:''}${f.hp.every(h=>h<=0)?'<p>Les épées tombent sur la pierre. Au-delà de la salle, une ouverture conduit de l’autre côté de la faille.</p>':''}`;
-        }
-      }
       const turns=s.flags.finalMazeTurns||0;
       const scenes=[
         'Tu avances entre de hautes parois de pierre noire. Après plusieurs détours, un carrefour s’ouvre devant toi. Les deux passages sont parfaitement semblables, jusqu’aux mêmes fissures dans les murs.',
@@ -5706,35 +5687,81 @@ const STORY = {
         ${r&&!r.success?'<p>Tu reprends ta marche. Le labyrinthe semble se refermer derrière toi, sans jamais t’offrir le moindre repère fiable.</p>':''}
         ${s.flags.finalMazeFound?'<p>Un souffle d’air frais te parvient. Devant toi, une ouverture mène enfin hors du dédale.</p>':''}`;
     },
+    choices:s=>s.hp<=0?terminalChoices():s.flags.finalMazeFound
+      ?[{label:'Suivre l’air frais',to:'c223'}]
+      :[{label:'Prendre le passage de gauche',stay:true,effect:t=>finalMazeRoll(t,'gauche')},
+        {label:'Prendre le passage de droite',stay:true,effect:t=>finalMazeRoll(t,'droite')}]
+  },
+  c223: {
+    number:'PAGE 223',title:'La faille',
+    text:s=>`<p>La sortie du dédale donne sur une faille gigantesque. Tu n’en vois ni le fond ni la paroi opposée. Un courant d’air remonte de l’obscurité.</p>
+      <p>Une petite échelle de corde, nouée à un anneau de fer, descend dans le vide. Sur la gauche, une fissure dans la paroi offre quelques prises pour traverser. Sur la droite, une ouverture juste assez large pour t’y glisser s’enfonce dans la roche.</p>
+      <p>Quelque part en contrebas, trois coups sourds résonnent. Le silence revient avant que tu puisses savoir d’où ils venaient.</p>
+      ${s.flags.finalRopeClimbed?'<p>Tu as remonté l’échelle. Elle ne t’apprendra rien de plus.</p>':''}`,
+    choices:s=>[
+      ...(!s.flags.finalRopeClimbed?[{label:'Descendre l’échelle de corde',to:'c224'}]:[]),
+      {label:'Longer la faille en s’accrochant aux prises',to:'c226'},
+      {label:'Se glisser dans l’ouverture de droite',to:'c230'}
+    ]
+  },
+  c224: {
+    number:'PAGE 224',title:'Au bout de l’échelle',
+    text:`<p>Tu descends l’échelle. La roche disparaît derrière la brume et tes bras se raidissent. Au dernier barreau, tu n’as toujours pas atteint le fond. La brume est presque assez proche pour être touchée du pied. Tu ne distingues rien sous elle.</p><p>La corde s’arrête ici.</p>`,
+    choices:[
+      {label:'Sauter dans la brume, sans voir le fond',to:'c225',effect:s=>{s.hp=0;}},
+      {label:'Remonter l’échelle',to:'c223',effect:s=>{s.flags.finalRopeClimbed=true;}}
+    ]
+  },
+  c225: {
+    number:'PAGE 225',title:'La chute',
+    text:`<p>Tu lâches l’échelle. La brume t’enveloppe aussitôt. Dix secondes passent, puis vingt. Aucun sol, aucune eau. Le courant d’air hurle contre tes oreilles. Après plus de cinquante secondes, la chute s’achève au fond du gouffre. Tu ne vois jamais ce qui t’a attendu en bas.</p>`,
+    choices:terminalChoices()
+  },
+  c226: {
+    number:'PAGE 226',title:'Les prises dans la roche',
+    text:`<p>Tu te plaques contre la paroi et cherches une première prise. La fissure se resserre, s’élargit, puis se resserre encore. Tes pieds ne trouvent parfois qu’une saillie à peine visible. Tu ignores si cette voie mène réellement de l’autre côté.</p><p>À mi-chemin, la roche devient lisse. Il faut poursuivre au-dessus du vide.</p>`,
+    choices:[{label:'Jeter les dés — Dextérité',to:'c227',effect:finalPassageDex}]
+  },
+  c227: {
+    number:'PAGE 227',title:'Au-dessus du gouffre',
+    text:s=>s.flags.finalPassageDex?.success
+      ? `${finalPassageDiceHtml(s.flags.finalPassageDex)}<p>Tu retrouves une prise de l’autre côté du passage lisse. La roche te permet enfin de poursuivre.</p>`
+      : `${finalPassageDiceHtml(s.flags.finalPassageDex)}<p>Ton pied glisse. Tu bascules, mais tes doigts agrippent une aspérité. Le choc contre la paroi te coûte ${s.flags.finalPassageBruise?.hpLost||0} Vie${s.flags.finalPassageBruise?.absorbed?` (${s.flags.finalPassageBruise.absorbed} absorbé${s.flags.finalPassageBruise.absorbed>1?'s':''} par ta protection)`:''}. Tu restes suspendu au-dessus du gouffre.</p><p>Il te reste une chance de te hisser sur la prise.</p>`,
+    choices:s=>s.hp<=0?terminalChoices():s.flags.finalPassageDex?.success
+      ?[{label:'Poursuivre la traversée',to:'c228'}]
+      :[{label:'Jeter les dés pour te rattraper',to:'c229',effect:finalPassageRecovery}]
+  },
+  c228: {
+    number:'PAGE 228',title:'L’autre côté de la faille',
+    text:`<p>Centimètre après centimètre, tu atteins la fin de la fissure. Tes bras tremblent lorsque tu retrouves enfin un sol stable. Une galerie étroite rejoint le côté opposé de la faille. Au bout, une porte entrebâillée laisse passer une faible lumière.</p>`,
+    choices:[{label:'Rejoindre la pièce éclairée',to:'c210'}]
+  },
+  c229: {
+    number:'PAGE 229',title:'La dernière prise',
+    text:s=>s.flags.finalPassageRecovery?.success
+      ? `${finalPassageDiceHtml(s.flags.finalPassageRecovery)}<p>Tu trouves une seconde prise et te hisses contre la roche. La chute est évitée de justesse.</p>`
+      : `${finalPassageDiceHtml(s.flags.finalPassageRecovery)}<p>La prise cède. Tu tombes dans le vide. La roche s’éloigne, puis la brume efface la dernière lumière. Ta chute ne s’interrompt qu’au fond du gouffre.</p>`,
+    choices:s=>s.flags.finalPassageRecovery?.success?[{label:'Terminer la traversée',to:'c228'}]:terminalChoices()
+  },
+  c230: {
+    number:'PAGE 230',title:'La longue salle',
+    text:s=>`<p>L’ouverture se resserre autour de toi, puis s’élargit assez pour te laisser avancer. Un second étranglement t’oblige à progresser de profil. Impossible de savoir si tu as choisi une issue ou une impasse.</p><p>La roche s’ouvre enfin sur une longue salle parallèle à la faille. C’est bon signe : elle doit mener de l’autre côté.</p><p>À peine en as-tu atteint le milieu que deux silhouettes déboulent de l’extrémité opposée. Sous leurs lourdes armures, leurs mouvements ont quelque chose de féroce, mais elles ont certainement été humaines autrefois. D’anciens chevaliers, à en juger par leurs épées massives.</p>${s.throwingBlades>0?`<p>Tu possèdes ${s.throwingBlades} lame${s.throwingBlades>1?'s':''} de jet. C’est probablement le moment de t’en servir si tu veux traverser cette salle.</p>`:''}<p>Tu ne peux plus leur échapper.</p>`,
+    choices:[{label:'Affronter les deux anciens chevaliers',to:'c231'}]
+  },
+  c231: {
+    number:'PAGE 231',title:'Les anciens chevaliers',
+    text:s=>{
+      const f=ensureFinalKnights(s);
+      return `<p>Les deux anciens chevaliers te barrent le passage. Tu dois en viser un tandis que l’autre cherche une ouverture pour frapper.</p><div class="enemy-card"><div class="enemy-card-title">ANCIENS CHEVALIERS</div><div class="enemy-card-stats"><div>Chevalier 1 <strong>${f.hp[0]}/6 Vie</strong></div><div>Chevalier 2 <strong>${f.hp[1]}/6 Vie</strong></div><div>Dextérité <strong>8 chacun</strong></div><div>Dégâts <strong>3 chacun</strong></div></div></div>${f.last?`<div class="combat-roll-result"><div class="combat-dice">${f.last.dice.map(renderDie).join('')}</div>${f.last.messages.map(m=>`<p>${m}</p>`).join('')}</div>`:''}${f.hp.every(h=>h<=0)?'<p>Les épées tombent sur la pierre. Au-delà de la salle, une ouverture conduit de l’autre côté de la faille.</p>':''}`;
+    },
     choices:s=>{
       if(s.hp<=0)return terminalChoices();
-      const stage=s.flags.finalPassageStage;
-      if(stage==='choice')return [
-        ...(!s.flags.finalRopeClimbed?[{label:'Descendre l’échelle de corde',stay:true,effect:t=>{t.flags.finalPassageStage='rope';}}]:[]),
-        {label:'Longer la faille en s’accrochant aux prises',stay:true,effect:t=>{t.flags.finalPassageStage='ledge';}},
-        {label:'Se glisser dans l’ouverture de droite',stay:true,effect:t=>{t.flags.finalPassageStage='chamber';}}
-      ];
-      if(stage==='rope')return [
-        {label:'Sauter dans la brume, sans voir le fond',stay:true,effect:t=>{t.flags.finalPassageStage='rope_fall';t.hp=0;}},
-        {label:'Remonter l’échelle',stay:true,effect:t=>{t.flags.finalRopeClimbed=true;t.flags.finalPassageStage='choice';}}
-      ];
-      if(stage==='ledge')return [{label:'Jeter les dés — Dextérité',stay:true,effect:finalPassageDex}];
-      if(stage==='ledge_slip')return [{label:'Jeter les dés pour te rattraper',stay:true,effect:finalPassageRecovery}];
-      if(stage==='ledge_safe')return [{label:'Rejoindre la pièce éclairée',to:'c210'}];
-      if(stage==='chamber')return [{label:'Affronter les deux anciens chevaliers',stay:true,effect:t=>{t.flags.finalPassageStage='fight';ensureFinalKnights(t);}}];
-      if(stage==='fight'){
-        const f=ensureFinalKnights(s);
-        if(f.hp.every(h=>h<=0))return [{label:'Traverser la salle',to:'c210'}];
-        return f.hp.flatMap((hp,i)=>hp<=0?[]:[
-          {label:`Jeter les dés contre le chevalier ${i+1} (${hp} Vie)`,stay:true,inlineCombat:true,effect:t=>finalKnightsRound(t,i,false)},
-          ...((s.throwingBlades||0)>0?[{label:`Lancer une lame sur le chevalier ${i+1} (${s.throwingBlades} restante${s.throwingBlades>1?'s':''})`,stay:true,inlineCombat:true,effect:t=>finalKnightsRound(t,i,true)}]:[])
-        ]);
-      }
-      if(stage==='fall'||stage==='rope_fall')return terminalChoices();
-      return s.flags.finalMazeFound
-        ?[{label:'Suivre l’air frais',stay:true,effect:t=>{t.flags.finalPassageStage='choice';}}]
-        :[{label:'Prendre le passage de gauche',stay:true,effect:t=>finalMazeRoll(t,'gauche')},
-          {label:'Prendre le passage de droite',stay:true,effect:t=>finalMazeRoll(t,'droite')}];
+      const f=ensureFinalKnights(s);
+      if(f.hp.every(h=>h<=0))return [{label:'Traverser la salle',to:'c210'}];
+      return f.hp.flatMap((hp,i)=>hp<=0?[]:[
+        {label:`Jeter les dés contre le chevalier ${i+1} (${hp} Vie)`,stay:true,inlineCombat:true,effect:t=>finalKnightsRound(t,i,false)},
+        ...((s.throwingBlades||0)>0?[{label:`Lancer une lame sur le chevalier ${i+1} (${s.throwingBlades} restante${s.throwingBlades>1?'s':''})`,stay:true,inlineCombat:true,effect:t=>finalKnightsRound(t,i,true)}]:[])
+      ]);
     }
   },
   c210: {
@@ -5983,6 +6010,15 @@ const STORY = {
     'c208': 'La demande d’Aldren',
     'c222': 'Laisser Aldren',
     'c209': 'Le labyrinthe impossible',
+    'c223': 'La faille',
+    'c224': 'Au bout de l’échelle',
+    'c225': 'La chute',
+    'c226': 'Les prises dans la roche',
+    'c227': 'Au-dessus du gouffre',
+    'c228': 'L’autre côté de la faille',
+    'c229': 'La dernière prise',
+    'c230': 'La longue salle',
+    'c231': 'Les anciens chevaliers',
     'c210': 'Une autre survivante',
     'c211': 'La chambre de l’esprit',
     'c212': 'La vérité du prisonnier',
@@ -6163,7 +6199,7 @@ const STORY = {
 };
 
   // L'ordre d'affichage peut changer ; les identifiants cN restent stables pour les liens et les sauvegardes.
-  const PAGE_ORDER = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15', 'c16', 'c17', 'c18', 'c19', 'c20', 'c21', 'c22', 'c23', 'c24', 'c25', 'c26', 'c27', 'c28', 'c29', 'c30', 'c31', 'c32', 'c33', 'c34', 'c35', 'c36', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c43', 'c44', 'c45', 'c46', 'c47', 'c48', 'c49', 'c50', 'c51', 'c52', 'c53', 'c54', 'c55', 'c56', 'c57', 'c58', 'c59', 'c60', 'c61', 'c62', 'c63', 'c64', 'c65', 'c66', 'c67', 'c68', 'c69', 'c70', 'c71', 'c72', 'c73', 'c74', 'c75', 'c76', 'c77', 'c78', 'c79', 'c80', 'c81', 'c82', 'c83', 'c84', 'c85', 'c86', 'c87', 'c88', 'c89', 'c90', 'c91', 'c92', 'c93', 'c94', 'c95', 'c96', 'c97', 'c98', 'c99', 'c100', 'c101', 'c102', 'c103', 'c138', 'c151', 'c196', 'c197', 'c198', 'c199', 'c200', 'c104', 'c105', 'c106', 'c107', 'c139', 'c184', 'c185', 'c186', 'c187', 'c188', 'c189', 'c108', 'c190', 'c140', 'c191', 'c192', 'c193', 'c194', 'c195', 'c109', 'c110', 'c111', 'c112', 'c113', 'c114', 'c115', 'c116', 'c117', 'c118', 'c119', 'c120', 'c121', 'c122', 'c123', 'c124', 'c125', 'c126', 'c127', 'c128', 'c129', 'c130', 'c131', 'c132', 'c133', 'c134', 'c135', 'c136', 'c137', 'c141', 'c142', 'c143', 'c144', 'c145', 'c146', 'c147', 'c148', 'c149', 'c150', 'c152', 'c153', 'c154', 'c155', 'c156', 'c157', 'c158', 'c159', 'c160', 'c161', 'c162', 'c163', 'c164', 'c165', 'c166', 'c167', 'c168', 'c169', 'c170', 'c171', 'c172', 'c173', 'c174', 'c175', 'c176', 'c177', 'c178', 'c179', 'c180', 'c181', 'c182', 'c183', 'c201', 'c202', 'c203', 'c204', 'c205', 'c206', 'c207', 'c208', 'c209', 'c210', 'c211', 'c212', 'c213', 'c220', 'c214', 'c218', 'c215', 'c216', 'c217', 'c219', 'c221', 'c222'];
+  const PAGE_ORDER = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15', 'c16', 'c17', 'c18', 'c19', 'c20', 'c21', 'c22', 'c23', 'c24', 'c25', 'c26', 'c27', 'c28', 'c29', 'c30', 'c31', 'c32', 'c33', 'c34', 'c35', 'c36', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c43', 'c44', 'c45', 'c46', 'c47', 'c48', 'c49', 'c50', 'c51', 'c52', 'c53', 'c54', 'c55', 'c56', 'c57', 'c58', 'c59', 'c60', 'c61', 'c62', 'c63', 'c64', 'c65', 'c66', 'c67', 'c68', 'c69', 'c70', 'c71', 'c72', 'c73', 'c74', 'c75', 'c76', 'c77', 'c78', 'c79', 'c80', 'c81', 'c82', 'c83', 'c84', 'c85', 'c86', 'c87', 'c88', 'c89', 'c90', 'c91', 'c92', 'c93', 'c94', 'c95', 'c96', 'c97', 'c98', 'c99', 'c100', 'c101', 'c102', 'c103', 'c138', 'c151', 'c196', 'c197', 'c198', 'c199', 'c200', 'c104', 'c105', 'c106', 'c107', 'c139', 'c184', 'c185', 'c186', 'c187', 'c188', 'c189', 'c108', 'c190', 'c140', 'c191', 'c192', 'c193', 'c194', 'c195', 'c109', 'c110', 'c111', 'c112', 'c113', 'c114', 'c115', 'c116', 'c117', 'c118', 'c119', 'c120', 'c121', 'c122', 'c123', 'c124', 'c125', 'c126', 'c127', 'c128', 'c129', 'c130', 'c131', 'c132', 'c133', 'c134', 'c135', 'c136', 'c137', 'c141', 'c142', 'c143', 'c144', 'c145', 'c146', 'c147', 'c148', 'c149', 'c150', 'c152', 'c153', 'c154', 'c155', 'c156', 'c157', 'c158', 'c159', 'c160', 'c161', 'c162', 'c163', 'c164', 'c165', 'c166', 'c167', 'c168', 'c169', 'c170', 'c171', 'c172', 'c173', 'c174', 'c175', 'c176', 'c177', 'c178', 'c179', 'c180', 'c181', 'c182', 'c183', 'c201', 'c202', 'c203', 'c204', 'c205', 'c206', 'c207', 'c208', 'c209', 'c210', 'c211', 'c212', 'c213', 'c220', 'c214', 'c218', 'c215', 'c216', 'c217', 'c219', 'c221', 'c222', 'c223', 'c224', 'c225', 'c226', 'c227', 'c228', 'c229', 'c230', 'c231'];
   const PAGE_BY_NODE = Object.fromEntries(PAGE_ORDER.map((id, i) => [id, i]));
   const padPage = n => String(n).padStart(3, '0');
 
@@ -7080,7 +7116,7 @@ const STORY = {
         ? [filename, `pages/${filename}`]
         : [`pages/${filename}`, filename];
     },
-    imageExtensions: ['jpg', 'jpeg', 'png'],
+    imageExtensions: ['webp', 'jpg', 'jpeg', 'png'],
     createInitialState,
     migrateState: migratePageNumbersV78,
     rules: { currentForce, currentDexterity, combatPower, weaponLabel, currentProtection, maxProtection, applyDamage, raiseContamination },
