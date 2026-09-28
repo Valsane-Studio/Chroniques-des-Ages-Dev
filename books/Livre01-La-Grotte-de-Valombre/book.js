@@ -583,7 +583,7 @@ function finalPassageDex(s) {
   if (!success) s.flags.finalPassageBruise = applyDamage(s, 2);
 }
 function finalPassageRecovery(s) {
-  const success = roll3D6(s, 'Dextérité — se rattraper', currentDexterity(s));
+  const success = roll3D6(s, 'Dextérité — se rattraper', Math.min(18, currentDexterity(s) + 6));
   s.flags.finalPassageRecovery = {success, dice:[...s.lastDice], total:s.lastTotal, threshold:s.lastStat};
 }
 function finalPassageDiceHtml(result) {
