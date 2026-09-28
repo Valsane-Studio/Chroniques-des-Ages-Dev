@@ -656,7 +656,7 @@ function finalKnightsRound(s, target, blade) {
   else if (fight.firstDown != null && target!==fight.firstDown && fight.hp[target]<before) {
     fight.hp[fight.firstDown]=10;
     fight.phase='revived';
-    messages.push(`Le premier chevalier se relève. Son armure grince tandis que ses membres reprennent une position impossible. Le combat menace de recommencer sans fin.`);
+    messages.push('Un grincement monte derrière toi. Tu n’oses pas encore te retourner.');
   }
   fight.last={messages,dice};
 }
@@ -5775,6 +5775,7 @@ const STORY = {
   },
   c227: {
     number:'PAGE 227',title:'Au-dessus du gouffre',
+    noImage:true,
     text:`<p>Tu tends la main vers la prise suivante. Pour l’atteindre, tu dois quitter un instant l’appui qui te maintient contre la paroi. Sous tes pieds, le gouffre s’ouvre dans la brume.</p><p>Il faut éprouver ton équilibre et ta Dextérité.</p>`,
     choices:[{label:'Jeter les dés — Dextérité',to:'c235',effect:finalPassageDex}]
   },
@@ -5789,11 +5790,13 @@ const STORY = {
   },
   c228: {
     number:'PAGE 228',title:'L’autre côté de la faille',
+    noImage:true,
     text:`<p>Tu avances encore de prise en prise, les pieds suspendus au-dessus du vide. Enfin, tes mains atteignent le rebord opposé. Tu te hisses sur un sol stable, les bras tremblants.</p><p>Une galerie s’ouvre devant toi. Au bout, une porte entrebâillée laisse passer une faible lumière.</p>`,
     choices:[{label:'Rejoindre la pièce éclairée',to:'c210'}]
   },
   c229: {
     number:'PAGE 229',title:'La dernière prise',
+    noImage:true,
     text:s=>s.flags.finalPassageRecovery?.success
       ? `${finalPassageDiceHtml(s.flags.finalPassageRecovery)}<p>Tu trouves une seconde prise et te hisses contre la roche. La chute est évitée de justesse.</p>`
       : `${finalPassageDiceHtml(s.flags.finalPassageRecovery)}<p>La prise cède sous tes doigts. Tu n’as plus aucun appui. La paroi s’éloigne tandis que tu bascules dans le vide.</p>`,
@@ -5807,29 +5810,32 @@ const STORY = {
     choices:terminalChoices()
   },
   c230: {
-    number:'PAGE 230',title:'La longue salle',
+    number:'PAGE 232',title:'Le passage étroit',
     text:s=>s.flags.finalKnights?.phase==='revived'
-      ? `<p>Tu te glisses une nouvelle fois par l’ouverture étroite. La grande salle s’étend devant toi. Les deux chevaliers y sont toujours. Celui que tu avais abattu s’est relevé, et l’autre ne te quitte pas des yeux.</p><p>Il faudra trouver un autre moyen de traverser.</p>`
-      : `<p>L’ouverture se resserre autour de toi, puis s’élargit assez pour te laisser avancer. Un second étranglement t’oblige à progresser de profil. Impossible de savoir si tu as choisi une issue ou une impasse.</p><p>La roche s’ouvre enfin sur une grande salle tout en longueur. Elle semble mener droit de l’autre côté du précipice aperçu tout à l’heure.</p><p>À peine en as-tu atteint le milieu que deux silhouettes déboulent de l’extrémité opposée. Sous leurs lourdes armures, leurs mouvements ont quelque chose de féroce, mais elles ont certainement été humaines autrefois. D’anciens chevaliers, à en juger par leurs épées massives.</p>${s.throwingBlades>0?`<p>Tu possèdes ${s.throwingBlades} lame${s.throwingBlades>1?'s':''} de jet. C’est probablement le moment de t’en servir si tu veux traverser cette salle.</p>`:''}<p>Tu ne peux plus leur échapper.</p>`,
+      ? `<p>Tu te glisses une nouvelle fois par l’ouverture étroite. Les deux chevaliers sont toujours dans la salle devant toi.</p>`
+      : `<p>L’ouverture se resserre autour de toi, puis s’élargit assez pour te laisser avancer. Un second étranglement t’oblige à progresser de profil. Impossible de savoir si tu as choisi une issue ou une impasse.</p>`,
+    choices:[{label:'Poursuivre dans la roche',to:'c237'}]
+  },
+  c237: {
+    number:'PAGE 237',title:'La grande salle',
+    text:s=>s.flags.finalKnights?.phase==='revived'
+      ? `<p>La grande salle s’étend devant toi. Le chevalier que tu avais abattu s’est relevé, et l’autre ne te quitte pas des yeux.</p>`
+      : `<p>Après quelques mètres, la roche s’ouvre enfin sur une grande salle tout en longueur. Elle semble mener droit de l’autre côté du précipice aperçu tout à l’heure.</p><p>À peine en as-tu atteint le milieu que deux silhouettes déboulent de l’extrémité opposée. Sous leurs lourdes armures, leurs mouvements ont quelque chose de féroce, mais elles ont certainement été humaines autrefois. D’anciens chevaliers, à en juger par leurs épées massives.</p>${s.throwingBlades>0?`<p>Tu possèdes ${s.throwingBlades} lame${s.throwingBlades>1?'s':''} de jet. C’est probablement le moment de t’en servir si tu veux traverser cette salle.</p>`:''}<p>Tu ne peux plus leur échapper.</p>`,
     choices:[{label:'Affronter les deux anciens chevaliers',to:'c231'}]
   },
   c231: {
-    number:'PAGE 231',title:'Les anciens chevaliers',
+    number:'PAGE 233',title:'Les anciens chevaliers',
     text:s=>{
       const f=ensureFinalKnights(s);
       const revival=f.phase==='revived'
-        ? '<p>Tu avais abattu le premier. Dès que le second a été blessé, le premier s’est relevé derrière toi. Son armure craque autour d’un corps qui refuse de rester à terre. Si tu continues à frapper, combien de fois recommencera-t-il ?</p>'
+        ? '<p>Tu entends un grincement sur le côté.</p>'
         : '<p>Les deux anciens chevaliers te barrent le passage. Tu dois en viser un tandis que l’autre cherche une ouverture pour frapper. Leurs armures arrêtent une partie de tes coups, mais tes lames de jet peuvent atteindre les jointures.</p>';
-      return `${revival}<div class="enemy-card"><div class="enemy-card-title">ANCIENS CHEVALIERS</div><div class="enemy-card-stats"><div>Chevalier 1 <strong>${f.hp[0]}/10 Vie</strong></div><div>Chevalier 2 <strong>${f.hp[1]}/10 Vie</strong></div><div>Dextérité <strong>${FINAL_KNIGHT_STATS.dexterity} chacun</strong></div><div>Force <strong>${FINAL_KNIGHT_STATS.force} chacun</strong></div><div>Armure <strong>${FINAL_KNIGHT_STATS.armor} par coup</strong></div><div>Dégâts <strong>${FINAL_KNIGHT_STATS.damage} chacun</strong></div></div></div>${f.last?`<div class="combat-roll-result"><div class="combat-dice">${f.last.dice.map(renderDie).join('')}</div>${f.last.messages.map(m=>`<p>${m}</p>`).join('')}</div>`:''}${f.phase==='revived'?'<p>La sortie est de l’autre côté de la salle. Derrière toi, tu peux encore retrouver l’étroit passage par lequel tu es entré.</p>':''}`;
+      return `${revival}<div class="enemy-card"><div class="enemy-card-title">ANCIENS CHEVALIERS</div><div class="enemy-card-stats"><div>Chevalier 1 <strong>${f.hp[0]}/10 Vie</strong></div><div>Chevalier 2 <strong>${f.hp[1]}/10 Vie</strong></div><div>Dextérité <strong>${FINAL_KNIGHT_STATS.dexterity} chacun</strong></div><div>Force <strong>${FINAL_KNIGHT_STATS.force} chacun</strong></div><div>Armure <strong>${FINAL_KNIGHT_STATS.armor} par coup</strong></div><div>Dégâts <strong>${FINAL_KNIGHT_STATS.damage} chacun</strong></div></div></div>${f.last?`<div class="combat-roll-result"><div class="combat-dice">${f.last.dice.map(renderDie).join('')}</div>${f.last.messages.map(m=>`<p>${m}</p>`).join('')}</div>`:''}`;
     },
     choices:s=>{
       if(s.hp<=0)return terminalChoices();
       const f=ensureFinalKnights(s);
-      if(f.phase==='revived')return [
-        {label:'Faire demi-tour par l’ouverture étroite',to:'c234'},
-        {label:'Tenter de courir jusqu’à l’autre côté',to:'c232',effect:dashPastKnights},
-        ...(finalWhiteAmpoule(s)?[{label:'Jeter une ampoule de liquide blanc sur les chevaliers',to:'c233',effect:throwWhiteAtKnights}]:[])
-      ];
+      if(f.phase==='revived')return [{label:'Tu entends un grincement sur le côté',to:'c238'}];
       if(f.phase==='cured')return [{label:'Traverser la salle',to:'c210'}];
       return f.hp.flatMap((hp,i)=>hp<=0?[]:[
         {label:`Jeter les dés contre le chevalier ${i+1} (${hp} Vie)`,stay:true,inlineCombat:true,effect:t=>finalKnightsRound(t,i,false)},
@@ -5837,22 +5843,34 @@ const STORY = {
       ]);
     }
   },
+  c238: {
+    number:'PAGE 238',title:'Le chevalier se relève',
+    text:`<p>Le chevalier que tu avais tué est en train de se relever derrière toi. Son armure craque autour d’un corps qui refuse de rester à terre. Ton arme ne semble pas efficace contre ces monstres sortis tout droit des enfers.</p><p>La sortie est de l’autre côté de la salle. Tu devras te faufiler entre leurs épées si tu veux y accéder. Derrière toi, tu peux encore retrouver l’étroit passage par lequel tu es entré.</p>`,
+    choices:s=>[
+        {label:'Faire demi-tour par l’ouverture étroite',to:'c234'},
+        {label:'Tenter de courir jusqu’à l’autre côté',to:'c232',effect:dashPastKnights},
+        ...(finalWhiteAmpoule(s)?[{label:'Jeter une ampoule de liquide blanc sur les chevaliers',to:'c233',effect:throwWhiteAtKnights}]:[])
+      ]
+  },
   c232: {
-    number:'PAGE 232',title:'Courir entre les lames',
+    number:'PAGE 234',title:'Courir entre les lames',
     text:s=>`${finalPassageDiceHtml(s.flags.finalKnightsEscape)}${s.flags.finalKnightsEscape?.success
       ? '<p>Tu attends que les deux épées se lèvent, puis tu te glisses entre les chevaliers. L’un d’eux tend le bras, trop tard. Tu franchis l’ouverture de l’autre côté de la salle sans te retourner.</p>'
       : `<p>Tu t’élances vers la sortie. Un chevalier te rattrape et son épée te frappe de plein fouet. Tu perds ${s.flags.finalKnightsEscape?.hpLost||0} Vie : il ne t’en reste que ${s.hp}. Tu parviens pourtant à te dégager et te traînes jusqu’à l’ouverture, hors de leur portée.</p>`}`,
     choices:[{label:'Rejoindre la survivante',to:'c210'}]
   },
   c233: {
-    number:'PAGE 233',title:'Le liquide blanc',
-    text:`<p>Tu jettes l’ampoule contre les chevaliers. Le verre éclate sur leurs armures. Le liquide blanc s’infiltre entre les plaques et les deux silhouettes s’arrêtent net.</p><p>Leurs membres reprennent peu à peu une forme humaine. L’un laisse tomber son épée. L’autre s’agenouille, comme s’il découvrait enfin où il se trouve. Puis ils s’effondrent tous les deux.</p><p>Leurs corps, pas plus que leurs esprits, n’ont survécu à toutes ces transformations. Le passage est libre.</p>`,
+    number:'PAGE 235',title:'Le liquide blanc',
+    text:`<p>Tu jettes l’ampoule contre les chevaliers. Le verre éclate sur leurs armures. Le liquide blanc s’infiltre entre les plaques et les deux silhouettes s’arrêtent net.</p><p>Leurs membres semblent reprendre peu à peu une forme humaine. Mais plus la transformation avance, plus de nouvelles aberrations apparaissent : un membre trop long, l’autre trop court. Leurs visages reprennent forme, humains un instant, puis la peau semble aspirée par les orbites. Les joues se creusent, les oreilles pendent. Ils s’effondrent tous les deux dans un craquement d’os.</p><p>Leurs corps, pas plus que leurs esprits, n’ont survécu à toutes ces transformations. Le passage est libre.</p>`,
     choices:[{label:'Traverser la salle',to:'c210'}]
   },
   c234: {
-    number:'PAGE 234',title:'Revenir sur ses pas',
-    text:`<p>Tu recules pendant que les chevaliers s’avancent. Tu te glisses de profil dans l’ouverture étroite par laquelle tu es arrivé. Leurs lourdes armures les empêchent de te suivre.</p><p>Tu retraverses le passage resserré et débouches devant la grande faille. L’échelle de corde et les prises sur la gauche sont toujours là.</p>`,
-    choices:[{label:'Choisir une autre voie devant la faille',to:'c223'}]
+    number:'PAGE 236',title:'Revenir sur ses pas',
+    text:`<p>Tu recules pendant que les chevaliers s’avancent. Tu te glisses de profil dans l’ouverture étroite par laquelle tu es arrivé. Leurs lourdes armures les empêchent de te suivre.</p><p>Te voici de retour devant la faille. Tu dois désormais tenter un autre passage. L’échelle de corde et les prises sur la gauche sont toujours là.</p>`,
+    choices:[
+      {label:'Descendre l’échelle de corde',to:'c224'},
+      {label:'Longer la faille en s’accrochant aux prises',to:'c226'}
+    ]
   },
   c210: {
     number:'PAGE 210',title:'Une autre survivante',
@@ -6109,8 +6127,10 @@ const STORY = {
     'c228': 'L’autre côté de la faille',
     'c229': 'La dernière prise',
     'c236': 'Au fond du gouffre',
-    'c230': 'La longue salle',
+    'c230': 'Le passage étroit',
+    'c237': 'La grande salle',
     'c231': 'Les anciens chevaliers',
+    'c238': 'Le chevalier se relève',
     'c232': 'Courir entre les lames',
     'c233': 'Le liquide blanc',
     'c234': 'Revenir sur ses pas',
@@ -6294,7 +6314,7 @@ const STORY = {
 };
 
   // L'ordre d'affichage peut changer ; les identifiants cN restent stables pour les liens et les sauvegardes.
-  const PAGE_ORDER = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15', 'c16', 'c17', 'c18', 'c19', 'c20', 'c21', 'c22', 'c23', 'c24', 'c25', 'c26', 'c27', 'c28', 'c29', 'c30', 'c31', 'c32', 'c33', 'c34', 'c35', 'c36', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c43', 'c44', 'c45', 'c46', 'c47', 'c48', 'c49', 'c50', 'c51', 'c52', 'c53', 'c54', 'c55', 'c56', 'c57', 'c58', 'c59', 'c60', 'c61', 'c62', 'c63', 'c64', 'c65', 'c66', 'c67', 'c68', 'c69', 'c70', 'c71', 'c72', 'c73', 'c74', 'c75', 'c76', 'c77', 'c78', 'c79', 'c80', 'c81', 'c82', 'c83', 'c84', 'c85', 'c86', 'c87', 'c88', 'c89', 'c90', 'c91', 'c92', 'c93', 'c94', 'c95', 'c96', 'c97', 'c98', 'c99', 'c100', 'c101', 'c102', 'c103', 'c138', 'c151', 'c196', 'c197', 'c198', 'c199', 'c200', 'c104', 'c105', 'c106', 'c107', 'c139', 'c184', 'c185', 'c186', 'c187', 'c188', 'c189', 'c108', 'c190', 'c140', 'c191', 'c192', 'c193', 'c194', 'c195', 'c109', 'c110', 'c111', 'c112', 'c113', 'c114', 'c115', 'c116', 'c117', 'c118', 'c119', 'c120', 'c121', 'c122', 'c123', 'c124', 'c125', 'c126', 'c127', 'c128', 'c129', 'c130', 'c131', 'c132', 'c133', 'c134', 'c135', 'c136', 'c137', 'c141', 'c142', 'c143', 'c144', 'c145', 'c146', 'c147', 'c148', 'c149', 'c150', 'c152', 'c153', 'c154', 'c155', 'c156', 'c157', 'c158', 'c159', 'c160', 'c161', 'c162', 'c163', 'c164', 'c165', 'c166', 'c167', 'c168', 'c169', 'c170', 'c171', 'c172', 'c173', 'c174', 'c175', 'c176', 'c177', 'c178', 'c179', 'c180', 'c181', 'c182', 'c183', 'c201', 'c202', 'c203', 'c204', 'c205', 'c206', 'c207', 'c208', 'c209', 'c210', 'c211', 'c212', 'c213', 'c220', 'c214', 'c218', 'c215', 'c216', 'c217', 'c219', 'c221', 'c222', 'c223', 'c224', 'c225', 'c226', 'c227', 'c235', 'c228', 'c229', 'c236', 'c230', 'c231', 'c232', 'c233', 'c234'];
+  const PAGE_ORDER = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11', 'c12', 'c13', 'c14', 'c15', 'c16', 'c17', 'c18', 'c19', 'c20', 'c21', 'c22', 'c23', 'c24', 'c25', 'c26', 'c27', 'c28', 'c29', 'c30', 'c31', 'c32', 'c33', 'c34', 'c35', 'c36', 'c37', 'c38', 'c39', 'c40', 'c41', 'c42', 'c43', 'c44', 'c45', 'c46', 'c47', 'c48', 'c49', 'c50', 'c51', 'c52', 'c53', 'c54', 'c55', 'c56', 'c57', 'c58', 'c59', 'c60', 'c61', 'c62', 'c63', 'c64', 'c65', 'c66', 'c67', 'c68', 'c69', 'c70', 'c71', 'c72', 'c73', 'c74', 'c75', 'c76', 'c77', 'c78', 'c79', 'c80', 'c81', 'c82', 'c83', 'c84', 'c85', 'c86', 'c87', 'c88', 'c89', 'c90', 'c91', 'c92', 'c93', 'c94', 'c95', 'c96', 'c97', 'c98', 'c99', 'c100', 'c101', 'c102', 'c103', 'c138', 'c151', 'c196', 'c197', 'c198', 'c199', 'c200', 'c104', 'c105', 'c106', 'c107', 'c139', 'c184', 'c185', 'c186', 'c187', 'c188', 'c189', 'c108', 'c190', 'c140', 'c191', 'c192', 'c193', 'c194', 'c195', 'c109', 'c110', 'c111', 'c112', 'c113', 'c114', 'c115', 'c116', 'c117', 'c118', 'c119', 'c120', 'c121', 'c122', 'c123', 'c124', 'c125', 'c126', 'c127', 'c128', 'c129', 'c130', 'c131', 'c132', 'c133', 'c134', 'c135', 'c136', 'c137', 'c141', 'c142', 'c143', 'c144', 'c145', 'c146', 'c147', 'c148', 'c149', 'c150', 'c152', 'c153', 'c154', 'c155', 'c156', 'c157', 'c158', 'c159', 'c160', 'c161', 'c162', 'c163', 'c164', 'c165', 'c166', 'c167', 'c168', 'c169', 'c170', 'c171', 'c172', 'c173', 'c174', 'c175', 'c176', 'c177', 'c178', 'c179', 'c180', 'c181', 'c182', 'c183', 'c201', 'c202', 'c203', 'c204', 'c205', 'c206', 'c207', 'c208', 'c209', 'c210', 'c211', 'c212', 'c213', 'c220', 'c214', 'c218', 'c215', 'c216', 'c217', 'c219', 'c221', 'c222', 'c223', 'c224', 'c225', 'c226', 'c227', 'c235', 'c228', 'c229', 'c236', 'c230', 'c231', 'c232', 'c233', 'c234', 'c237', 'c238'];
   const PAGE_BY_NODE = Object.fromEntries(PAGE_ORDER.map((id, i) => [id, i]));
   const padPage = n => String(n).padStart(3, '0');
 
@@ -6928,7 +6948,7 @@ const STORY = {
         ? `<div class="dice-result"><p class="roll-number">Dernière potion</p><div class="dice-faces">${renderDie(state.lastHealingDie)}</div><p><strong>+${state.lastHealingDie} point${state.lastHealingDie > 1 ? 's' : ''} de Vie</strong></p><p>Vie : <strong>${state.hp} / ${state.maxHp}</strong></p></div>`
         : '';
       const earth = contaminationLevel(state)>0 ? `<div class="inventory-equipment-card"><strong>Terre noire : ${contaminationLevel(state)}/13</strong><p>${state.flags.physicianNotesRead ? "0–3 : appel puissant · 4–8 : équilibre précaire · 9–12 : transformation imminente · 13 : transformation." : "Effets inconnus."}</p></div>` : "";
-      return equipment + earth + healing;
+      return equipment + earth + healing + testInventoryHtml(state);
     },
 
     actionHtml(id, item, state) {
@@ -7207,13 +7227,13 @@ const STORY = {
     pageByNode: PAGE_BY_NODE,
     navigationTitles: PAGE_NAV_TITLES,
     padPage,
-    imageBaseForPage: n => (n === 178 || n === 179 || n === 202)
+    imageBaseForPage: n => (n === 178 || n === 179 || n === 202 || n === 233 || n === 234)
       ? 'La-Grotte-de-Valombre-Combat'
       : `La-Grotte-de-Valombre-${padPage(n)}`,
-    // Exception : les pages 178, 179 et 202 réutilisent l’illustration de combat.
+    // Les pages 178, 179, 202, 233 et 234 réutilisent l’illustration de combat.
     // Toutes les autres pages continuent à utiliser exclusivement leur propre numéro.
     imageCandidatesForPage: (n, state) => {
-      if (n === 178 || n === 179 || n === 202) return [
+      if (n === 178 || n === 179 || n === 202 || n === 233 || n === 234) return [
         'La-Grotte-de-Valombre-Combat',
         'pages/La-Grotte-de-Valombre-Combat'
       ];
@@ -7254,7 +7274,7 @@ const STORY = {
       { node: 'c201', label: 'La caverne des condamnés' },
       { node: 'c209', label: 'L’entrée du labyrinthe' }
     ],
-    testCheckpointForNode: id => /^c(?:22[3-9]|23[0-6])$/.test(id) ? 'c209' : null,
+    testCheckpointForNode: id => /^c(?:22[3-9]|23[0-8])$/.test(id) ? 'c209' : null,
     normalizeCheckpoint(saved) {
       if (saved.node !== 'c223' || saved.currentCheckpoint !== 'La faille') return false;
       saved.node = 'c209';
