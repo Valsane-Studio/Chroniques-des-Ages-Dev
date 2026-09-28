@@ -9,14 +9,14 @@ const ENEMIES = {
     name: 'MASSE DANS L’OMBRE',
     maxHp: 8,
     force: 10,
-    dexterity: 9,
+    dexterity: 8,
     damage: 2
   },
   rochebrumeMissing: {
     name: 'DISPARU DE ROCHEBRUME',
-    maxHp: 6,
+    maxHp: 3,
     force: 7,
-    dexterity: 13,
+    dexterity: 11,
     damage: 1
   },
   bridgeWalker: {
