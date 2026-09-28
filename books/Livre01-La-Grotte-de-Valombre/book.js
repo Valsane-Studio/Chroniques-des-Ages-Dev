@@ -5733,7 +5733,7 @@ const STORY = {
   },
   c228: {
     number:'PAGE 228',title:'L’autre côté de la faille',
-    text:`<p>Centimètre après centimètre, tu atteins la fin de la fissure. Tes bras tremblent lorsque tu retrouves enfin un sol stable. Une galerie étroite rejoint le côté opposé de la faille. Au bout, une porte entrebâillée laisse passer une faible lumière.</p>`,
+    text:`<p>Tu avances encore de prise en prise, les pieds suspendus au-dessus du vide. Enfin, tes mains atteignent le rebord opposé. Tu te hisses sur un sol stable, les bras tremblants.</p><p>Une galerie s’ouvre devant toi. Au bout, une porte entrebâillée laisse passer une faible lumière.</p>`,
     choices:[{label:'Rejoindre la pièce éclairée',to:'c210'}]
   },
   c229: {
