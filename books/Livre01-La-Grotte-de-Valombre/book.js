@@ -47,7 +47,7 @@ const ENEMIES = {
     dexterity: 5,
     damage: 3
   },
-  labyrinthWanderer: { name: 'ERRANT DU DÉDALE', maxHp: 8, force: 10, dexterity: 8, damage: 2 },
+  labyrinthWanderer: { name: 'ERRANT DU DÉDALE', maxHp: 11, force: 10, dexterity: 8, damage: 2 },
   labyrinthCaiman: { name: 'RAMPANT DE LA CORNICHE', maxHp: 7, force: 10, dexterity: 8, damage: 2 },
   reserveRat: { name: 'RAT DÉFORMÉ', maxHp: 6, force: 6, dexterity: 10, damage: 1, noContamination: true }
 };
