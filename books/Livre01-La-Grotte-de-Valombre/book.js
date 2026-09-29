@@ -5642,7 +5642,7 @@ const STORY = {
     choices:s=>!s.flags.cavernCombat?[{label:'Revenir au combat',to:'c201'}]:s.hp<=0 || s.flags.blackEarthTransformed?terminalChoices():[{label:'Approcher de la porte gigantesque',to:'c203'}]
   },
   c203: {
-    number:'PAGE 203',title:'Sir Aldren',
+    number:'PAGE 203',title:'',
     text:s=>`<p>À chaque pas vers la porte, une vibration étrange semble traverser la pierre.</p>
       <blockquote>« ${heroName(s)}… »</blockquote>
       <p>Contre une paroi de la grotte, un homme est adossé à la roche. Tu reconnais Sir Aldren.</p>
@@ -5766,7 +5766,7 @@ const STORY = {
     ]
   },
   c225: {
-    number:'PAGE 225',title:'La chute',
+    number:'PAGE 225',title:'',
     text:`<p>Tu lâches l’échelle. La brume t’enveloppe aussitôt. Dix secondes passent, puis vingt. Aucun sol, aucune eau. Le courant d’air hurle contre tes oreilles. Après plus de cinquante secondes, la chute s’achève au fond du gouffre. Tu ne vois jamais ce qui t’a attendu en bas.</p>`,
     choices:terminalChoices()
   },
@@ -5785,7 +5785,7 @@ const STORY = {
     choices:[{label:'Jeter les dés — Dextérité',to:'c235',effect:finalPassageDex}]
   },
   c235: {
-    number:'PAGE 235',title:'La prise suivante',
+    number:'PAGE 235',title:'',
     text:s=>s.flags.finalPassageDex?.success
       ? `${finalPassageDiceHtml(s.flags.finalPassageDex)}<p>Tu retrouves une prise de l’autre côté du passage lisse. La roche te permet enfin de poursuivre.</p>`
       : `${finalPassageDiceHtml(s.flags.finalPassageDex)}<p>Ton pied glisse. Tu bascules, mais tes doigts agrippent une aspérité. Le choc contre la paroi te coûte ${s.flags.finalPassageBruise?.hpLost||0} Vie${s.flags.finalPassageBruise?.absorbed?` (${s.flags.finalPassageBruise.absorbed} absorbé${s.flags.finalPassageBruise.absorbed>1?'s':''} par ta protection)`:''}. Tu restes suspendu au-dessus du gouffre.</p><p>Il te reste une chance de te hisser sur la prise.</p>`,
@@ -5800,7 +5800,7 @@ const STORY = {
     choices:[{label:'Rejoindre la pièce éclairée',to:'c210'}]
   },
   c229: {
-    number:'PAGE 229',title:'La dernière prise',
+    number:'PAGE 229',title:'',
     noImage:true,
     text:s=>s.flags.finalPassageRecovery?.success
       ? `${finalPassageDiceHtml(s.flags.finalPassageRecovery)}<p>Tu trouves une seconde prise et te hisses contre la roche. La chute est évitée de justesse.</p>`
@@ -5829,7 +5829,7 @@ const STORY = {
     choices:[{label:'Affronter les deux anciens chevaliers',to:'c231'}]
   },
   c231: {
-    number:'PAGE 233',title:'Les anciens chevaliers',
+    number:'PAGE 233',title:'',
     text:s=>{
       const f=ensureFinalKnights(s);
       if (f.phase==='revived') return '<p>Alors que tu viens de blesser le deuxième chevalier, tu entends un grincement sur le côté.</p>';
@@ -5853,7 +5853,7 @@ const STORY = {
     choices:[{label:'Entendre un grincement sur le côté',to:'c238'}]
   },
   c238: {
-    number:'PAGE 238',title:'Le chevalier se relève',
+    number:'PAGE 238',title:'',
     text:`<p>Le chevalier que tu avais tué est en train de se relever derrière toi. Son armure craque autour d’un corps qui refuse de rester à terre. Ton arme ne semble pas efficace contre ces monstres sortis tout droit des enfers.</p><p>La sortie est de l’autre côté de la salle. Tu devras te faufiler entre leurs épées si tu veux y accéder. Derrière toi, tu peux encore retrouver l’étroit passage par lequel tu es entré.</p>`,
     choices:s=>[
         {label:'Faire demi-tour par l’ouverture étroite',to:'c234'},
@@ -5862,19 +5862,19 @@ const STORY = {
       ]
   },
   c232: {
-    number:'PAGE 234',title:'Courir entre les lames',
+    number:'PAGE 234',title:'',
     text:s=>`${finalPassageDiceHtml(s.flags.finalKnightsEscape)}${s.flags.finalKnightsEscape?.success
       ? '<p>Tu attends que les deux épées se lèvent, puis tu te glisses entre les chevaliers. L’un d’eux tend le bras, trop tard. Tu franchis l’ouverture de l’autre côté de la salle sans te retourner.</p>'
       : `<p>Tu t’élances vers la sortie. Un chevalier te rattrape et son épée te frappe de plein fouet. Tu perds ${s.flags.finalKnightsEscape?.hpLost||0} Vie : il ne t’en reste que ${s.hp}. Tu parviens pourtant à te dégager et te traînes jusqu’à l’ouverture, hors de leur portée.</p>`}`,
     choices:[{label:'Poursuivre dans la salle suivante',to:'c210'}]
   },
   c233: {
-    number:'PAGE 235',title:'Le liquide blanc',
+    number:'PAGE 235',title:'',
     text:`<p>Tu jettes l’ampoule contre les chevaliers. Le verre éclate sur leurs armures. Le liquide blanc s’infiltre entre les plaques et les deux silhouettes s’arrêtent net.</p><p>Leurs membres semblent reprendre peu à peu une forme humaine. Mais plus la transformation avance, plus de nouvelles aberrations apparaissent : un membre trop long, l’autre trop court. Leurs visages reprennent forme, humains un instant, puis la peau semble aspirée par les orbites. Les joues se creusent, les oreilles pendent. Ils s’effondrent tous les deux dans un craquement d’os.</p><p>Leurs corps, pas plus que leurs esprits, n’ont survécu à toutes ces transformations. Le passage est libre.</p>`,
     choices:[{label:'Traverser la salle',to:'c210'}]
   },
   c234: {
-    number:'PAGE 236',title:'Revenir sur ses pas',
+    number:'PAGE 236',title:'',
     text:`<p>Tu recules pendant que les chevaliers s’avancent. Tu te glisses de profil dans l’ouverture étroite par laquelle tu es arrivé. Leurs lourdes armures les empêchent de te suivre.</p><p>Te voici de retour devant la faille. Tu dois désormais tenter un autre passage. L’échelle de corde et les prises sur la gauche sont toujours là.</p>`,
     choices:[
       {label:'Descendre l’échelle de corde',to:'c224'},
@@ -5882,7 +5882,7 @@ const STORY = {
     ]
   },
   c210: {
-    number:'PAGE 210',title:'Une autre survivante',
+    number:'PAGE 210',title:'',
     text:`<p>Tu entres dans une petite pièce sombre. Une femme inconnue est assise contre la roche. Ses vêtements abîmés laissent deviner qu’elle est une guerrière, mais toute sa force semble l’avoir quittée depuis longtemps.</p>
       <blockquote>« J’y étais presque. À deux doigts de mettre fin au règne de cette chose. »</blockquote>
       <p>Tu lui demandes comment elle sait qu’il faut détruire l’esprit.</p>
@@ -5935,7 +5935,7 @@ const STORY = {
     }
   },
   c213: {
-    number:'PAGE 213',title:'L’esprit libéré',
+    number:'PAGE 213',title:'',
     text:`<p>La lame noire tranche un lien de lumière. Tous les autres se rompent à sa suite. Une vague verte traverse la caverne et t’enveloppe. La chaleur pénètre jusque dans tes os. La douleur, la faim et l’épuisement disparaissent. Tu te redresses avec une force que tu ne te connaissais pas.</p>`,
     choices:[{label:'Reprendre le chemin de la surface',to:'c220'}]
   },
@@ -5951,7 +5951,7 @@ const STORY = {
     choices:[{label:'Voir ce que devient Valombre',to:'c217'}]
   },
   c214: {
-    number:'PAGE 215',title:'La fin de l’esprit',
+    number:'PAGE 215',title:'',
     text:s=>`<p>Tu enfonces la lame noire dans le cœur de la lumière. La sphère se déchire dans un souffle vert. Une onde terrifiante t’arrache presque l’arme des mains et te projette en arrière.</p>
       <p>Puis le souffle faiblit et tout redevient noir. Un noir calme, presque apaisant. Un silence absolu.</p>
       <p>Tu restes longtemps immobile. Après les combats, les pièges et les voix qui t’ont poursuivi jusque dans les profondeurs, tu peux enfin reprendre ta respiration.</p>
@@ -5965,7 +5965,7 @@ const STORY = {
     choices:[{label:'Rejoindre Valombre',to:'c218'}]
   },
   c218: {
-    number:'PAGE 216',title:'Le retour à Valombre',
+    number:'PAGE 216',title:'Valombre',
     text:s=>`<p>De retour au village, tout te paraît calme. Le bruit d’une porte qu’on ouvre, une conversation sur la place, l’odeur du pain : ces choses ordinaires te bouleversent après ce que tu viens de traverser.</p>
       <p>Les semaines passent, puis les mois. Valombre reprend lentement vie. Les étals se remplissent, les familles reviennent et tu aides les habitants à renouer le commerce avec les régions voisines. Rien ne change d’un coup, mais chaque petite victoire compte.</p>
       ${s.flags.aldrenOutcome==='severed'
@@ -5984,7 +5984,7 @@ const STORY = {
     choices:terminalChoices()
   },
   c215: {
-    number:'PAGE 217',title:'L’effondrement',
+    number:'PAGE 217',title:'',
     text:`<p>Tu places la poudre aux quatre coins de la pièce, puis tu déroules les mèches jusqu’au centre.</p>
       <p>Tu repenses à tout le chemin parcouru. Une dernière pensée pour Sir Aldren. Une dernière pensée aussi pour cette vie d’aventure que tu ne vivras pas.</p>
       <p>Tu allumes les mèches. Les flammes brillent doucement et avancent sans trembler le long de la pierre.</p>
@@ -6006,7 +6006,7 @@ const STORY = {
     choices:terminalChoices()
   },
   c217: {
-    number:'PAGE 219',title:'La fin d’un règne',
+    number:'PAGE 219',title:'',
     text:`<p>Un beau jour, sur la place de Valombre, un marchand inconnu s’approche de toi. Il te parle d’une voix douce. Tu te penches pour l’entendre.</p>
       <p>D’un mouvement brutal, il tire une lame noire de sous son manteau et te l’enfonce profondément dans la poitrine.</p>
       <p>Une douleur fulgurante te traverse. La force qui t’habitait depuis la grotte disparaît d’un seul coup. Tu tombes à genoux.</p>
@@ -6016,7 +6016,7 @@ const STORY = {
     choices:terminalChoices()
   },
   c219: {
-    number:'PAGE 220',title:'La transformation',
+    number:'PAGE 220',title:'',
     text:`<p><strong>Ton taux de terre noire vient de dépasser le niveau critique.</strong></p>
       <p>Tu sens d’abord une brûlure, profonde, impossible à localiser.</p>
       <p>Une douleur insoutenable traverse ton corps, comme si quelque chose cherchait à naître sous ta peau.</p>
