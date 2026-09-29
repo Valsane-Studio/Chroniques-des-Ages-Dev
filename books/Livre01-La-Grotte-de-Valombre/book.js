@@ -597,15 +597,18 @@ function finalPassageRecovery(s) {
 function finalPassageDiceHtml(result) {
   return result ? `<div class="dice-result"><p>Dextérité : ${result.threshold} · Dés : ${result.total}</p><div class="dice-faces">${result.dice.map(renderDie).join('')}</div><p><strong>${result.success ? 'Réussite' : 'Échec'}</strong></p></div>` : '';
 }
-const FINAL_KNIGHT_STATS = { dexterity: 7, force: 12, damage: 3, armor: 2 };
+const FINAL_KNIGHT_STATS = { dexterity: 7, force: 12, damage: 3, armor: 3 };
 function ensureFinalKnights(s) {
   if (!s.flags.finalKnights || !Array.isArray(s.flags.finalKnights.hp))
-    s.flags.finalKnights = {hp:[10,10], last:null, contaminated:false, balanceVersion:2, phase:'duel'};
+    s.flags.finalKnights = {hp:[10,10], armor:[3,3], last:null, contaminated:false, balanceVersion:3, phase:'duel'};
   const fight=s.flags.finalKnights;
-  if (fight.balanceVersion !== 2) {
+  if (fight.balanceVersion !== 2 && fight.balanceVersion !== 3) {
     fight.hp=fight.hp.map(hp=>hp>0?Math.min(10,hp+4):0);
-    fight.balanceVersion=2;
   }
+  if (!Array.isArray(fight.armor) || fight.armor.length !== 2)
+    fight.armor=fight.hp.map(hp=>hp>0?FINAL_KNIGHT_STATS.armor:0);
+  fight.armor=fight.armor.map(value=>Math.max(0,Math.min(FINAL_KNIGHT_STATS.armor,Number(value)||0)));
+  fight.balanceVersion=3;
   if (!fight.phase) fight.phase='duel';
   if (fight.firstDown == null && fight.phase==='duel' && fight.hp.filter(hp=>hp<=0).length===1)
     fight.firstDown=fight.hp.findIndex(hp=>hp<=0);
@@ -633,9 +636,11 @@ function finalKnightsRound(s, target, blade) {
     const foeScore=FINAL_KNIGHT_STATS.dexterity+FINAL_KNIGHT_STATS.force+foeDice[0]+foeDice[1];
     if (heroScore>foeScore) {
       const rawDamage=heroCombatDamage(s);
-      const damage=Math.max(1,rawDamage-FINAL_KNIGHT_STATS.armor);
+      const absorbed=Math.min(rawDamage,fight.armor[target]);
+      fight.armor[target]-=absorbed;
+      const damage=rawDamage-absorbed;
       fight.hp[target]=Math.max(0,fight.hp[target]-damage);
-      messages.push(`Tu touches le chevalier ${target+1} : ${damage} dégâts après les ${FINAL_KNIGHT_STATS.armor} points absorbés par son armure.`);
+      messages.push(`Tu touches le chevalier ${target+1} : ${absorbed} absorbé${absorbed>1?'s':''} par son armure, ${damage} dégât${damage>1?'s':''} infligé${damage>1?'s':''}. Protection restante : ${fight.armor[target]}/3.`);
     } else if (heroScore<foeScore) {
       const hit=applyDamage(s,FINAL_KNIGHT_STATS.damage);
       if(hit.hpLost>0&&!fight.contaminated){raiseContamination(s,2);fight.contaminated=true;}
@@ -5829,8 +5834,8 @@ const STORY = {
       const f=ensureFinalKnights(s);
       const revival=f.phase==='revived'
         ? '<p>Tu entends un grincement sur le côté.</p>'
-        : '<p>Les deux anciens chevaliers te barrent le passage. Tu dois en viser un tandis que l’autre cherche une ouverture pour frapper. Leurs armures arrêtent une partie de tes coups, mais tes lames de jet peuvent atteindre les jointures.</p>';
-      return `${revival}<div class="enemy-card"><div class="enemy-card-title">ANCIENS CHEVALIERS</div><div class="enemy-card-stats final-knights-stats"><div><span>Chevalier 1</span><strong>${f.hp[0]}/10 Vie</strong></div><div><span>Chevalier 2</span><strong>${f.hp[1]}/10 Vie</strong></div><div><span>Dextérité</span><strong>${FINAL_KNIGHT_STATS.dexterity} chacun</strong></div><div><span>Force</span><strong>${FINAL_KNIGHT_STATS.force} chacun</strong></div><div><span>Armure</span><strong>${FINAL_KNIGHT_STATS.armor} par coup</strong></div><div><span>Dégâts</span><strong>${FINAL_KNIGHT_STATS.damage} chacun</strong></div></div></div>${f.last?`<div class="combat-roll-result"><div class="combat-dice">${f.last.dice.map(renderDie).join('')}</div>${f.last.messages.map(m=>`<p>${m}</p>`).join('')}</div>`:''}`;
+        : '<p>Les deux anciens chevaliers te barrent le passage. Tu dois en viser un tandis que l’autre cherche une ouverture pour frapper. Leurs armures absorbent les premiers coups, puis se brisent. Tes lames de jet peuvent atteindre les jointures.</p>';
+      return `${revival}<div class="enemy-card"><div class="enemy-card-title">ANCIENS CHEVALIERS</div><div class="enemy-card-stats final-knights-stats"><div><span>Chevalier 1</span><strong>${f.hp[0]}/10 Vie<br>${f.armor[0]}/3 Protection</strong></div><div><span>Chevalier 2</span><strong>${f.hp[1]}/10 Vie<br>${f.armor[1]}/3 Protection</strong></div><div><span>Dextérité</span><strong>${FINAL_KNIGHT_STATS.dexterity} chacun</strong></div><div><span>Force</span><strong>${FINAL_KNIGHT_STATS.force} chacun</strong></div><div><span>Armure</span><strong>${FINAL_KNIGHT_STATS.armor} points chacun</strong></div><div><span>Dégâts</span><strong>${FINAL_KNIGHT_STATS.damage} chacun</strong></div></div></div>${f.last?`<div class="combat-roll-result"><div class="combat-dice">${f.last.dice.map(renderDie).join('')}</div>${f.last.messages.map(m=>`<p>${m}</p>`).join('')}</div>`:''}`;
     },
     choices:s=>{
       if(s.hp<=0)return terminalChoices();
