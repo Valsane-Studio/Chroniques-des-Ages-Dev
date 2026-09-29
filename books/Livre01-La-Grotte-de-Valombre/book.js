@@ -1086,7 +1086,7 @@ const STORY = {
     title: 'La place de Valombre',
     image: 'La place de Valombre',
     text: state => {
-      const merchantDone = !!(state.flags.merchantVisited || state.visited?.c4);
+      const merchantDone = !!(state.flags.merchantPotionBought || state.visited?.c120);
       const streetDone = !!(state.flags.valombreStreetVisited || state.visited?.c6 || state.visited?.c7);
       const details = [];
       if (!merchantDone) details.push('Le marchand se tient sous son auvent.');
@@ -1100,7 +1100,7 @@ const STORY = {
     },
     choices: state => {
       const list = [];
-      if (!state.flags.merchantVisited && !state.visited?.c4) list.push({ label: 'Voir le marchand', to: 'c4' });
+      if (!state.flags.merchantPotionBought && !state.visited?.c120) list.push({ label: 'Voir le marchand', to: 'c4' });
       list.push({ label: 'Voir la forgeronne', to: 'c5' });
       if (!state.flags.valombreStreetVisited && !state.visited?.c6 && !state.visited?.c7) list.push({ label: 'Approcher la personne dans la ruelle', to: 'c6' });
       list.push({ label: 'Partir vers la grotte', to: 'c8' });
@@ -1115,13 +1115,17 @@ const STORY = {
     image: 'Le marchand de Valombre',
     onEnter: s => { s.flags.merchantVisited = true; },
     text: state => {
-      if (hasItem(state,'potion_guerison')) {
+      if (state.flags.merchantPotionBought || state.visited?.c120 || hasItem(state,'potion_guerison')) {
         return `
           <p>Le marchand reconnaît la potion qui dépasse de ton sac.</p>
           <blockquote>« Garde-la pour le moment où tu en auras vraiment besoin. »</blockquote>
         `;
       }
       if (state.silver >= 3) {
+        if ((state.history || []).filter(id => id === 'c4').length > 1) return `
+          <p>Le marchand te reconnaît et soulève la fiole restée sur son étal.</p>
+          <blockquote>« Tu as changé d’avis ? La potion est toujours disponible. Elle te rendra <strong>1 dé de Vie</strong> pour trois pièces d’argent. »</blockquote>
+        `;
         return `
           <p>Le marchand t’écoute raconter le retour du cheval. Son visage devient grave.</p>
           <p>Il sort alors d’une petite caisse une fiole soigneusement bouchée.</p>
@@ -1134,13 +1138,14 @@ const STORY = {
       `;
     },
     choices: state => {
-      if (!hasItem(state,'potion_guerison') && state.silver >= 3) {
+      if (!state.flags.merchantPotionBought && !state.visited?.c120 && !hasItem(state,'potion_guerison') && state.silver >= 3) {
         return [
           {
             label: 'Acheter la potion de guérison',
             to: 'c120',
             effect: s => {
               s.silver -= 3;
+              s.flags.merchantPotionBought = true;
               addItem(
                 s,
                 'potion_guerison',
