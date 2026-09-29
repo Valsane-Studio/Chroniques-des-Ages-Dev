@@ -2733,11 +2733,19 @@ const STORY = {
     title: '',
     noImage: true,
     image: 'Ce qui vit entre les pierres',
+    onEnter: state => {
+      if (state.flags.fissureDustExposure) return;
+      state.flags.fissureDustExposure = true;
+      raiseContamination(state, 1);
+    },
     text: state => {
       const r = diceResultHtml(state);
+      const dust = '<p>Une fine poussière noire se détache des fissures et retombe sur toi. Elle s’infiltre sous tes vêtements et dans ta respiration. <strong>Terre noire : +1.</strong></p>';
       if (state.flags.fissurePass === 'success') {
         return r + `
           <p>Tu avances lentement, sans jamais t’arracher à la paroi.</p>
+
+          ${dust}
 
           <p>À plusieurs reprises, quelque chose de pâle affleure dans les fentes puis disparaît avant que tu puisses tourner la tête.</p>
 
@@ -2765,6 +2773,8 @@ const STORY = {
 
       return r + `
         ${weaponLine}
+
+        ${dust}
 
         <p>C’est suffisant.</p>
 
