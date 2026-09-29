@@ -529,6 +529,9 @@ function render() {
       }
       if (choice.inlineCombat) btn.disabled = true;
       if (typeof choice.effect === 'function') choice.effect(state);
+      const redirect = typeof choice.redirectAfterEffect === 'function'
+        ? choice.redirectAfterEffect(state) : choice.redirectAfterEffect;
+      if (redirect && STORY[redirect]) return enterNode(redirect);
       if (choice.stay) {
         saveState(); render();
         if (choice.inlineCombat) {
