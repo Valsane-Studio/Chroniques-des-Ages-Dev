@@ -4299,3 +4299,13 @@ body.library-home-open .app-shell {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+
+/* V68.208 — masque complètement la barre de caractéristiques lorsqu'elle est vide.
+   Évite le trait texturé résiduel et l'espace réservé en bas des pages sans HUD. */
+.status-tags:empty {
+  display: none !important;
+}
+body.no-status-tags .app-shell {
+  padding-bottom: max(24px, env(safe-area-inset-bottom)) !important;
+}
