@@ -479,6 +479,7 @@ function render() {
       statusTags.appendChild(tag);
     });
   }
+  document.body.classList.toggle('no-status-tags', statusTags.childElementCount === 0);
 
   const overriddenChoices = typeof BOOK.choiceOverride === 'function' ? BOOK.choiceOverride(state, node) : null;
   const availableChoices = pendingDice
