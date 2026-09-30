@@ -1,6 +1,6 @@
 /* La Grotte de Valombre — Service Worker
    IMPORTANT : augmenter APP_VERSION à chaque nouvelle mise en ligne. */
-const APP_VERSION = 'reference-68.247-ten-soldiers-dev';
+const APP_VERSION = 'reference-68.248-book01-duel-rules-dev';
 const CACHE_PREFIX = 'chroniques-ages-test-';
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 
