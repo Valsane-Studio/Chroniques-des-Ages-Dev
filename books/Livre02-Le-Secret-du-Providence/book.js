@@ -139,32 +139,67 @@ function crewBattleHtml(s,key,enemyCount=12){
   const enemyPower=Number.isFinite(b.enemyPower)?b.enemyPower:3;
   const hasNewResult=!!(l&&l.mode==='force_gap_d6');
 
-  const advantage=l
-    ? (l.outcome==='soldiers'
-      ? `Tes soldats ont la plus grande Force. Leur dé de pertes est réduit de <strong>${l.gap}</strong>.`
-      : l.outcome==='pirates'
-        ? `Les pirates ont la plus grande Force. Leur dé de pertes est réduit de <strong>${l.gap}</strong>.`
-        : 'Les deux groupes ont la même Force : aucun camp ne bénéficie de réduction.')
-    : '';
-
-  return `<div class="combat-roll-result"><div class="combat-roll-title">Combat de groupe</div>
-    <p>Soldats : <strong>${s.soldiers}</strong> · Pirates : <strong>${b.enemy}</strong></p>
-    ${hasNewResult?`
-      <div class="dice-result crew-battle-compact">
-        <div class="crew-battle-side">
-          <span><strong>Soldats — ${l.soldierCount} × ${soldierPower} = Force ${l.soldierAttack}</strong></span>
-          <span class="crew-battle-die">${renderDie(l.soldierLossDie)}</span>
-          <span>Dé de pertes : ${l.soldierLossDie}${l.outcome==='soldiers'?` − ${l.gap}`:''} → <strong>−${l.soldierLoss}</strong></span>
-        </div>
-        <div class="crew-battle-side">
-          <span><strong>Pirates — ${l.enemyCount} × ${enemyPower} = Force ${l.enemyAttack}</strong></span>
-          <span class="crew-battle-die">${renderDie(l.enemyLossDie)}</span>
-          <span>Dé de pertes : ${l.enemyLossDie}${l.outcome==='pirates'?` − ${l.gap}`:''} → <strong>−${l.enemyLoss}</strong></span>
-        </div>
-        <p class="crew-battle-outcome"><strong>${advantage}</strong></p>
-        <p><strong>Pertes du tour : Soldats −${l.soldierLoss} · Pirates −${l.enemyLoss}</strong></p>
+  if(!hasNewResult){
+    const soldierAttack=s.soldiers*soldierPower;
+    const enemyAttack=b.enemy*enemyPower;
+    return `<div class="combat-roll-result crew-battle-result">
+      <div class="combat-roll-title">Combat de groupe</div>
+      <div class="crew-strength-preview">
+        <div><strong>Soldats</strong><span>${s.soldiers} × ${soldierPower} = <strong>${soldierAttack}</strong></span></div>
+        <div><strong>Pirates</strong><span>${b.enemy} × ${enemyPower} = <strong>${enemyAttack}</strong></span></div>
       </div>
-    `:''}
+      <p class="crew-battle-ready">Lance les dés pour résoudre les pertes de cet assaut.</p>
+    </div>`;
+  }
+
+  const soldierAfter=Math.max(0,l.soldierCount-l.soldierLoss);
+  const enemyAfter=Math.max(0,l.enemyCount-l.enemyLoss);
+  const stronger=l.outcome==='soldiers'?'soldats':l.outcome==='pirates'?'pirates':'aucun camp';
+  const advantageText=l.outcome==='tie'
+    ? 'Les deux groupes ont la même Force : aucun ne réduit ses pertes.'
+    : `Les <strong>${stronger}</strong> ont l’avantage de Force : <strong>${l.gap}</strong>. Cet écart est retiré de leur propre dé de pertes.`;
+
+  const soldierCalc=l.outcome==='soldiers'
+    ? `${l.soldierLossDie} − ${l.gap} = <strong>${l.soldierLoss} perte${l.soldierLoss>1?'s':''}</strong>`
+    : `${l.soldierLossDie} = <strong>${l.soldierLoss} perte${l.soldierLoss>1?'s':''}</strong>`;
+
+  const enemyCalc=l.outcome==='pirates'
+    ? `${l.enemyLossDie} − ${l.gap} = <strong>${l.enemyLoss} perte${l.enemyLoss>1?'s':''}</strong>`
+    : `${l.enemyLossDie} = <strong>${l.enemyLoss} perte${l.enemyLoss>1?'s':''}</strong>`;
+
+  return `<div class="combat-roll-result crew-battle-result">
+    <div class="combat-roll-title">Résultat de l’assaut</div>
+
+    <div class="crew-strength-preview">
+      <div><strong>Soldats</strong><span>${l.soldierCount} × ${soldierPower} = Force <strong>${l.soldierAttack}</strong></span></div>
+      <div><strong>Pirates</strong><span>${l.enemyCount} × ${enemyPower} = Force <strong>${l.enemyAttack}</strong></span></div>
+    </div>
+
+    <p class="crew-advantage">${advantageText}</p>
+
+    <div class="crew-loss-grid">
+      <div class="crew-loss-card">
+        <strong>Soldats</strong>
+        <span class="crew-loss-label">Dé de pertes</span>
+        <div class="crew-loss-die">${renderDie(l.soldierLossDie)}</div>
+        <div class="crew-loss-value">Résultat : <strong>${l.soldierLossDie}</strong></div>
+        <div class="crew-loss-calc">${soldierCalc}</div>
+      </div>
+
+      <div class="crew-loss-card">
+        <strong>Pirates</strong>
+        <span class="crew-loss-label">Dé de pertes</span>
+        <div class="crew-loss-die">${renderDie(l.enemyLossDie)}</div>
+        <div class="crew-loss-value">Résultat : <strong>${l.enemyLossDie}</strong></div>
+        <div class="crew-loss-calc">${enemyCalc}</div>
+      </div>
+    </div>
+
+    <div class="crew-battle-summary">
+      <strong>Pertes de l’assaut</strong>
+      <span>Soldats : <strong>−${l.soldierLoss}</strong> · Pirates : <strong>−${l.enemyLoss}</strong></span>
+      <span>Effectifs : Soldats <strong>${l.soldierCount} → ${soldierAfter}</strong> · Pirates <strong>${l.enemyCount} → ${enemyAfter}</strong></span>
+    </div>
   </div>`;
 }
 
@@ -275,7 +310,7 @@ const STORY={
    +`<p>Tu allumes la petite lampe posée près du lit.</p><p>Tu ne reconnais pas ton agresseur.</p><p>Un homme du village, peut-être. Ou quelqu’un arrivé après vous.</p><p>Il essaie de respirer.</p><p>Tu t’accroupis près de lui.</p><blockquote>« Qui vous envoie ? »</blockquote><p>Il secoue lentement la tête.</p><p>Puis ses doigts se referment sur ta manche.</p><blockquote>« Abandonnez les recherches... »</blockquote><p>Sa voix n’est plus qu’un souffle.</p><blockquote>« Le trésor doit disparaître à jamais. »</blockquote><p>Sa main retombe.</p><p>Il ne répond plus.</p>`,choices:[{label:'Fouiller son corps',to:'c10',effect:s=>{if(!s.flags.assassinLoot){s.flags.assassinLoot=true;addGold(s,8);addItem(s,'couteaux_jet','Deux couteaux équilibrés','Deux petits couteaux parfaitement équilibrés, adaptés au lancer.',{quantity:2});}}}]},
 
  c10:{title:'',text:s=>`<p>Tu fouilles rapidement les vêtements de l’homme.</p><p>Il ne porte aucun document.</p><p>Aucun signe permettant de connaître son origine.</p><p>Dans une petite bourse, tu trouves <strong>huit pièces d’or</strong>.</p><p>Sous son manteau sont dissimulés <strong>deux petits couteaux parfaitement équilibrés</strong>. Plus courts que ton arme de combat, mais conçus pour être lancés avec précision.</p><p>Tu les ajoutes à ton équipement.</p><p>Le reste de la nuit est court.</p><p>Lorsque tu redescends dans la salle, le jour commence à peine à entrer par les fenêtres.</p><p>Le tavernier est déjà là, mais il évite ton regard.</p>${s.flags.oldSailorDone?'<p>La table du vieux marin est vide.</p>':''}${s.flags.spanishWomanDone?'<p>La femme espagnole a elle aussi disparu.</p>':''}<p>Personne ne demande ce qui s’est passé dans ta chambre.</p><p>Personne ne semble surpris.</p><p>Quelques minutes plus tard, tu rejoins la jetée.</p><p>À bord du Resolute, les marins terminent de préparer les voiles. Tes huit soldats vérifient leurs armes.</p><p>Tu jettes un dernier regard vers le village.</p><p>Puis tu donnes l’ordre de larguer les amarres.</p><p><strong>Le Providence vous attend quelque part au-delà de la côte.</strong></p>`,choices:[{label:'Rejoindre la zone de disparition',to:'c20'}]},
- c12:{title:'Le pavillon noir',text:`<p>Un bâtiment rapide approche. Un pavillon noir monte.</p><p>Vous refusez de vous rendre. Le noir redescend. Un pavillon rouge prend sa place.</p>`,choices:[{label:'Préparer les soldats',to:'c13',effect:s=>startCrewBattle(s,'pirates1',12,5,3,6)}]},
+ c12:{title:'Le pavillon noir',text:`<p>Le Resolute quitte progressivement les eaux côtières et prend la route du large.</p><p>Derrière vous, la ligne de terre s’efface peu à peu jusqu’à disparaître complètement.</p><p>Bientôt, il ne reste plus que la mer.</p><p>De l’eau dans toutes les directions, jusqu’à l’horizon.</p><p>Le vent est régulier et le sloop avance vite, mais à bord l’atmosphère est différente de celle des premières heures.</p><p>Les marins connaissent ces eaux.</p><p>Ils savent que loin des côtes, un bâtiment isolé peut rester invisible pendant des jours.</p><p>Et ils savent surtout que les navires marchands ne sont pas les seuls à emprunter cette route.</p><p>Certains hommes parlent moins fort. D’autres gardent leur couteau ou leur pistolet plus près qu’à l’habitude.</p><p>Personne pourtant ne remet ta décision en cause.</p><p>Ta réputation les rassure.</p><p>Et celle de tes huit soldats davantage encore.</p><p>Ils ont déjà combattu sous tes ordres. Ils savent tenir une ligne, défendre un pont et garder leur sang-froid lorsqu’un autre équipage tente l’abordage.</p><p>Les heures passent.</p><p>Le soleil monte, puis commence lentement à redescendre.</p><p>Autour du Resolute, l’océan semble ne jamais finir.</p><p>Tu n’aperçois ni terre, ni fumée, ni voile.</p><p>Puis une voix éclate soudain au-dessus du pont.</p><blockquote>« Voile ! Voile à l’horizon ! »</blockquote><p>La vigie, installée dans la hune, pointe le bras vers l’avant tribord.</p><p>En quelques secondes, les conversations cessent.</p><p>Plusieurs hommes se tournent dans la même direction.</p><p>Au début, tu ne distingues presque rien.</p><p>Un point sombre seulement, posé sur la ligne de l’horizon.</p><p>Quelqu’un murmure que c’est peut-être un marchand.</p><p>Pendant quelques minutes, tout le monde veut le croire.</p><p>Le Resolute poursuit sa route.</p><p>Le point devient une voile.</p><p>Puis une coque.</p><p>Le bâtiment vient vers vous.</p><p>Tu prends la longue-vue.</p><p>Sa structure est légère et rapide. Trop rapide pour un gros navire de commerce.</p><p>Et surtout, quelque chose flotte en haut du mât.</p><p>Une pièce de tissu noire.</p><p>Le doute disparaît.</p><p><strong>Un pavillon noir.</strong></p><p>Sur ton pont, les soldats se mettent en place.</p><p>Les marins cessent complètement de parler.</p><p>Le navire adverse continue d’approcher.</p><p>Il attend probablement que vous réduisiez la voilure et acceptiez de vous rendre.</p><p>Tu ne donnes aucun ordre en ce sens.</p><p>Quelques instants plus tard, le pavillon noir descend.</p><p>Un autre monte lentement à sa place.</p><p><strong>Rouge.</strong></p><p>Cette fois, même les plus jeunes marins comprennent ce que cela signifie.</p><p>Pas de quartier.</p><p>Pas de prisonniers.</p><p>Le navire pirate accélère encore.</p>`,choices:[{label:'Préparer les soldats',to:'c13',effect:s=>startCrewBattle(s,'pirates1',12,5,3,6)}]},
  c13:{title:'L’abordage',text:s=>`<p>Les pirates passent à l’abordage.</p>
   <div class="dice-result">
     <p class="roll-number">Règle du combat de groupe</p>
@@ -506,7 +541,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:23,pageMapVersion:3,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:25,pageMapVersion:3,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
