@@ -251,7 +251,7 @@ function villageAssaultRound(s,action){
   }
 
   const soldierHits=soldierDice.filter(v=>v<=4).length;
-  const haleHits=haleDice.filter(v=>v<=3).length;
+  const haleHits=haleDice.filter(v=>v<=4).length;
   const marineHits=marineDice.filter(v=>v<=3).length;
   const flankHits=flankDice.filter(v=>v<=4).length;
   const alliedHits=soldierHits+haleHits+marineHits+flankHits+extraEnemyLoss;
@@ -358,7 +358,7 @@ function villageAssaultHtml(s){
     </div>
     <p>Comme lors des combats contre les pirates, chaque groupe possède une <strong>Valeur de combat</strong> qui représente à la fois son équipement et son entraînement.</p>
     <p>Tes soldats sont aguerris et bien équipés : <strong>Valeur de combat 4</strong>. Chaque dé faisant <strong>1, 2, 3 ou 4</strong> est une réussite.</p>
-    <p><strong>Hale</strong>, s’il est encore avec toi, possède une <strong>Valeur de combat 3</strong>. Les marins du <strong>Providence</strong>, si tu parviens à les libérer pendant la bataille, ont eux aussi une <strong>Valeur de combat 3</strong> : chaque dé faisant <strong>1, 2 ou 3</strong> est une réussite.</p>
+    <p><strong>Hale</strong> combat comme tes autres soldats : <strong>Valeur de combat 4</strong>. Les marins du <strong>Providence</strong>, si tu parviens à les libérer pendant la bataille, ont une <strong>Valeur de combat 3</strong> : chaque dé faisant <strong>1, 2 ou 3</strong> est une réussite.</p>
     <p>Les hommes pâles sont moins entraînés et moins bien équipés : <strong>Valeur de combat 1</strong>. Seul un <strong>1</strong> est une réussite.</p>
     <p>Chaque combattant lance <strong>1D6</strong>. <strong>Chaque réussite met un adversaire hors de combat.</strong> À chaque nouvel assaut, tous les combattants encore debout relancent leur dé.</p>
     <p>À chaque tour, tu choisis aussi ton action :</p>
@@ -380,10 +380,10 @@ function villageAssaultHtml(s){
       h+='</div>';
     }
 
-    h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Ton groupe</strong><span>Soldats : réussite sur 1–4 · Hale et marins : 1–3</span></div>';
+    h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Ton groupe</strong><span>Soldats et Hale : réussite sur 1–4 · Marins : 1–3</span></div>';
     if(l.soldierDice.length)h+='<p>Soldats</p><div class="crew-training-dice">'+villageBattleDiceRow(l.soldierDice,4)+'</div>';
     if(l.flankDice.length)h+='<p>Feu croisé</p><div class="crew-training-dice">'+villageBattleDiceRow(l.flankDice,4)+'</div>';
-    if(l.haleDice.length)h+='<p>Hale</p><div class="crew-training-dice">'+villageBattleDiceRow(l.haleDice,3)+'</div>';
+    if(l.haleDice.length)h+='<p>Hale</p><div class="crew-training-dice">'+villageBattleDiceRow(l.haleDice,4)+'</div>';
     if(l.marineDice.length)h+='<p>Marins du Providence</p><div class="crew-training-dice">'+villageBattleDiceRow(l.marineDice,3)+'</div>';
     h+='<p><strong>'+String(l.enemyLoss)+' homme'+(l.enemyLoss>1?'s pâles tombent':' pâle tombe')+'.</strong></p></div>';
 
@@ -1288,7 +1288,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:80,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:81,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
