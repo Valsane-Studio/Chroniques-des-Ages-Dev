@@ -684,6 +684,16 @@ function closeDrawer() {
 }
 
 const bookApi = { book: BOOK, saveState, render, openInventory, showModal, closeModal };
+storyText.addEventListener('click', event => {
+  const button = event.target.closest('[data-story-modal]');
+  if (!button) return;
+  const key = button.dataset.storyModal;
+  const def = BOOK.storyModals && BOOK.storyModals[key];
+  if (!def) return;
+  const html = typeof def.html === 'function' ? def.html(state) : def.html;
+  showModal(def.title || 'Règles', html || '');
+});
+
 modalContent.addEventListener('click', event => {
   const button = event.target.closest('[data-action]');
   if (!button) return;
