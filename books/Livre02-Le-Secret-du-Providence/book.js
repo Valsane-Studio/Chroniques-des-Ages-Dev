@@ -351,82 +351,180 @@ const enemyBefore=b.enemy;
     prisonOpenedThisRound
   };
 }
-function villageSoloAssaultRound(s){
+function markVillageEnemyLoss(s,n=1){
   const b=initVillageAssault(s);
-  if(s.hp<=0||b.enemy<=0)return;
-
-  const heroSuccess=roll3D6(s,'Dextérité',currentDexterity(s));
-  const heroDice=Array.isArray(s.lastDice)?[...s.lastDice]:[];
-  const heroTotal=s.lastTotal;
-
-  let enemyLoss=0;
-  if(heroSuccess){
-    enemyLoss=Math.min(1,b.enemy);
-    b.enemy=Math.max(0,b.enemy-enemyLoss);
-  }
-
-  const enemyDice=Array.from({length:b.enemy},()=>cryptoDie6());
-  const enemyHits=enemyDice.filter(v=>v===1).length;
-  const damageRolls=Array.from({length:enemyHits},()=>Math.ceil(cryptoDie6()/2));
-  const rawDamage=damageRolls.reduce((sum,v)=>sum+v,0);
-  const resolution=rawDamage>0?applyDamage(s,rawDamage):{absorbed:0,hpLost:0};
-
+  const loss=Math.min(Math.max(0,Math.floor(Number(b.enemy)||0)),Math.max(0,Math.floor(Number(n)||0)));
+  b.enemy=Math.max(0,(b.enemy||0)-loss);
   if(b.enemy<=0){
     b.enemy=0;
     b.enemyDefeated=true;
   }
-
-  b.soloRound=(b.soloRound||0)+1;
-  b.soloLast={
-    heroSuccess,heroDice,heroTotal,enemyLoss,enemyDice,enemyHits,damageRolls,rawDamage,
-    absorbed:resolution.absorbed||0,hpLost:resolution.hpLost||0
-  };
+  return loss;
 }
 
-function villageSoloAssaultHtml(s){
+function nightGuardAttempt(s,index){
+  const key='nightGuard'+String(index);
+  if(s.flags[key]?.resolved)return;
+  const success=roll3D6(s,'Dextérité',currentDexterity(s));
+  const result={
+    resolved:true,
+    success,
+    dice:Array.isArray(s.lastDice)?[...s.lastDice]:[],
+    total:s.lastTotal,
+    enemyLoss:0
+  };
+  if(success)result.enemyLoss=markVillageEnemyLoss(s,1);
+  else s.flags.nightVillageAlerted=true;
+  s.flags[key]=result;
+}
+
+function nightGuardResultHtml(s,index){
+  const r=s.flags['nightGuard'+String(index)];
+  if(!r?.resolved)return '';
   const b=initVillageAssault(s);
-  const l=b.soloLast;
-  let h='';
-
-  if(!l){
-    h+='<p>Tu te retournes.</p><p>Tous tes hommes sont à terre.</p><p>Mais le combat n’est pas fini.</p>';
-    h+='<p>Tu vas désormais devoir te battre seul. Ton entraînement et ton équipement peuvent encore te permettre de remporter ce combat.</p>';
-    h+='<div class="combat-roll-result crew-battle-result"><div class="combat-roll-title">Combat en solitaire</div>';
-    h+='<p>À chaque tour, effectue un <strong>test de Dextérité</strong>. S’il réussit, tu mets <strong>1 homme pâle</strong> hors de combat. S’il échoue, aucun homme pâle n’est éliminé.</p>';
-    h+='<p>Les hommes pâles continuent de te viser de la même façon. Chacun lance <strong>1D6</strong>. Chaque dé faisant <strong>1</strong> te touche et t’inflige <strong>1D3 dégâts</strong>.</p>';
-    h+='<p>Il reste <strong>'+String(b.enemy)+'</strong> homme'+(b.enemy>1?'s pâles':' pâle')+'.</p></div>';
-    return h;
-  }
-
-  h+='<div class="combat-roll-result crew-battle-result"><div class="combat-roll-title">Combat en solitaire — tour '+String(b.soloRound||1)+'</div>';
-  h+='<div class="crew-training-side"><strong>Ton test de Dextérité</strong><div class="crew-training-dice">'+l.heroDice.map(v=>renderDie(v)).join('')+'</div>';
-  h+='<p>Total : <strong>'+String(l.heroTotal)+'</strong> — <strong>'+(l.heroSuccess?'réussite':'échec')+'</strong>.</p>';
-  h+=l.heroSuccess?'<p><strong>1 homme pâle est mis hors de combat.</strong></p>':'<p>Aucun homme pâle n’est éliminé.</p>';
-  h+='</div>';
-
-  h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Hommes pâles</strong><span>Réussite uniquement sur <strong>1</strong></span></div>';
-  if(l.enemyDice.length)h+='<div class="crew-training-dice">'+villageBattleDiceRow(l.enemyDice,1)+'</div>';
-  else h+='<p>Il ne reste plus personne pour riposter.</p>';
-  if(l.enemyHits>0){
-    h+='<p><strong>'+String(l.enemyHits)+' tir'+(l.enemyHits>1?'s te touchent':' te touche')+'.</strong></p>';
-    h+='<p>Dégâts : '+l.damageRolls.map(v=>'<strong>1D3 → '+String(v)+'</strong>').join(' · ')+'.</p>';
-    if(l.absorbed>0)h+='<p>Ta protection absorbe <strong>'+String(l.absorbed)+'</strong> dégât'+(l.absorbed>1?'s':'')+'.</p>';
-    if(l.hpLost>0)h+='<p>Tu perds <strong>'+String(l.hpLost)+'</strong> Vie.</p>';
-    else h+='<p>Tu ne perds aucun point de Vie.</p>';
+  let h='<div class="combat-roll-result crew-battle-result"><div class="combat-roll-title">Test de Dextérité</div>';
+  h+='<div class="crew-training-dice">'+r.dice.map(v=>renderDie(v)).join('')+'</div>';
+  h+='<p>Total : <strong>'+String(r.total)+'</strong> — <strong>'+(r.success?'réussite':'échec')+'</strong>.</p>';
+  if(r.success){
+    h+='<p>Tu atteins le garde avant qu’il ne puisse donner l’alerte. <strong>Un homme pâle de moins.</strong></p>';
+    h+=b.enemy>0
+      ?'<p>Il reste <strong>'+String(b.enemy)+'</strong> homme'+(b.enemy>1?'s pâles':' pâle')+'.</p>'
+      :'<p><strong>Il ne reste plus aucun homme pâle.</strong></p>';
   }else{
-    h+='<p>Aucun tir ne te touche.</p>';
+    h+='<p>Le garde t’aperçoit. Son cri déchire le silence et des silhouettes surgissent dans tout le village.</p>';
+    h+='<p><strong>'+String(b.enemy)+'</strong> homme'+(b.enemy>1?'s pâles sont encore debout':' pâle est encore debout')+'.</p>';
   }
-  h+='</div>';
-  h+='<div class="crew-battle-summary"><strong>Vie restante : '+String(s.hp)+'/'+String(s.maxHp)+'</strong> · <strong>Hommes pâles restants : '+String(b.enemy||0)+'</strong></div>';
   h+='</div>';
   return h;
 }
 
-function villageSoloAssaultChoices(s){
+const NIGHT_PALE={name:'HOMME PÂLE',hp:6,dex:9,force:8,damage:2,weaponPower:1};
+
+function initNightVillageFight(s){
   const b=initVillageAssault(s);
+  if(b.enemy>0&&(!Number.isFinite(b.nightEnemyHp)||b.nightEnemyHp<=0))b.nightEnemyHp=NIGHT_PALE.hp;
+  return b;
+}
+
+function nightVillageFightRound(s){
+  const b=initNightVillageFight(s);
+  if(s.hp<=0||b.enemy<=0)return;
+
+  const heroDice=[cryptoDie6(),cryptoDie6()];
+  const enemyDice=[cryptoDie6(),cryptoDie6()];
+  const heroDexterity=currentDexterity(s);
+  const heroForce=currentForce(s);
+  const enemyDexterity=NIGHT_PALE.dex;
+  const enemyForce=NIGHT_PALE.force;
+  const heroAttack=heroDexterity+heroForce+heroDice[0]+heroDice[1];
+  const enemyAttack=enemyDexterity+enemyForce+enemyDice[0]+enemyDice[1];
+  const heroWeaponPower=s.weapon&&s.weapon!=='none'?combatPower(s):0;
+  const heroDamage=heroCombatDamage(s);
+  const enemyWeaponPower=NIGHT_PALE.weaponPower;
+  const enemyDamage=enemyCombatDamage(NIGHT_PALE);
+  const enemyHpBefore=b.nightEnemyHp;
+
+  let outcome='tie',damage=0,protectionAbsorbed=0,hpLost=0,enemyKilled=false,enemyHpAfter=enemyHpBefore;
+
+  if(heroAttack>enemyAttack){
+    outcome='hero';
+    damage=heroDamage;
+    enemyHpAfter=Math.max(0,enemyHpBefore-damage);
+    if(enemyHpAfter<=0){
+      enemyKilled=true;
+      markVillageEnemyLoss(s,1);
+      if(b.enemy>0)b.nightEnemyHp=NIGHT_PALE.hp;
+      else b.nightEnemyHp=0;
+    }else b.nightEnemyHp=enemyHpAfter;
+  }else if(heroAttack<enemyAttack){
+    outcome='enemy';
+    damage=enemyDamage;
+    const resolution=applyDamage(s,damage);
+    protectionAbsorbed=resolution.absorbed;
+    hpLost=resolution.hpLost;
+  }
+
+  b.nightFightRound=(b.nightFightRound||0)+1;
+  b.nightFightLast={
+    round:b.nightFightRound,heroDice,enemyDice,heroDexterity,heroForce,enemyDexterity,enemyForce,
+    heroAttack,enemyAttack,heroWeaponPower,heroDamage,enemyWeaponPower,enemyDamage,
+    enemyHpBefore,enemyHpAfter,enemyKilled,outcome,damage,protectionAbsorbed,hpLost,
+    heroHp:s.hp,enemyRemaining:b.enemy
+  };
+}
+
+function nightVillageFightHtml(s){
+  const b=initNightVillageFight(s);
+  const r=b.nightFightLast;
+  let h='<p>Tu n’as plus personne pour tenir la ligne avec toi. Cette fois, tu affrontes toi-même les hommes pâles encore présents dans le village.</p>';
+  h+='<div class="combat-roll-result"><div class="combat-roll-title">Combat de nuit</div>';
+  h+='<p>Il reste <strong>'+String(b.enemy)+'</strong> homme'+(b.enemy>1?'s pâles':' pâle')+'.</p>';
+  if(!r){
+    h+='<p>Pour chaque échange, vous lancez chacun <strong>2 dés</strong> et ajoutez <strong>Dextérité + Force</strong>. Le meilleur score touche. En cas d’égalité, personne n’est blessé.</p>';
+    h+='<p>Tes dégâts sont de <strong>2 + la Puissance de ton arme</strong>. Un homme pâle possède <strong>6 Vie</strong> et inflige <strong>3 dégâts</strong> lorsqu’il remporte l’échange.</p>';
+    h+='</div>';
+    return h;
+  }
+
+  h+='<div class="combat-roll-grid">';
+  h+='<div class="combat-side"><strong>TOI</strong><div class="combat-dice">'+renderDie(r.heroDice[0])+renderDie(r.heroDice[1])+'</div><p>Dextérité '+String(r.heroDexterity)+' + Force '+String(r.heroForce)+' + dés '+String(r.heroDice[0]+r.heroDice[1])+'</p><p class="combat-total">Attaque : <strong>'+String(r.heroAttack)+'</strong></p></div>';
+  h+='<div class="combat-versus">VS</div>';
+  h+='<div class="combat-side"><strong>HOMME PÂLE</strong><div class="combat-dice">'+renderDie(r.enemyDice[0])+renderDie(r.enemyDice[1])+'</div><p>Dextérité '+String(r.enemyDexterity)+' + Force '+String(r.enemyForce)+' + dés '+String(r.enemyDice[0]+r.enemyDice[1])+'</p><p class="combat-total">Attaque : <strong>'+String(r.enemyAttack)+'</strong></p></div>';
+  h+='</div>';
+
+  if(r.outcome==='hero'){
+    h+='<div class="combat-outcome"><strong>Tu remportes l’échange.</strong><br>Tu infliges <strong>'+String(r.damage)+'</strong> dégâts.';
+    h+=r.enemyKilled?'<br><strong>L’homme pâle s’effondre.</strong>':'<br>Il lui reste <strong>'+String(r.enemyHpAfter)+'</strong> Vie.';
+    h+='</div>';
+  }else if(r.outcome==='enemy'){
+    h+='<div class="combat-outcome"><strong>L’homme pâle remporte l’échange.</strong><br>Il inflige <strong>'+String(r.damage)+'</strong> dégâts.';
+    if(r.protectionAbsorbed>0)h+=' Ta protection en absorbe <strong>'+String(r.protectionAbsorbed)+'</strong>.';
+    if(r.hpLost>0)h+=' Tu perds <strong>'+String(r.hpLost)+'</strong> Vie.';
+    else h+=' Tu ne perds aucun point de Vie.';
+    h+='</div>';
+  }else{
+    h+='<div class="combat-outcome"><strong>Égalité.</strong><br>Aucun de vous ne parvient à toucher l’autre.</div>';
+  }
+
+  h+='<div class="combat-life-line">Ta Vie : <strong>'+String(s.hp)+'/'+String(s.maxHp)+'</strong> · Hommes pâles restants : <strong>'+String(b.enemy)+'</strong>';
+  if(b.enemy>0)h+=' · Vie de l’adversaire actuel : <strong>'+String(b.nightEnemyHp)+'/'+String(NIGHT_PALE.hp)+'</strong>';
+  h+='</div></div>';
+  return h;
+}
+
+function nightVillageFightChoices(s){
+  const b=initNightVillageFight(s);
   if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];
-  if(b.enemyDefeated)return[{label:'Rejoindre la prison',to:'villageAssaultVictory'}];
-  return[{label:'Lancer les dés',stay:true,inlineCombat:true,effect:x=>villageSoloAssaultRound(x)}];
+  if(b.enemy<=0)return[{label:'Continuer',to:'villageNightAftermath'}];
+  return[{label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>nightVillageFightRound(x)}];
+}
+
+function nightStatueVictimCount(s){
+  if(Number.isFinite(s.flags.nightStatueVictims))return s.flags.nightStatueVictims;
+  return Math.max(0,Math.floor(Number(initVillageAssault(s).enemy)||0));
+}
+
+function villageNightStatueHtml(s){
+  const n=nightStatueVictimCount(s);
+  let h='<p>Tu approches du village avec la statuette entre les mains.</p><p>À mesure que tu avances, les conversations cessent.</p><p>Un homme pâle se tourne vers toi. Puis un autre.</p><p>Aucun ne fuit. Aucun ne lève son arme.</p><p>Ils restent immobiles, comme si la présence de la statuette leur interdisait de réagir.</p>';
+  if(n===1){
+    h+='<p>Tu avances jusqu’à lui et lèves ton épée pour le tuer.</p><p>Il ne se défend pas.</p><p>Quelques secondes plus tard, le silence retombe sur le village.</p><p>Il ne reste plus personne.</p>';
+  }else if(n===2){
+    h+='<p>Tu avances jusqu’au premier et lèves ton épée pour le tuer.</p><p>Il ne se défend pas.</p><p>Le second ne réagit pas davantage.</p><p>Quelques instants plus tard, le silence est total.</p><p>Il ne reste plus personne.</p>';
+  }else if(n>=3){
+    h+='<p>Tu avances jusqu’au premier et lèves ton épée pour le tuer.</p><p>Il ne se défend pas.</p><p>Puis tu passes au suivant.</p><p>Un à un, tu élimines les hommes pâles encore présents dans le village.</p><p>Pas un seul ne tente de t’arrêter.</p><p>Quelques minutes plus tard, le silence est total.</p><p>Il ne reste plus personne.</p>';
+  }else{
+    h+='<p>Le village est déjà silencieux. Aucun homme pâle ne se dresse encore devant toi.</p>';
+  }
+  return h;
+}
+
+function resolveNightStatueVillage(s){
+  const b=initVillageAssault(s);
+  if(!Number.isFinite(s.flags.nightStatueVictims))s.flags.nightStatueVictims=Math.max(0,Math.floor(Number(b.enemy)||0));
+  b.enemy=0;
+  b.enemyDefeated=true;
+  s.flags.palesAllDead=true;
 }
 
 function villageAssaultRulesHtml(){
@@ -439,7 +537,7 @@ function villageAssaultRulesHtml(){
     <p>À chaque tour, tu choisis aussi ton action :</p>
     <p><strong>Mener la charge :</strong> si ton test de Force réussit, tu neutralises <strong>1 homme pâle supplémentaire</strong>. En cas d’échec, tu subis <strong>1D3 dégâts</strong>.</p>
     <p><strong>Couvrir tes hommes :</strong> si ton test de Dextérité réussit, tu annules <strong>une perte dans ton groupe</strong> pendant ce tour.</p>
-    <p>Si tous tes hommes tombent, tu peux continuer seul. Tu ne peux alors que <strong>charger</strong> : si ton test de Dextérité réussit, tu mets <strong>1 homme pâle</strong> hors de combat. En cas d’échec, tu subis <strong>1D3 dégâts</strong>.</p>
+    <p>Si tous tes hommes tombent, l’assaut est perdu. Tu dois <strong>te replier dans la forêt</strong> avant que les hommes pâles ne se referment sur toi.</p>
   </div>`;
 }
 function villageAssaultHtml(s){
@@ -503,14 +601,14 @@ function villageAssaultHtml(s){
 
   if(b.enemyDefeated)h+='<p>Le dernier adversaire tombe. Pour quelques secondes, le village devient silencieux.</p>';
 
-  if(!b.enemyDefeated&&villageHeroAlone(s))h+='<p><strong>Tu es désormais seul.</strong> Les hommes pâles se referment autour de toi, mais tu peux encore continuer le combat.</p>';
+  if(!b.enemyDefeated&&villageHeroAlone(s))h+='<p><strong>Le dernier de tes hommes vient de tomber.</strong> Les hommes pâles se tournent vers toi. Rester ici serait suicidaire : il faut te replier.</p>';
   return h;
 }
 function villageAssaultChoices(s){
   const b=initVillageAssault(s);
   if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];
   if(b.enemyDefeated)return[{label:'Rejoindre la prison',to:'villageAssaultVictory'}];
-  if(villageHeroAlone(s))return[{label:'Continuer le combat seul',to:'villageSoloAssault'}];
+  if(villageHeroAlone(s))return[{label:'Fuir vers la forêt',to:'villageRetreat'}];
   return[
     {label:'Mener la charge — test de Force',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'charge')},
     {label:'Couvrir tes hommes — test de Dextérité',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'cover')}
@@ -803,7 +901,7 @@ const ALLIGATOR={name:'ALLIGATOR',hp:8,dex:7,force:8,damage:3};
 
 function createInitialState(){
   return {
-    node:'start',pageMapVersion:14,heroGender:'female',heroName:'Eleanor',
+    node:'start',pageMapVersion:15,heroGender:'female',heroName:'Eleanor',
     inventory:{},flags:{},visited:{},history:[],journal:'',
     hp:18,maxHp:18,baseForce:8,baseDexterity:13,forceBonus:0,dexBonus:0,dexPenalty:0,
     weapon:'naval_sword',protection:0,goldCoins:0,
@@ -1123,7 +1221,29 @@ ringKillThree:{title:'Profiter de leur hésitation',text:'<p>Tu fais un signe br
 
 villageAssault:{title:'Donner l’assaut',text:s=>villageAssaultHtml(s),onEnter:s=>initVillageAssault(s),choices:s=>villageAssaultChoices(s)},
 
-villageSoloAssault:{title:'Seul face à eux',noImage:true,text:s=>villageSoloAssaultHtml(s),choices:s=>villageSoloAssaultChoices(s)},
+villageRetreat:{title:'Le repli',noImage:true,text:'<p>Le dernier de tes hommes s’effondre.</p><p>Autour de toi, il ne reste plus personne pour tenir la ligne.</p><p>Les hommes pâles se tournent vers toi.</p><p>Tu recules de quelques pas, puis tu cours.</p><p>Tu t’enfonces dans la forêt sans regarder derrière toi. Des cris s’élèvent dans ton dos. Des branches craquent. Ils te poursuivent.</p><p>Tu quittes le sentier, descends une pente couverte de racines et te glisses derrière un énorme rocher.</p><p>Là, presque invisible dans un renfoncement de pierre, tu te plaques contre la roche.</p><p>Les bruits se rapprochent.</p><p>Des pas passent à quelques mètres de toi.</p><p>Puis s’éloignent.</p><p>Tu restes immobile. Longtemps.</p><p>Lorsque tu oses enfin bouger, la lumière a presque disparu entre les arbres.</p><p>La nuit tombe sur l’île.</p>',choices:[{label:'Attendre que la nuit soit complète',to:'villageRetreatNight'}]},
+
+villageRetreatNight:{title:'La nuit',noImage:true,text:'<p>La forêt est désormais plongée dans l’obscurité.</p><p>Au loin, quelques lueurs apparaissent entre les arbres. Le village des hommes pâles est toujours là.</p><p>Tu es seul.</p><p>Mais ils ignorent où tu te trouves.</p><p>Tu dois décider de ce que tu vas faire avant le lever du jour.</p>',choices:s=>[
+  {label:'S’approcher discrètement du camp',to:s.flags.guardianStatue?'villageNightStatue':'villageNightGuard1'},
+  {label:'Tenter de fuir l’île à la nage',to:'villageNightSwim'},
+  {label:'Fouiller l’île en espérant trouver quelque chose qui puisse t’aider',to:'villageNightSearch'}
+]},
+
+villageNightSwim:{title:'La traversée',noImage:true,text:'<p>L’autre île est très loin.</p><p>Mais tu as peut-être une chance de l’atteindre avant d’être totalement épuisé.</p><p>Sur la plage, tu retires tout ce qui pourrait gêner tes mouvements. Tu abandonnes ton équipement le plus lourd, puis tu entres dans l’eau.</p><p>Le froid te saisit immédiatement.</p><p>Tu commences à nager.</p><p>Au début, tout se passe bien. La mer est calme et tu progresses régulièrement vers la masse sombre de l’autre île.</p><p>Puis quelque chose change.</p><p>Un remous d’une puissance incroyable se forme sous toi.</p><p>Ton corps est brutalement projeté sur le côté, puis dans l’autre sens, comme si toute la mer se mettait à bouger sous tes jambes.</p><p>Tu t’arrêtes une fraction de seconde.</p><p>Ta jambe se bloque net.</p><p>Quelque chose d’épais et de souple vient de s’enrouler autour de ta cheville.</p><p>Tu n’as pas le temps de reprendre ton souffle.</p><p>Une tentacule gigantesque t’arrache vers le fond.</p><p>La surface disparaît au-dessus de toi.</p><div class="ending">FIN DE L’AVENTURE</div>',onEnter:s=>{s.hp=0;},choices:[{label:'Recommencer',action:'restart'}]},
+
+villageNightGuard1:{title:'Aux abords du village',noImage:true,text:s=>'<p>Tu progresses lentement entre les arbres.</p><p>À cette heure, le village est presque silencieux. Quelques feux brûlent encore entre les habitations.</p><p>Une silhouette se tient à l’écart.</p><p>Un homme pâle.</p><p>Seul.</p><p>Il monte la garde.</p><p>Tu peux tenter de t’approcher suffisamment pour le tuer avant qu’il ne donne l’alerte.</p>'+nightGuardResultHtml(s,1),choices:s=>{const r=s.flags.nightGuard1;if(!r?.resolved)return[{label:'Tenter de neutraliser le garde — test de Dextérité',stay:true,inlineCombat:true,effect:x=>nightGuardAttempt(x,1)}];if(!r.success)return[{label:'Le village est alerté — combattre',to:'villageNightFight'}];const b=initVillageAssault(s);if(b.enemy<=0)return[{label:'Continuer',to:'villageNightAftermath'}];return[{label:'Continuer vers le village',to:'villageNightGuard2'}];}},
+
+villageNightGuard2:{title:'Le second garde',noImage:true,text:s=>'<p>Tu laisses le premier garde derrière toi et continues vers le centre du village.</p><p>Tu n’as parcouru que quelques mètres lorsqu’une deuxième silhouette apparaît entre deux bâtiments.</p><p>Un autre garde.</p><p>Il ne t’a pas encore vu.</p>'+nightGuardResultHtml(s,2),choices:s=>{const r=s.flags.nightGuard2;if(!r?.resolved)return[{label:'Tenter de neutraliser le second garde — test de Dextérité',stay:true,inlineCombat:true,effect:x=>nightGuardAttempt(x,2)}];if(!r.success)return[{label:'Le village est alerté — combattre',to:'villageNightFight'}];const b=initVillageAssault(s);if(b.enemy<=0)return[{label:'Continuer',to:'villageNightAftermath'}];return[{label:'Attaquer les survivants de front',to:'villageNightFight'}];}},
+
+villageNightFight:{title:'Le combat dans le village',noImage:true,text:s=>nightVillageFightHtml(s),choices:s=>nightVillageFightChoices(s)},
+
+villageNightSearch:{title:'Fouiller l’île',noImage:true,text:s=>{if(s.flags.guardianStatue)return '<p>Tu parcours l’île dans l’obscurité, mais tu ne trouves rien qui puisse réellement t’aider davantage.</p><p>La seule découverte importante de cette île est déjà entre tes mains : la statuette du Gardien.</p>';if(s.flags.caveTruth)return '<p>Tu parcours les sentiers, les plages et les hauteurs de l’île.</p><p>Rien.</p><p>Tu ne trouves ni arme, ni embarcation, ni passage caché.</p><p>Il ne reste qu’un seul endroit que tu n’as pas véritablement exploité.</p><p>La grotte.</p><p>Et cette étrange statuette que tu as laissée sur place.</p><p>Tu retournes devant son entrée.</p>';return '<p>Tu décides de rester loin du village.</p><p>Si quelque chose peut encore t’aider, tu dois le trouver avant le lever du jour.</p><p>Tu parcours l’île dans l’obscurité pendant de longues minutes.</p><p>Entre deux parois rocheuses, tu finis par apercevoir une ouverture sombre.</p><p>Une grotte.</p><p>Au-dessus de l’entrée, un cercle noir a été gravé dans la pierre.</p>';},choices:s=>{if(s.flags.guardianStatue)return[{label:'Retourner au village avec la statuette',to:'villageNightStatue'},{label:'Tenter de fuir l’île à la nage',to:'villageNightSwim'},{label:'Attaquer le village de front',to:'villageNightFight'}];if(s.flags.caveTruth)return[{label:'Prendre la statuette',to:'villageNightStatue',effect:x=>{if(!x.flags.guardianStatue){x.flags.guardianStatue=true;addItem(x,'statue_gardien','Statuette du Gardien','Une petite statue de pierre représentant une créature marine aux multiples tentacules.');}}},{label:'Tenter de fuir l’île à la nage',to:'villageNightSwim'},{label:'Attaquer le village de front',to:'villageNightFight'}];return[{label:'Entrer dans la grotte',to:'villageNightCave'}];}},
+
+villageNightCave:{title:'Le sanctuaire dans la nuit',noImage:true,text:'<p>Tu avances dans la grotte à tâtons.</p><p>Les parois deviennent régulières, puis des marches taillées dans la roche te conduisent jusqu’à une salle ronde.</p><p>Un mince rayon de lune traverse une fissure très haute.</p><p>Sur un petit monticule de pierre repose la statuette.</p><p>La créature sculptée possède un corps massif entouré de tentacules.</p><p>Autour d’elle, les fresques racontent la même histoire : des navires attirés jusqu’ici, des hommes emportés, puis des bâtiments repartant seuls.</p><p>Cette fois, tu ne laisses pas la statuette derrière toi.</p><p>Tu la prends.</p>',onEnter:s=>{s.flags.caveTruth=true;if(!s.flags.guardianStatue){s.flags.guardianStatue=true;addItem(s,'statue_gardien','Statuette du Gardien','Une petite statue de pierre représentant une créature marine aux multiples tentacules.');}},choices:[{label:'Retourner au village avec la statuette',to:'villageNightStatue'}]},
+
+villageNightStatue:{title:'Sous le regard du Gardien',noImage:true,text:s=>villageNightStatueHtml(s),onEnter:s=>resolveNightStatueVillage(s),choices:[{label:'Continuer',to:'villageNightAftermath'}]},
+
+villageNightAftermath:{title:'',noImage:true,text:'',choices:[]},
 
 villageAssaultVictory:{title:'Les derniers marins du Providence',text:'<p>Plus aucun homme pâle ne se dresse entre vous et la prison.</p><p>Vous rejoignez la cage et attaquez la serrure. Après plusieurs coups, la lourde porte métallique finit par céder.</p><p>Derrière les barreaux se trouvent les derniers matelots du <strong>Providence</strong>.</p><p>Ils sont affamés, blessés et épuisés. Certains tiennent à peine debout.</p><p>Lorsqu’ils comprennent que vous êtes venus les chercher, plusieurs restent silencieux quelques secondes, comme s’ils n’osaient pas encore croire qu’ils sont libres.</p><p>La mission n’est pourtant pas terminée. Il faut encore quitter cette île.</p>',onEnter:s=>{s.flags.providenceSailorsFreed=true;s.flags.villageAssaultWon=true;},choices:[]},
 
@@ -1241,7 +1361,16 @@ const PAGE_NAV_TITLES = {
   "ringPrisonRevolt": "La supercherie",
   "ringKillThree": "Profiter de leur hésitation",
   "villageAssault": "Donner l'assaut",
-  "villageSoloAssault": "Seul face à eux",
+  "villageRetreat": "Le repli",
+  "villageRetreatNight": "La nuit",
+  "villageNightSwim": "La traversée",
+  "villageNightGuard1": "Aux abords du village",
+  "villageNightGuard2": "Le second garde",
+  "villageNightFight": "Le combat dans le village",
+  "villageNightSearch": "Fouiller l’île",
+  "villageNightCave": "Le sanctuaire dans la nuit",
+  "villageNightStatue": "Sous le regard du Gardien",
+  "villageNightAftermath": "",
   "villageAssaultVictory": "Les marins du Providence",
   "villageNight": "Attendre la nuit",
   "villageNightResult": "Dans le silence",
@@ -1249,7 +1378,7 @@ const PAGE_NAV_TITLES = {
   "c69": "Le véritable prix",
   "death": "La fin du voyage"
 };
-const PAGE_ORDER=['c0','c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c12','c13','c15','c16','c20','search2','north1','north2','north3','north4','east1','east2','east3','eastRefuse','east4','east5','east6','south1','south2','c21','c22','c23','c24','c25','c26','c27','c28','c29','c30','directIsland','c31','pirateApproach','pirateParley','pirateOfferRejected','pirateDealAccepted','c32','c34','c35','c36','c37','ravineDown','ravineMouth','ravineFight','ravineCorpse','ravineExit','c41','c50','c38','c39','c40','c42','c43','c44','c45','c46','c47','c48','c49','c51','c52','c53','c54','c55','c56','c57','islandRetreat','islandBeach','islandBeachFight','islandBeachYield','islandCaptured','islandForestLanding','forestTrap','forestAlligator','islandRecon','coveClearing','caveTunnel','caveShrine','caveExit','villageRear','villageWalkIn','villageStatueSubmission','statuePrison','statueExecution','statueSpareLast','statueKillLast','villageRingReturn','villageRingDominance','ringPrisonApproach','ringPrisonRevolt','ringKillThree','villageAssault','villageSoloAssault','villageAssaultVictory','villageNight','villageNightResult','c68','c69','death'];
+const PAGE_ORDER=['c0','c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c12','c13','c15','c16','c20','search2','north1','north2','north3','north4','east1','east2','east3','eastRefuse','east4','east5','east6','south1','south2','c21','c22','c23','c24','c25','c26','c27','c28','c29','c30','directIsland','c31','pirateApproach','pirateParley','pirateOfferRejected','pirateDealAccepted','c32','c34','c35','c36','c37','ravineDown','ravineMouth','ravineFight','ravineCorpse','ravineExit','c41','c50','c38','c39','c40','c42','c43','c44','c45','c46','c47','c48','c49','c51','c52','c53','c54','c55','c56','c57','islandRetreat','islandBeach','islandBeachFight','islandBeachYield','islandCaptured','islandForestLanding','forestTrap','forestAlligator','islandRecon','coveClearing','caveTunnel','caveShrine','caveExit','villageRear','villageWalkIn','villageStatueSubmission','statuePrison','statueExecution','statueSpareLast','statueKillLast','villageRingReturn','villageRingDominance','ringPrisonApproach','ringPrisonRevolt','ringKillThree','villageAssault','villageRetreat','villageRetreatNight','villageNightSwim','villageNightGuard1','villageNightGuard2','villageNightFight','villageNightSearch','villageNightCave','villageNightStatue','villageNightAftermath','villageAssaultVictory','villageNight','villageNightResult','c68','c69','death'];
 const PAGE_BY_NODE=Object.fromEntries(PAGE_ORDER.map((id,i)=>[id,i]));
 const padPage=n=>String(n).padStart(3,'0');
 
@@ -1388,7 +1517,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:91,pageMapVersion:14,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:92,pageMapVersion:15,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
