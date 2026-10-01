@@ -409,12 +409,20 @@ function villageAssaultHtml(s){
 function villageAssaultChoices(s){
   const b=initVillageAssault(s);
   if(s.hp<=0||b.failed)return[{label:'La fin du voyage',to:'death'}];
-  if(b.enemyDefeated)return[{label:'Rejoindre la prison',to:'villageAssaultVictory'}];
+
+  const reminder={label:'Rappeler les règles du combat',modalTitle:'Règles du combat',modalHtml:villageAssaultRulesHtml};
+
+  if(b.enemyDefeated){
+    const out=[{label:'Rejoindre la prison',to:'villageAssaultVictory'}];
+    if(b.round>0)out.push(reminder);
+    return out;
+  }
+
   const out=[
     {label:'Mener la charge — test de Force',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'charge')},
     {label:'Couvrir tes hommes — test de Dextérité',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'cover')}
   ];
-  if(b.round>0)out.push({label:'Rappeler les règles',modalTitle:'Règles du combat',modalHtml:villageAssaultRulesHtml});
+  if(b.round>0)out.push(reminder);
   return out;
 }
 
@@ -1286,7 +1294,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:86,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:87,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
