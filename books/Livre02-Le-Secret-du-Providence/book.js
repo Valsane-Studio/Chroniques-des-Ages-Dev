@@ -163,7 +163,10 @@ function resolveNightRaid(s){
 }
 
 function initVillageAssault(s){
-  if(s.flags.villageAssaultBattle)return s.flags.villageAssaultBattle;
+  if(s.flags.villageAssaultBattle){
+    s.flags.villageAssaultBattle.failed=false;
+    return s.flags.villageAssaultBattle;
+  }
   const initialEnemy=Math.max(0,9-Math.max(0,Math.floor(Number(s.flags.paleAssaultLoss)||0)));
   const b={
     initialEnemy,
@@ -188,6 +191,9 @@ function displayedSoldierCount(s){
   const haleWithParty=!!(s.flags?.secondIslandPartyReady && s.flags?.companion==='hale' && s.flags?.haleAlive!==false);
   return anonymous+(haleWithParty?1:0);
 }
+function villageHeroAlone(s){
+  return displayedSoldierCount(s)===0;
+}
 function villageBattleAllies(s,b){
   return Math.max(0,Math.floor(Number(s.soldiers)||0))+(s.flags.haleAlive===false?0:1)+Math.max(0,Math.floor(Number(b.marines)||0));
 }
@@ -211,7 +217,43 @@ function villageBattleDiceRow(dice,threshold){
 }
 function villageAssaultRound(s,action){
   const b=initVillageAssault(s);
-  if(b.enemy<=0||b.enemyFled||b.failed||s.hp<=0)return;
+  if(b.enemy<=0||b.enemyFled||s.hp<=0)return;
+
+  if(villageHeroAlone(s)){
+    const enemyBefore=b.enemy;
+    const actionSuccess=roll3D6(s,'Dextérité',currentDexterity(s));
+    const actionDice=Array.isArray(s.lastDice)?[...s.lastDice]:[];
+    const actionTotal=s.lastTotal;
+    let chargeDamage=null;
+    let enemyLoss=0;
+
+    if(actionSuccess){
+      enemyLoss=Math.min(1,b.enemy);
+      b.enemy=Math.max(0,b.enemy-enemyLoss);
+    }else{
+      const raw=Math.ceil(cryptoDie6()/2);
+      const resolution=applyDamage(s,raw);
+      chargeDamage={raw,absorbed:resolution.absorbed,hpLost:resolution.hpLost};
+    }
+
+    if(b.enemy<=0){
+      b.enemy=0;
+      b.enemyDefeated=true;
+    }
+
+    b.round++;
+    b.last={
+      mode:'solo',
+      action:'soloCharge',
+      actionSuccess,
+      actionDice,
+      actionTotal,
+      chargeDamage,
+      enemyBefore,
+      enemyLoss
+    };
+    return;
+  }
 
   const enemyBefore=b.enemy;
   const soldiersBefore=Math.max(0,Math.floor(Number(s.soldiers)||0));
@@ -311,8 +353,6 @@ function villageAssaultRound(s,action){
     }
   }
 
-  if(!b.enemyDefeated&&!b.enemyFled&&s.hp>0&&villageBattleAllies(s,b)<=0)b.failed=true;
-
   b.round++;
   b.last={
     action,
@@ -357,6 +397,7 @@ function villageAssaultRulesHtml(){
     <p>À chaque tour, tu choisis aussi ton action :</p>
     <p><strong>Mener la charge :</strong> si ton test de Force réussit, tu neutralises <strong>1 homme pâle supplémentaire</strong>. En cas d’échec, tu subis <strong>1D3 dégâts</strong>.</p>
     <p><strong>Couvrir tes hommes :</strong> si ton test de Dextérité réussit, tu annules <strong>une perte dans ton groupe</strong> pendant ce tour.</p>
+    <p>Si tous tes hommes tombent, tu peux continuer seul. Tu ne peux alors que <strong>charger</strong> : si ton test de Dextérité réussit, tu mets <strong>1 homme pâle</strong> hors de combat. En cas d’échec, tu subis <strong>1D3 dégâts</strong>.</p>
   </div>`;
 }
 function villageAssaultHtml(s){
@@ -379,44 +420,57 @@ function villageAssaultHtml(s){
   if(b.round>0)h+='<div class="combat-rules-reminder-wrap"><button type="button" class="combat-rules-reminder" data-story-modal="village-assault-rules">Rappeler les règles du combat</button></div>';
 
   if(l){
-    const actionTitle=l.action==='charge'?'Mener la charge':'Couvrir les hommes';
-    h+='<div class="combat-roll-result crew-battle-result"><div class="combat-roll-title">'+actionTitle+' — tour '+String(b.round)+'</div>';
+    if(l.mode==='solo'){
+      h+='<div class="combat-roll-result crew-battle-result"><div class="combat-roll-title">Tu combats seul — tour '+String(b.round)+'</div>';
+      h+='<div class="crew-training-side"><strong>Charge solitaire — Dextérité</strong><div class="crew-training-dice">'+villageBattleDiceRow(l.actionDice,6)+'</div><p>Total : <strong>'+String(l.actionTotal)+'</strong> — <strong>'+(l.actionSuccess?'réussite':'échec')+'</strong>.</p>';
+      if(l.actionSuccess)h+='<p>Tu trouves une ouverture et mets <strong>1 homme pâle</strong> hors de combat.</p>';
+      else if(l.chargeDamage)h+='<p>Ta charge échoue. Tu encaisses <strong>'+String(l.chargeDamage.raw)+'</strong> dégât'+(l.chargeDamage.raw>1?'s':'')+'.'+(l.chargeDamage.absorbed>0?' Ta protection en absorbe <strong>'+String(l.chargeDamage.absorbed)+'</strong>.':'')+(l.chargeDamage.hpLost>0?' Tu perds <strong>'+String(l.chargeDamage.hpLost)+'</strong> Vie.':'')+'</p>';
+      h+='</div>';
+      h+='<div class="crew-battle-summary"><strong>Soldats restants : 0</strong> · <strong>Hommes pâles restants : '+String(b.enemy||0)+'</strong></div>';
+      h+='</div>';
+    }else{
+      const actionTitle=l.action==='charge'?'Mener la charge':'Couvrir les hommes';
+      h+='<div class="combat-roll-result crew-battle-result"><div class="combat-roll-title">'+actionTitle+' — tour '+String(b.round)+'</div>';
 
-    if(l.action==='charge'||l.action==='cover'){
-      h+='<div class="crew-training-side"><strong>Ton test — '+(l.action==='charge'?'Force':'Dextérité')+'</strong><div class="crew-training-dice">'+villageBattleDiceRow(l.actionDice,6)+'</div><p>Total : <strong>'+String(l.actionTotal)+'</strong> — <strong>'+(l.actionSuccess?'réussite':'échec')+'</strong>.</p>';
-      if(l.action==='charge'){
-        if(l.actionSuccess)h+='<p>Tu ouvres une brèche : <strong>1 homme pâle supplémentaire est neutralisé.</strong></p>';
-        else if(l.chargeDamage)h+='<p>La charge échoue. Tu encaisses <strong>'+String(l.chargeDamage.raw)+'</strong> dégât'+(l.chargeDamage.raw>1?'s':'')+'.'+(l.chargeDamage.absorbed>0?' Ta protection en absorbe <strong>'+String(l.chargeDamage.absorbed)+'</strong>.':'')+(l.chargeDamage.hpLost>0?' Tu perds <strong>'+String(l.chargeDamage.hpLost)+'</strong> Vie.':'')+'</p>';
-      }else h+='<p>'+(l.prevented?'<strong>Tu empêches une perte dans tes rangs.</strong>':'Tu ne parviens pas à protéger efficacement le groupe.')+'</p>';
+      if(l.action==='charge'||l.action==='cover'){
+        h+='<div class="crew-training-side"><strong>Ton test — '+(l.action==='charge'?'Force':'Dextérité')+'</strong><div class="crew-training-dice">'+villageBattleDiceRow(l.actionDice,6)+'</div><p>Total : <strong>'+String(l.actionTotal)+'</strong> — <strong>'+(l.actionSuccess?'réussite':'échec')+'</strong>.</p>';
+        if(l.action==='charge'){
+          if(l.actionSuccess)h+='<p>Tu ouvres une brèche : <strong>1 homme pâle supplémentaire est neutralisé.</strong></p>';
+          else if(l.chargeDamage)h+='<p>La charge échoue. Tu encaisses <strong>'+String(l.chargeDamage.raw)+'</strong> dégât'+(l.chargeDamage.raw>1?'s':'')+'.'+(l.chargeDamage.absorbed>0?' Ta protection en absorbe <strong>'+String(l.chargeDamage.absorbed)+'</strong>.':'')+(l.chargeDamage.hpLost>0?' Tu perds <strong>'+String(l.chargeDamage.hpLost)+'</strong> Vie.':'')+'</p>';
+        }else h+='<p>'+(l.prevented?'<strong>Tu empêches une perte dans tes rangs.</strong>':'Tu ne parviens pas à protéger efficacement le groupe.')+'</p>';
+        h+='</div>';
+      }
+
+      h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Ton groupe</strong><span>Soldats et Hale : réussite sur 1–4</span></div>';
+      if(l.soldierDice.length)h+='<p>Soldats</p><div class="crew-training-dice">'+villageBattleDiceRow(l.soldierDice,4)+'</div>';
+      if(l.flankDice.length)h+='<p>Feu croisé</p><div class="crew-training-dice">'+villageBattleDiceRow(l.flankDice,4)+'</div>';
+      if(l.haleDice.length)h+='<p>Hale</p><div class="crew-training-dice">'+villageBattleDiceRow(l.haleDice,4)+'</div>';
+      h+='<p><strong>'+String(l.enemyLoss)+' homme'+(l.enemyLoss>1?'s pâles tombent':' pâle tombe')+'.</strong></p></div>';
+
+      h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Hommes pâles</strong><span>Réussite sur <strong>1</strong></span></div><div class="crew-training-dice">'+villageBattleDiceRow(l.enemyDice,1)+'</div>';
+      if(l.prevented)h+='<p>Une de leurs réussites est annulée par ta couverture.</p>';
+      if(l.soldierLoss)h+='<p><strong>Tu perds '+String(l.soldierLoss)+' soldat'+(l.soldierLoss>1?'s':'')+'.</strong></p>';
+      if(l.haleLost)h+='<p><strong>Hale tombe pendant l’affrontement.</strong></p>';
+      if(!l.soldierLoss&&!l.haleLost)h+='<p>Personne ne tombe dans ton groupe.</p>';
+      h+='</div>';
+
+      h+='<div class="crew-battle-summary"><strong>Soldats restants : '+String(displayedSoldierCount(s))+'</strong> · <strong>Hommes pâles restants : '+String(b.enemy||0)+'</strong></div>';
       h+='</div>';
     }
-
-    h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Ton groupe</strong><span>Soldats et Hale : réussite sur 1–4</span></div>';
-    if(l.soldierDice.length)h+='<p>Soldats</p><div class="crew-training-dice">'+villageBattleDiceRow(l.soldierDice,4)+'</div>';
-    if(l.flankDice.length)h+='<p>Feu croisé</p><div class="crew-training-dice">'+villageBattleDiceRow(l.flankDice,4)+'</div>';
-    if(l.haleDice.length)h+='<p>Hale</p><div class="crew-training-dice">'+villageBattleDiceRow(l.haleDice,4)+'</div>';
-    h+='<p><strong>'+String(l.enemyLoss)+' homme'+(l.enemyLoss>1?'s pâles tombent':' pâle tombe')+'.</strong></p></div>';
-
-    h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Hommes pâles</strong><span>Réussite sur <strong>'+(l.enemyCombat===2?'1 ou 2':'1')+'</strong></span></div><div class="crew-training-dice">'+villageBattleDiceRow(l.enemyDice,l.enemyCombat)+'</div>';
-    if(l.prevented)h+='<p>Une de leurs réussites est annulée par ta couverture.</p>';
-    if(l.soldierLoss)h+='<p><strong>Tu perds '+String(l.soldierLoss)+' soldat'+(l.soldierLoss>1?'s':'')+'.</strong></p>';
-    if(l.haleLost)h+='<p><strong>Hale tombe pendant l’affrontement.</strong></p>';
-    if(!l.soldierLoss&&!l.haleLost)h+='<p>Personne ne tombe dans ton groupe.</p>';
-    h+='</div>';
-
-    h+='<div class="crew-battle-summary"><strong>Soldats restants : '+String(displayedSoldierCount(s))+'</strong> · <strong>Hommes pâles restants : '+String(b.enemy||0)+'</strong></div>';
-    h+='</div>';
   }
 
   if(b.enemyDefeated)h+='<p>Le dernier adversaire tombe. Pour quelques secondes, le village devient silencieux.</p>';
 
-  if(b.failed)h+='<p>Tu te retrouves sans aucun homme capable de tenir la ligne avec toi. Les hommes pâles se referment de tous côtés.</p>';
+  if(!b.enemyDefeated&&villageHeroAlone(s))h+='<p><strong>Tu es désormais seul.</strong> Les hommes pâles se referment autour de toi, mais tu peux encore continuer le combat.</p>';
   return h;
 }
 function villageAssaultChoices(s){
   const b=initVillageAssault(s);
-  if(s.hp<=0||b.failed)return[{label:'La fin du voyage',to:'death'}];
+  if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];
   if(b.enemyDefeated)return[{label:'Rejoindre la prison',to:'villageAssaultVictory'}];
+  if(villageHeroAlone(s))return[
+    {label:'Charger seul — test de Dextérité',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'soloCharge')}
+  ];
   return[
     {label:'Mener la charge — test de Force',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'charge')},
     {label:'Couvrir tes hommes — test de Dextérité',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'cover')}
@@ -1291,7 +1345,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:89,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:90,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
