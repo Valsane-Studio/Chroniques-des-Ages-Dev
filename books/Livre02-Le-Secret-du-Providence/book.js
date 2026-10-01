@@ -831,10 +831,106 @@ const PAGE_ORDER=['c0','c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c12',
 const PAGE_BY_NODE=Object.fromEntries(PAGE_ORDER.map((id,i)=>[id,i]));
 const padPage=n=>String(n).padStart(3,'0');
 
+const DEV_TEST_ITEM_CATALOG=[
+ {id:'diamant_bleu',name:'Pierre bleue',description:'La pierre laissée près de la carte du Providence.',flag:'baitStone'},
+ {id:'poudre_verte',name:'Poudre verte',description:'La poudre très fine trouvée dans la réserve du Providence.'},
+ {id:'couteaux_jet',name:'Lames de lancer ×5',description:'Cinq lames équilibrées pour tester les passages qui les utilisent.',special:'blades'},
+ {id:'caisse_rhum',name:'Tonneaux de rhum ×3',description:'Marchandise de négociation avec les pirates.',special:'rum'},
+ {id:'gold_test',name:'100 pièces d’or',description:'Réserve de test pour les achats et négociations.',special:'gold'},
+ {id:'gantelets_marchands',name:'Gantelets renforcés · Protection +3',description:'Protection donnée par les marchands.',protection:3,flag:'southProtectionGift'},
+ {id:'gantelets',name:'Gantelets renforcés · Protection +4',description:'Protection récupérée sur les pirates.',protection:4,flag:'gauntlets'},
+ {id:'bracelet_force',name:'Bracelet de force · Force +2',description:'Bracelet obtenu au début de l’enquête.',force:2,flag:'forceBracelet'},
+ {id:'bracelet_force_ravin',name:'Bracelet du ravin · Force +2',description:'Bracelet trouvé sur le corps au fond du ravin.',force:2,flag:'ravineForceBracelet'},
+ {id:'bague_crane',name:'Bague au crâne',description:'La bague reconnue par les hommes pâles.',flag:'skullRing'},
+ {id:'statue_gardien',name:'Statuette du Gardien',description:'La statuette trouvée dans le sanctuaire de la grotte.',flag:'guardianStatue'}
+];
+
+function devTestItemOwned(s,e){
+ if(e.special==='gold')return (s.goldCoins||0)>=100;
+ if(e.special==='rum')return rumCrateCount(s)>0;
+ if(e.special==='blades')return !!s.inventory?.couteaux_jet;
+ return !!s.inventory?.[e.id];
+}
+function recalcDevProtection(s){
+ let p=0;
+ if(s.inventory?.gantelets_marchands)p=Math.max(p,3);
+ if(s.inventory?.gantelets)p=Math.max(p,4);
+ s.protection=p;
+}
+function setDevTestItem(s,e,enabled){
+ if(e.special==='gold'){
+   s.goldCoins=enabled?Math.max(100,s.goldCoins||0):0;
+   return;
+ }
+ if(e.special==='rum'){
+   if(enabled)s.inventory.caisse_rhum={name:'Tonneau de rhum',description:'Du rhum des Caraïbes conservé en tonneau. Une marchandise qui peut être offerte, troquée ou utilisée pour négocier.',quantity:3};
+   else delete s.inventory.caisse_rhum;
+   return;
+ }
+ if(e.special==='blades'){
+   if(enabled)s.inventory.couteaux_jet={name:'Lames de lancer',description:'De petites lames équilibrées, conçues pour être lancées avec précision.',quantity:5};
+   else delete s.inventory.couteaux_jet;
+   return;
+ }
+ const owned=!!s.inventory?.[e.id];
+ if(enabled&&!owned){
+   addItem(s,e.id,e.name.replace(/ ·.*$/,''),e.description);
+   if(e.force)s.forceBonus=(s.forceBonus||0)+e.force;
+ }else if(!enabled&&owned){
+   delete s.inventory[e.id];
+   if(e.force)s.forceBonus=Math.max(0,(s.forceBonus||0)-e.force);
+ }
+ if(e.flag)s.flags[e.flag]=enabled;
+ if(e.protection)recalcDevProtection(s);
+}
+function devTestInventoryHtml(s){
+ const rows=DEV_TEST_ITEM_CATALOG.map(e=>{
+   const checked=devTestItemOwned(s,e);
+   const qty=e.special==='rum'&&checked?' × '+rumCrateCount(s):e.special==='blades'&&checked?' × '+(s.inventory.couteaux_jet.quantity||1):'';
+   return `<label class="test-item-row">
+     <input type="checkbox" data-action="dev-toggle-item:${e.id}" ${checked?'checked':''}>
+     <span class="test-item-box" aria-hidden="true"></span>
+     <span class="test-item-copy"><strong>${e.name}${qty}</strong><small>${e.description}</small></span>
+   </label>`;
+ }).join('');
+ const weapons=[
+   ['naval_sword','Sabre court de marine · Puissance 4'],
+   ['none','Aucune arme']
+ ].map(([value,label])=>`<label class="test-weapon-option">
+   <input type="radio" name="devTestWeapon" data-action="dev-equip-weapon:${value}" ${s.weapon===value?'checked':''}>
+   <span>${label}</span>
+ </label>`).join('');
+ return `<div class="test-inventory-panel">
+   <div class="test-inventory-title">Mode DEV · objets disponibles</div>
+   <p class="test-inventory-note">Coche ou décoche librement les objets pour tester les différentes branches du Livre 02.</p>
+   <div class="test-item-list">${rows}</div>
+   <div class="test-weapon-panel"><strong>Arme équipée</strong><div class="test-weapon-list">${weapons}</div></div>
+ </div>`;
+}
+
 const inventory={
  topLine:s=>`Or : ${s.goldCoins||0} · Arme : ${weaponLabel(s)} · Soldats : ${s.soldiers}`,
- extraHtml:s=>`<div class="inventory-equipment-card"><div class="inventory-equipment-title">État de l’expédition</div><div class="inventory-equipment-row"><span>Soldats survivants</span><strong>${s.soldiers}/${s.maxSoldiers}</strong></div><div class="inventory-equipment-row"><span>Avec toi sur l’île</span><strong>${s.expeditionSoldiers||0}</strong></div><div class="inventory-equipment-row"><span>Protection</span><strong>${currentProtection(s)}</strong></div></div>`,
- actionHtml:()=>'',handleAction:()=>false
+ extraHtml:s=>`<div class="inventory-equipment-card"><div class="inventory-equipment-title">État de l’expédition</div><div class="inventory-equipment-row"><span>Soldats survivants</span><strong>${s.soldiers}/${s.maxSoldiers}</strong></div><div class="inventory-equipment-row"><span>Avec toi sur l’île</span><strong>${s.expeditionSoldiers||0}</strong></div><div class="inventory-equipment-row"><span>Protection</span><strong>${currentProtection(s)}</strong></div></div>`+devTestInventoryHtml(s),
+ actionHtml:()=>'',handleAction(action,s,api){
+   if(action.startsWith('dev-toggle-item:')){
+     const id=action.slice('dev-toggle-item:'.length);
+     const entry=DEV_TEST_ITEM_CATALOG.find(e=>e.id===id);
+     if(entry){
+       setDevTestItem(s,entry,!devTestItemOwned(s,entry));
+       api.saveState();api.render();api.openInventory();
+     }
+     return true;
+   }
+   if(action.startsWith('dev-equip-weapon:')){
+     const weapon=action.slice('dev-equip-weapon:'.length);
+     if(['naval_sword','none'].includes(weapon)){
+       s.weapon=weapon;
+       api.saveState();api.render();api.openInventory();
+     }
+     return true;
+   }
+   return false;
+ }
 };
 
 function characterSheetHtml(s){
@@ -846,7 +942,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:72,pageMapVersion:11,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:73,pageMapVersion:11,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
