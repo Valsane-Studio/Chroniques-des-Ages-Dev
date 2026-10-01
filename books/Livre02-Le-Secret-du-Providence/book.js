@@ -548,7 +548,7 @@ function villageAssaultHtml(s){
   else h+='<p>Tu comptes <strong>'+String(b.enemy)+'</strong> hommes pâles capables de se battre.</p>';
   if(!b.flankUsed&&(s.flags.flankingSoldiers||0)>0)h+='<p>Tes <strong>'+String(s.flags.flankingSoldiers)+' soldat'+((s.flags.flankingSoldiers||0)>1?'s sont':' est')+' en position de l’autre côté du village</strong>. Au premier échange, chacun lancera un dé supplémentaire grâce au feu croisé.</p>';
 
-  if(b.pistolOpeningLoss>0)h+='<p><strong>Tu dégaines les deux pistolets trouvés dans la grotte.</strong> Deux détonations éclatent presque en même temps. <strong>'+String(b.pistolOpeningLoss)+' homme'+(b.pistolOpeningLoss>1?'s pâles tombent':' pâle tombe')+'</strong> avant que la bataille ne commence vraiment.</p>';
+  if(b.round===0&&b.pistolOpeningLoss>0)h+='<p><strong>Tu dégaines les deux pistolets trouvés dans la grotte.</strong> Deux détonations éclatent presque en même temps. <strong>'+String(b.pistolOpeningLoss)+' homme'+(b.pistolOpeningLoss>1?'s pâles tombent':' pâle tombe')+'</strong> avant que la bataille ne commence vraiment.</p>';
 
   h+=`<div class="combat-roll-result crew-battle-result">
     <div class="combat-roll-title">Assaut du village</div>
