@@ -183,6 +183,11 @@ function initVillageAssault(s){
   s.flags.villageAssaultBattle=b;
   return b;
 }
+function displayedSoldierCount(s){
+  const anonymous=Math.max(0,Math.floor(Number(s.soldiers)||0));
+  const haleWithParty=!!(s.flags?.secondIslandPartyReady && s.flags?.companion==='hale' && s.flags?.haleAlive!==false);
+  return anonymous+(haleWithParty?1:0);
+}
 function villageBattleAllies(s,b){
   return Math.max(0,Math.floor(Number(s.soldiers)||0))+(s.flags.haleAlive===false?0:1)+Math.max(0,Math.floor(Number(b.marines)||0));
 }
@@ -399,7 +404,7 @@ function villageAssaultHtml(s){
     if(!l.soldierLoss&&!l.haleLost)h+='<p>Personne ne tombe dans ton groupe.</p>';
     h+='</div>';
 
-    h+='<div class="crew-battle-summary"><strong>Soldats restants : '+String(s.soldiers||0)+'</strong> · <strong>Hommes pâles restants : '+String(b.enemy||0)+'</strong></div>';
+    h+='<div class="crew-battle-summary"><strong>Soldats restants : '+String(displayedSoldierCount(s))+'</strong> · <strong>Hommes pâles restants : '+String(b.enemy||0)+'</strong></div>';
     h+='</div>';
   }
 
@@ -1211,8 +1216,8 @@ function devSoldierCountHtml(s){
      <span>${n} soldat${n>1?'s':''}</span>
    </label>`).join('');
  return `<div class="test-inventory-panel">
-   <div class="test-inventory-title">Mode DEV · soldats avec toi</div>
-   <p class="test-inventory-note">Choisis directement le nombre de soldats présents avec toi pour tester l’assaut final. Ce réglage annule une éventuelle séparation en tenaille.</p>
+   <div class="test-inventory-title">Mode DEV · autres soldats avec toi</div>
+   <p class="test-inventory-note">Choisis le nombre de soldats de la garnison présents avec toi pour tester l’assaut final. Hale est ajouté automatiquement à l’effectif s’il est encore avec toi. Ce réglage annule une éventuelle séparation en tenaille.</p>
    <div class="test-weapon-list">${options}</div>
  </div>`;
 }
@@ -1243,8 +1248,8 @@ function devTestInventoryHtml(s){
 }
 
 const inventory={
- topLine:s=>`Or : ${s.goldCoins||0} · Arme : ${weaponLabel(s)} · Soldats : ${s.soldiers}`,
- extraHtml:s=>`<div class="inventory-equipment-card"><div class="inventory-equipment-title">État de l’expédition</div><div class="inventory-equipment-row"><span>Soldats survivants</span><strong>${s.soldiers}/${s.maxSoldiers}</strong></div><div class="inventory-equipment-row"><span>Avec toi sur l’île</span><strong>${s.expeditionSoldiers||0}</strong></div><div class="inventory-equipment-row"><span>Protection</span><strong>${currentProtection(s)}</strong></div></div>`+devSoldierCountHtml(s)+devTestInventoryHtml(s),
+ topLine:s=>`Or : ${s.goldCoins||0} · Arme : ${weaponLabel(s)} · Soldats : ${displayedSoldierCount(s)}`,
+ extraHtml:s=>`<div class="inventory-equipment-card"><div class="inventory-equipment-title">État de l’expédition</div><div class="inventory-equipment-row"><span>Soldats survivants</span><strong>${s.soldiers}/${s.maxSoldiers}</strong></div><div class="inventory-equipment-row"><span>Avec toi sur l’île</span><strong>${displayedSoldierCount(s)}</strong></div><div class="inventory-equipment-row"><span>Protection</span><strong>${currentProtection(s)}</strong></div></div>`+devSoldierCountHtml(s)+devTestInventoryHtml(s),
  actionHtml:()=>'',handleAction(action,s,api){
    if(action.startsWith('dev-set-soldiers:')){
      const n=Math.max(0,Math.min(4,Math.floor(Number(action.slice('dev-set-soldiers:'.length))||0)));
@@ -1279,14 +1284,14 @@ const inventory={
 
 function characterSheetHtml(s){
  return `<div class="character-modal-sheet"><div class="character-modal-name">${heroName(s)}</div><div class="character-modal-rank">${heroRank()}</div><div class="character-modal-stats">
- <div><span class="tag-copy"><small>Vie</small><strong>${s.hp}/${s.maxHp}</strong></span></div><div><span class="tag-copy"><small>Dextérité</small><strong>${currentDexterity(s)}</strong></span></div><div><span class="tag-copy"><small>Force</small><strong>${currentForce(s)}</strong></span></div><div><span class="tag-copy"><small>Arme</small><strong>+4</strong></span></div><div><span class="tag-copy"><small>Protection</small><strong>${currentProtection(s)}</strong></span></div><div><span class="tag-copy"><small>Soldats</small><strong>${s.soldiers}</strong></span></div>
+ <div><span class="tag-copy"><small>Vie</small><strong>${s.hp}/${s.maxHp}</strong></span></div><div><span class="tag-copy"><small>Dextérité</small><strong>${currentDexterity(s)}</strong></span></div><div><span class="tag-copy"><small>Force</small><strong>${currentForce(s)}</strong></span></div><div><span class="tag-copy"><small>Arme</small><strong>+4</strong></span></div><div><span class="tag-copy"><small>Protection</small><strong>${currentProtection(s)}</strong></span></div><div><span class="tag-copy"><small>Soldats</small><strong>${displayedSoldierCount(s)}</strong></span></div>
  </div></div>`+devSoldierCountHtml(s);
 }
 
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:88,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:89,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
@@ -1295,7 +1300,7 @@ BookRegistry.register({
  handleProfileInputChange(s,input){if(input?.classList.contains('hero-gender-input'))setHeroIdentity(s,input.value);},
  statusStats(s){const r=s.maxHp>0?s.hp/s.maxHp:0;return[
   {icon:'♥',label:'Vie',value:`${s.hp}/${s.maxHp}`,cls:r<=.3?'status-critical':r<=.55?'status-warning':''},
-  {icon:'◆',label:'Dextérité',value:String(currentDexterity(s))},{icon:'⚔',label:'Force',value:String(currentForce(s))},{icon:'†',label:'Arme',value:'+4'},{icon:'🛡',label:'Protection',value:String(currentProtection(s))},{icon:'●',label:'Soldats',value:`${s.soldiers}/${s.maxSoldiers}`}];},
+  {icon:'◆',label:'Dextérité',value:String(currentDexterity(s))},{icon:'⚔',label:'Force',value:String(currentForce(s))},{icon:'†',label:'Arme',value:'+4'},{icon:'🛡',label:'Protection',value:String(currentProtection(s))},{icon:'●',label:'Soldats',value:`${displayedSoldierCount(s)}/${s.maxSoldiers}`}];},
  resetSeriesOnRestart:true,showMissingIllustrationPlaceholder:true,story:STORY,pageOrder:PAGE_ORDER,pageByNode:PAGE_BY_NODE,navigationTitles:PAGE_NAV_TITLES,padPage,
  imageBaseForPage:n=>`Le-Secret-du-Providence-${padPage(n)}`,imageCandidatesForPage:n=>[`Le-Secret-du-Providence-${padPage(n)}`,`pages/Le-Secret-du-Providence-${padPage(n)}`],imageExtensions:['jpg','jpeg','png'],
  createInitialState,rules:{currentForce,currentDexterity,combatPower,weaponLabel,currentProtection,applyDamage},characterSheetHtml,inventory,
