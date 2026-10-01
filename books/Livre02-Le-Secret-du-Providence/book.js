@@ -219,43 +219,7 @@ function villageAssaultRound(s,action){
   const b=initVillageAssault(s);
   if(b.enemy<=0||b.enemyFled||s.hp<=0)return;
 
-  if(villageHeroAlone(s)){
-    const enemyBefore=b.enemy;
-    const actionSuccess=roll3D6(s,'Dextérité',currentDexterity(s));
-    const actionDice=Array.isArray(s.lastDice)?[...s.lastDice]:[];
-    const actionTotal=s.lastTotal;
-    let chargeDamage=null;
-    let enemyLoss=0;
-
-    if(actionSuccess){
-      enemyLoss=Math.min(1,b.enemy);
-      b.enemy=Math.max(0,b.enemy-enemyLoss);
-    }else{
-      const raw=Math.ceil(cryptoDie6()/2);
-      const resolution=applyDamage(s,raw);
-      chargeDamage={raw,absorbed:resolution.absorbed,hpLost:resolution.hpLost};
-    }
-
-    if(b.enemy<=0){
-      b.enemy=0;
-      b.enemyDefeated=true;
-    }
-
-    b.round++;
-    b.last={
-      mode:'solo',
-      action:'soloCharge',
-      actionSuccess,
-      actionDice,
-      actionTotal,
-      chargeDamage,
-      enemyBefore,
-      enemyLoss
-    };
-    return;
-  }
-
-  const enemyBefore=b.enemy;
+const enemyBefore=b.enemy;
   const soldiersBefore=Math.max(0,Math.floor(Number(s.soldiers)||0));
   const marinesBefore=Math.max(0,Math.floor(Number(b.marines)||0));
   const haleBefore=s.flags.haleAlive!==false;
@@ -387,6 +351,84 @@ function villageAssaultRound(s,action){
     prisonOpenedThisRound
   };
 }
+function villageSoloAssaultRound(s){
+  const b=initVillageAssault(s);
+  if(s.hp<=0||b.enemy<=0)return;
+
+  const heroSuccess=roll3D6(s,'Dextérité',currentDexterity(s));
+  const heroDice=Array.isArray(s.lastDice)?[...s.lastDice]:[];
+  const heroTotal=s.lastTotal;
+
+  let enemyLoss=0;
+  if(heroSuccess){
+    enemyLoss=Math.min(1,b.enemy);
+    b.enemy=Math.max(0,b.enemy-enemyLoss);
+  }
+
+  const enemyDice=Array.from({length:b.enemy},()=>cryptoDie6());
+  const enemyHits=enemyDice.filter(v=>v===1).length;
+  const damageRolls=Array.from({length:enemyHits},()=>Math.ceil(cryptoDie6()/2));
+  const rawDamage=damageRolls.reduce((sum,v)=>sum+v,0);
+  const resolution=rawDamage>0?applyDamage(s,rawDamage):{absorbed:0,hpLost:0};
+
+  if(b.enemy<=0){
+    b.enemy=0;
+    b.enemyDefeated=true;
+  }
+
+  b.soloRound=(b.soloRound||0)+1;
+  b.soloLast={
+    heroSuccess,heroDice,heroTotal,enemyLoss,enemyDice,enemyHits,damageRolls,rawDamage,
+    absorbed:resolution.absorbed||0,hpLost:resolution.hpLost||0
+  };
+}
+
+function villageSoloAssaultHtml(s){
+  const b=initVillageAssault(s);
+  const l=b.soloLast;
+  let h='';
+
+  if(!l){
+    h+='<p>Tu te retournes.</p><p>Tous tes hommes sont à terre.</p><p>Mais le combat n’est pas fini.</p>';
+    h+='<p>Tu vas désormais devoir te battre seul. Ton entraînement et ton équipement peuvent encore te permettre de remporter ce combat.</p>';
+    h+='<div class="combat-roll-result crew-battle-result"><div class="combat-roll-title">Combat en solitaire</div>';
+    h+='<p>À chaque tour, effectue un <strong>test de Dextérité</strong>. S’il réussit, tu mets <strong>1 homme pâle</strong> hors de combat. S’il échoue, aucun homme pâle n’est éliminé.</p>';
+    h+='<p>Les hommes pâles continuent de te viser de la même façon. Chacun lance <strong>1D6</strong>. Chaque dé faisant <strong>1</strong> te touche et t’inflige <strong>1D3 dégâts</strong>.</p>';
+    h+='<p>Il reste <strong>'+String(b.enemy)+'</strong> homme'+(b.enemy>1?'s pâles':' pâle')+'.</p></div>';
+    return h;
+  }
+
+  h+='<div class="combat-roll-result crew-battle-result"><div class="combat-roll-title">Combat en solitaire — tour '+String(b.soloRound||1)+'</div>';
+  h+='<div class="crew-training-side"><strong>Ton test de Dextérité</strong><div class="crew-training-dice">'+l.heroDice.map(v=>renderDie(v)).join('')+'</div>';
+  h+='<p>Total : <strong>'+String(l.heroTotal)+'</strong> — <strong>'+(l.heroSuccess?'réussite':'échec')+'</strong>.</p>';
+  h+=l.heroSuccess?'<p><strong>1 homme pâle est mis hors de combat.</strong></p>':'<p>Aucun homme pâle n’est éliminé.</p>';
+  h+='</div>';
+
+  h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Hommes pâles</strong><span>Réussite uniquement sur <strong>1</strong></span></div>';
+  if(l.enemyDice.length)h+='<div class="crew-training-dice">'+villageBattleDiceRow(l.enemyDice,1)+'</div>';
+  else h+='<p>Il ne reste plus personne pour riposter.</p>';
+  if(l.enemyHits>0){
+    h+='<p><strong>'+String(l.enemyHits)+' tir'+(l.enemyHits>1?'s te touchent':' te touche')+'.</strong></p>';
+    h+='<p>Dégâts : '+l.damageRolls.map(v=>'<strong>1D3 → '+String(v)+'</strong>').join(' · ')+'.</p>';
+    if(l.absorbed>0)h+='<p>Ta protection absorbe <strong>'+String(l.absorbed)+'</strong> dégât'+(l.absorbed>1?'s':'')+'.</p>';
+    if(l.hpLost>0)h+='<p>Tu perds <strong>'+String(l.hpLost)+'</strong> Vie.</p>';
+    else h+='<p>Tu ne perds aucun point de Vie.</p>';
+  }else{
+    h+='<p>Aucun tir ne te touche.</p>';
+  }
+  h+='</div>';
+  h+='<div class="crew-battle-summary"><strong>Vie restante : '+String(s.hp)+'/'+String(s.maxHp)+'</strong> · <strong>Hommes pâles restants : '+String(b.enemy||0)+'</strong></div>';
+  h+='</div>';
+  return h;
+}
+
+function villageSoloAssaultChoices(s){
+  const b=initVillageAssault(s);
+  if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];
+  if(b.enemyDefeated)return[{label:'Rejoindre la prison',to:'villageAssaultVictory'}];
+  return[{label:'Lancer les dés',stay:true,inlineCombat:true,effect:x=>villageSoloAssaultRound(x)}];
+}
+
 function villageAssaultRulesHtml(){
   return `<div class="village-assault-rules">
     <p>Comme lors des combats contre les pirates, chaque groupe possède une <strong>Valeur de combat</strong> qui représente à la fois son équipement et son entraînement.</p>
@@ -468,9 +510,7 @@ function villageAssaultChoices(s){
   const b=initVillageAssault(s);
   if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];
   if(b.enemyDefeated)return[{label:'Rejoindre la prison',to:'villageAssaultVictory'}];
-  if(villageHeroAlone(s))return[
-    {label:'Charger seul — test de Dextérité',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'soloCharge')}
-  ];
+  if(villageHeroAlone(s))return[{label:'Continuer le combat seul',to:'villageSoloAssault'}];
   return[
     {label:'Mener la charge — test de Force',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'charge')},
     {label:'Couvrir tes hommes — test de Dextérité',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'cover')}
@@ -763,7 +803,7 @@ const ALLIGATOR={name:'ALLIGATOR',hp:8,dex:7,force:8,damage:3};
 
 function createInitialState(){
   return {
-    node:'start',pageMapVersion:13,heroGender:'female',heroName:'Eleanor',
+    node:'start',pageMapVersion:14,heroGender:'female',heroName:'Eleanor',
     inventory:{},flags:{},visited:{},history:[],journal:'',
     hp:18,maxHp:18,baseForce:8,baseDexterity:13,forceBonus:0,dexBonus:0,dexPenalty:0,
     weapon:'naval_sword',protection:0,goldCoins:0,
@@ -1083,6 +1123,8 @@ ringKillThree:{title:'Profiter de leur hésitation',text:'<p>Tu fais un signe br
 
 villageAssault:{title:'Donner l’assaut',text:s=>villageAssaultHtml(s),onEnter:s=>initVillageAssault(s),choices:s=>villageAssaultChoices(s)},
 
+villageSoloAssault:{title:'Seul face à eux',noImage:true,text:s=>villageSoloAssaultHtml(s),choices:s=>villageSoloAssaultChoices(s)},
+
 villageAssaultVictory:{title:'Les derniers marins du Providence',text:'<p>Plus aucun homme pâle ne se dresse entre vous et la prison.</p><p>Vous rejoignez la cage et attaquez la serrure. Après plusieurs coups, la lourde porte métallique finit par céder.</p><p>Derrière les barreaux se trouvent les derniers matelots du <strong>Providence</strong>.</p><p>Ils sont affamés, blessés et épuisés. Certains tiennent à peine debout.</p><p>Lorsqu’ils comprennent que vous êtes venus les chercher, plusieurs restent silencieux quelques secondes, comme s’ils n’osaient pas encore croire qu’ils sont libres.</p><p>La mission n’est pourtant pas terminée. Il faut encore quitter cette île.</p>',onEnter:s=>{s.flags.providenceSailorsFreed=true;s.flags.villageAssaultWon=true;},choices:[]},
 
 villageNight:{title:'Attendre la nuit',text:s=>'<p>Vous restez cachés jusqu’à la disparition complète du soleil.</p><p>Peu à peu, les feux s’éteignent dans le village.</p><p>Les hommes pâles regagnent leurs huttes.</p><p>Deux sentinelles seulement restent visibles.</p>'+((s.flags.flankingSoldiers||0)>0?'<p>De l’autre côté, tu aperçois parfois le reflet discret d’une lame : l’autre groupe est toujours en position.</p>':'')+'<p>Vous attendez encore.</p><p>Le moment venu, chaque soldat doit progresser sans bruit. Chacun lancera un dé. <strong>Seul un 6 signifie que l’ennemi a le temps de donner l’alerte avant d’être tué.</strong></p>',choices:[{label:'Donner le signal et lancer les dés',to:'villageNightResult',effect:s=>resolveNightRaid(s)}]},
@@ -1199,6 +1241,7 @@ const PAGE_NAV_TITLES = {
   "ringPrisonRevolt": "La supercherie",
   "ringKillThree": "Profiter de leur hésitation",
   "villageAssault": "Donner l'assaut",
+  "villageSoloAssault": "Seul face à eux",
   "villageAssaultVictory": "Les marins du Providence",
   "villageNight": "Attendre la nuit",
   "villageNightResult": "Dans le silence",
@@ -1206,7 +1249,7 @@ const PAGE_NAV_TITLES = {
   "c69": "Le véritable prix",
   "death": "La fin du voyage"
 };
-const PAGE_ORDER=['c0','c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c12','c13','c15','c16','c20','search2','north1','north2','north3','north4','east1','east2','east3','eastRefuse','east4','east5','east6','south1','south2','c21','c22','c23','c24','c25','c26','c27','c28','c29','c30','directIsland','c31','pirateApproach','pirateParley','pirateOfferRejected','pirateDealAccepted','c32','c34','c35','c36','c37','ravineDown','ravineMouth','ravineFight','ravineCorpse','ravineExit','c41','c50','c38','c39','c40','c42','c43','c44','c45','c46','c47','c48','c49','c51','c52','c53','c54','c55','c56','c57','islandRetreat','islandBeach','islandBeachFight','islandBeachYield','islandCaptured','islandForestLanding','forestTrap','forestAlligator','islandRecon','coveClearing','caveTunnel','caveShrine','caveExit','villageRear','villageWalkIn','villageStatueSubmission','statuePrison','statueExecution','statueSpareLast','statueKillLast','villageRingReturn','villageRingDominance','ringPrisonApproach','ringPrisonRevolt','ringKillThree','villageAssault','villageAssaultVictory','villageNight','villageNightResult','c68','c69','death'];
+const PAGE_ORDER=['c0','c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c12','c13','c15','c16','c20','search2','north1','north2','north3','north4','east1','east2','east3','eastRefuse','east4','east5','east6','south1','south2','c21','c22','c23','c24','c25','c26','c27','c28','c29','c30','directIsland','c31','pirateApproach','pirateParley','pirateOfferRejected','pirateDealAccepted','c32','c34','c35','c36','c37','ravineDown','ravineMouth','ravineFight','ravineCorpse','ravineExit','c41','c50','c38','c39','c40','c42','c43','c44','c45','c46','c47','c48','c49','c51','c52','c53','c54','c55','c56','c57','islandRetreat','islandBeach','islandBeachFight','islandBeachYield','islandCaptured','islandForestLanding','forestTrap','forestAlligator','islandRecon','coveClearing','caveTunnel','caveShrine','caveExit','villageRear','villageWalkIn','villageStatueSubmission','statuePrison','statueExecution','statueSpareLast','statueKillLast','villageRingReturn','villageRingDominance','ringPrisonApproach','ringPrisonRevolt','ringKillThree','villageAssault','villageSoloAssault','villageAssaultVictory','villageNight','villageNightResult','c68','c69','death'];
 const PAGE_BY_NODE=Object.fromEntries(PAGE_ORDER.map((id,i)=>[id,i]));
 const padPage=n=>String(n).padStart(3,'0');
 
@@ -1345,7 +1388,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:90,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:91,pageMapVersion:14,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
