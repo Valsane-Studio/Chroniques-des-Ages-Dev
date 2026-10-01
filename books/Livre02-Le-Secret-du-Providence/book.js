@@ -353,22 +353,21 @@ function villageAssaultHtml(s){
   h+=`<div class="combat-roll-result crew-battle-result">
     <div class="combat-roll-title">Assaut du village</div>
     <div class="crew-strength-preview">
-      <div><strong>Objectif</strong><span>Atteindre la prison : <strong>${b.progress}/3</strong></span><span>${b.prisonOpen?'Prison ouverte':'Il faut progresser sous le feu'}</span></div>
-      <div><strong>Forces</strong><span>Soldats : <strong>${s.soldiers||0}</strong> · Hale : <strong>${s.flags.haleAlive===false?'hors de combat':'présent'}</strong></span><span>Marins libérés : <strong>${b.marines}</strong> · Hommes pâles : <strong>${b.enemy}</strong></span></div>
+      <div><strong>Ton groupe</strong><span>Soldats : <strong>${s.soldiers||0}</strong> · Hale : <strong>${s.flags.haleAlive===false?'hors de combat':'présent'}</strong></span></div>
+      <div><strong>Adversaires</strong><span>Hommes pâles : <strong>${b.enemy}</strong></span></div>
     </div>
     <p>Comme lors des combats contre les pirates, chaque groupe possède une <strong>Valeur de combat</strong> qui représente à la fois son équipement et son entraînement.</p>
     <p>Tes soldats sont aguerris et bien équipés : <strong>Valeur de combat 4</strong>. Chaque dé faisant <strong>1, 2, 3 ou 4</strong> est une réussite.</p>
-    <p><strong>Hale</strong> combat comme tes autres soldats : <strong>Valeur de combat 4</strong>. Les marins du <strong>Providence</strong>, si tu parviens à les libérer pendant la bataille, ont une <strong>Valeur de combat 3</strong> : chaque dé faisant <strong>1, 2 ou 3</strong> est une réussite.</p>
+    <p><strong>Hale</strong> combat comme tes autres soldats : <strong>Valeur de combat 4</strong>.</p>
     <p>Les hommes pâles sont moins entraînés et moins bien équipés : <strong>Valeur de combat 1</strong>. Seul un <strong>1</strong> est une réussite.</p>
     <p>Chaque combattant lance <strong>1D6</strong>. <strong>Chaque réussite met un adversaire hors de combat.</strong> À chaque nouvel assaut, tous les combattants encore debout relancent leur dé.</p>
     <p>À chaque tour, tu choisis aussi ton action :</p>
     <p><strong>Mener la charge :</strong> si ton test de Force réussit, tu neutralises <strong>1 homme pâle supplémentaire</strong>. En cas d’échec, tu subis <strong>1D3 dégâts</strong>.</p>
     <p><strong>Couvrir tes hommes :</strong> si ton test de Dextérité réussit, tu annules <strong>une perte dans ton groupe</strong> pendant ce tour.</p>
-    <p><strong>Pousser vers la prison :</strong> tu avances vers la prison. Il faut avancer sur <strong>3 tours</strong> pour ouvrir la prison et libérer les marins du Providence. Pendant le tour où tu avances, tu ne peux rien faire d’autre : ni mener la charge, ni couvrir tes hommes.</p>
   </div>`;
 
   if(l){
-    const actionTitle=l.action==='charge'?'Mener la charge':l.action==='cover'?'Couvrir les hommes':'Pousser vers la prison';
+    const actionTitle=l.action==='charge'?'Mener la charge':'Couvrir les hommes';
     h+='<div class="combat-roll-result crew-battle-result"><div class="combat-roll-title">'+actionTitle+' — tour '+String(b.round)+'</div>';
 
     if(l.action==='charge'||l.action==='cover'){
@@ -380,30 +379,23 @@ function villageAssaultHtml(s){
       h+='</div>';
     }
 
-    h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Ton groupe</strong><span>Soldats et Hale : réussite sur 1–4 · Marins : 1–3</span></div>';
+    h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Ton groupe</strong><span>Soldats et Hale : réussite sur 1–4</span></div>';
     if(l.soldierDice.length)h+='<p>Soldats</p><div class="crew-training-dice">'+villageBattleDiceRow(l.soldierDice,4)+'</div>';
     if(l.flankDice.length)h+='<p>Feu croisé</p><div class="crew-training-dice">'+villageBattleDiceRow(l.flankDice,4)+'</div>';
     if(l.haleDice.length)h+='<p>Hale</p><div class="crew-training-dice">'+villageBattleDiceRow(l.haleDice,4)+'</div>';
-    if(l.marineDice.length)h+='<p>Marins du Providence</p><div class="crew-training-dice">'+villageBattleDiceRow(l.marineDice,3)+'</div>';
     h+='<p><strong>'+String(l.enemyLoss)+' homme'+(l.enemyLoss>1?'s pâles tombent':' pâle tombe')+'.</strong></p></div>';
 
     h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Hommes pâles</strong><span>Réussite sur <strong>'+(l.enemyCombat===2?'1 ou 2':'1')+'</strong></span></div><div class="crew-training-dice">'+villageBattleDiceRow(l.enemyDice,l.enemyCombat)+'</div>';
     if(l.prevented)h+='<p>Une de leurs réussites est annulée par ta couverture.</p>';
     if(l.soldierLoss)h+='<p><strong>Tu perds '+String(l.soldierLoss)+' soldat'+(l.soldierLoss>1?'s':'')+'.</strong></p>';
-    if(l.marineLoss)h+='<p><strong>'+String(l.marineLoss)+' marin'+(l.marineLoss>1?'s du Providence tombent':' du Providence tombe')+'.</strong></p>';
     if(l.haleLost)h+='<p><strong>Hale tombe pendant l’affrontement.</strong></p>';
-    if(!l.soldierLoss&&!l.marineLoss&&!l.haleLost)h+='<p>Personne ne tombe dans ton groupe.</p>';
+    if(!l.soldierLoss&&!l.haleLost)h+='<p>Personne ne tombe dans ton groupe.</p>';
     h+='</div>';
 
-    if(l.action==='push')h+='<p>Vous gagnez du terrain vers la prison : <strong>'+String(l.progressAfter)+'/3</strong>.</p>';
-    if(l.prisonOpenedThisRound)h+='<p><strong>Vous atteignez la cage.</strong> La porte est forcée dans la confusion. Trois des marins du Providence encore capables de tenir une arme ramassent des sabres et rejoignent immédiatement le combat.</p>';
     h+='</div>';
   }
 
-  if(b.prisonOpen&&b.enemyFled)h+='<p>La libération des prisonniers brise ce qui restait de leur assurance. Les hommes pâles encore debout reculent, puis disparaissent entre les huttes et les arbres.</p>';
-  else if(b.enemyDefeated)h+='<p>Le dernier adversaire tombe. Pour quelques secondes, le village devient silencieux.</p>';
-  else if(b.prisonOpen&&b.moraleTurns===1)h+='<p>Les hommes pâles hésitent en voyant les prisonniers libres et armés. Ils tiennent encore, mais leur groupe est en train de se disloquer. <strong>Il faut tenir un dernier échange.</strong></p>';
-  else if(b.prisonOpen&&b.enemy>6)h+='<p>Les prisonniers sont libres, mais les hommes pâles sont encore assez nombreux pour poursuivre le combat. Les trois marins armés viennent renforcer ta ligne.</p>';
+  if(b.enemyDefeated)h+='<p>Le dernier adversaire tombe. Pour quelques secondes, le village devient silencieux.</p>';
 
   if(b.failed)h+='<p>Tu te retrouves sans aucun homme capable de tenir la ligne avec toi. Les hommes pâles se referment de tous côtés.</p>';
   return h;
@@ -411,13 +403,11 @@ function villageAssaultHtml(s){
 function villageAssaultChoices(s){
   const b=initVillageAssault(s);
   if(s.hp<=0||b.failed)return[{label:'La fin du voyage',to:'death'}];
-  if(b.enemyDefeated||b.enemyFled)return[{label:b.prisonOpen?'Rassembler les survivants':'Forcer la porte de la prison',to:'villageAssaultVictory'}];
-  const out=[
+  if(b.enemyDefeated)return[{label:'Rejoindre la prison',to:'villageAssaultVictory'}];
+  return[
     {label:'Mener la charge — test de Force',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'charge')},
     {label:'Couvrir tes hommes — test de Dextérité',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'cover')}
   ];
-  if(!b.prisonOpen)out.push({label:'Pousser vers la prison — étape '+String(Math.min(3,b.progress+1))+'/3',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'push')});
-  return out;
 }
 
 function addThrowingBlades(s,n=1){
@@ -1026,7 +1016,7 @@ ringKillThree:{title:'Profiter de leur hésitation',text:'<p>Tu fais un signe br
 
 villageAssault:{title:'Donner l’assaut',text:s=>villageAssaultHtml(s),onEnter:s=>initVillageAssault(s),choices:s=>villageAssaultChoices(s)},
 
-villageAssaultVictory:{title:'Les derniers marins du Providence',text:s=>{const b=initVillageAssault(s);let h='';if(b.enemyFled)h+='<p>Les derniers hommes pâles abandonnent la place et disparaissent dans la forêt. Aucun ne tente de revenir.</p>';else h+='<p>Plus aucun homme pâle ne se dresse entre vous et la prison.</p>';if(!b.prisonOpen)h+='<p>Vous rejoignez la cage et attaquez la serrure. Après plusieurs coups, la lourde porte métallique finit par céder.</p>';h+='<p>Derrière les barreaux se trouvent les derniers matelots du <strong>Providence</strong>.</p><p>Ils sont affamés, blessés et épuisés. Certains tiennent à peine debout.</p><p>Lorsqu’ils comprennent que vous êtes venus les chercher, plusieurs restent silencieux quelques secondes, comme s’ils n’osaient pas encore croire qu’ils sont libres.</p>';if(b.prisonOpen)h+='<p>Les trois marins qui ont pris part au combat rendent lentement les armes récupérées. Les autres viennent soutenir les blessés.</p>';h+='<p>La mission n’est pourtant pas terminée. Il faut encore quitter cette île.</p>';return h;},onEnter:s=>{s.flags.providenceSailorsFreed=true;s.flags.villageAssaultWon=true;},choices:[]},
+villageAssaultVictory:{title:'Les derniers marins du Providence',text:'<p>Plus aucun homme pâle ne se dresse entre vous et la prison.</p><p>Vous rejoignez la cage et attaquez la serrure. Après plusieurs coups, la lourde porte métallique finit par céder.</p><p>Derrière les barreaux se trouvent les derniers matelots du <strong>Providence</strong>.</p><p>Ils sont affamés, blessés et épuisés. Certains tiennent à peine debout.</p><p>Lorsqu’ils comprennent que vous êtes venus les chercher, plusieurs restent silencieux quelques secondes, comme s’ils n’osaient pas encore croire qu’ils sont libres.</p><p>La mission n’est pourtant pas terminée. Il faut encore quitter cette île.</p>',onEnter:s=>{s.flags.providenceSailorsFreed=true;s.flags.villageAssaultWon=true;},choices:[]},
 
 villageNight:{title:'Attendre la nuit',text:s=>'<p>Vous restez cachés jusqu’à la disparition complète du soleil.</p><p>Peu à peu, les feux s’éteignent dans le village.</p><p>Les hommes pâles regagnent leurs huttes.</p><p>Deux sentinelles seulement restent visibles.</p>'+((s.flags.flankingSoldiers||0)>0?'<p>De l’autre côté, tu aperçois parfois le reflet discret d’une lame : l’autre groupe est toujours en position.</p>':'')+'<p>Vous attendez encore.</p><p>Le moment venu, chaque soldat doit progresser sans bruit. Chacun lancera un dé. <strong>Seul un 6 signifie que l’ennemi a le temps de donner l’alerte avant d’être tué.</strong></p>',choices:[{label:'Donner le signal et lancer les dés',to:'villageNightResult',effect:s=>resolveNightRaid(s)}]},
 
@@ -1288,7 +1278,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:82,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:83,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
