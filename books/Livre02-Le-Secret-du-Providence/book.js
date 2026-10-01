@@ -147,12 +147,37 @@ function resolveIslandLogTrap(s){
   s.flags.islandLogTrapRolled=true;
   s.flags.islandHeroDex=rollDex(s);
   if(!s.flags.islandHeroDex)rollDamage(s,'islandLogTrapHero',3);
-  if(s.flags.haleAlive!==false){s.flags.islandHaleRoll=cryptoDie6();if(s.flags.islandHaleRoll<=2){s.flags.haleAlive=false;s.flags.companion=null;}}
+
+  const halePresent=s.flags.haleAlive!==false;
   const n=Math.max(0,Math.floor(Number(s.expeditionSoldiers)||0));
-  const rolls=[];let dead=0;
-  for(let i=0;i<n;i++){const r=cryptoDie6();rolls.push(r);if(r<=2)dead++;}
-  s.flags.islandSoldierRolls=rolls;s.flags.islandSoldierDeaths=dead;
-  s.expeditionSoldiers=Math.max(0,n-dead);s.soldiers=Math.max(0,(s.soldiers||0)-dead);
+  const flanking=Math.max(0,Math.floor(Number(s.flags.flankingSoldiers)||0));
+  let haleRoll=halePresent?cryptoDie6():null;
+  const rolls=Array.from({length:n},()=>cryptoDie6());
+
+  // À partir de l'approche de la deuxième île, le dernier allié ne peut pas
+  // être éliminé par un piège avant l'arrivée au village.
+  if(flanking===0){
+    const localAllies=(halePresent?1:0)+n;
+    const haleFatal=halePresent&&haleRoll<=2;
+    const soldierFatal=rolls.filter(v=>v<=2).length;
+    if(localAllies>0&&soldierFatal+(haleFatal?1:0)>=localAllies){
+      if(halePresent)haleRoll=3;
+      else if(rolls.length)rolls[rolls.length-1]=3;
+      s.flags.islandLastAllyProtected=true;
+    }
+  }
+
+  s.flags.islandHaleRoll=haleRoll;
+  if(halePresent&&haleRoll<=2){
+    s.flags.haleAlive=false;
+    s.flags.companion=null;
+  }
+
+  const dead=rolls.filter(v=>v<=2).length;
+  s.flags.islandSoldierRolls=rolls;
+  s.flags.islandSoldierDeaths=dead;
+  s.expeditionSoldiers=Math.max(0,n-dead);
+  s.soldiers=Math.max(0,(s.soldiers||0)-dead);
 }
 function resolveNightRaid(s){
   if(s.flags.nightRaidRolled)return;
@@ -603,7 +628,11 @@ function villageAssaultHtml(s){
 
   if(b.enemyDefeated)h+='<p>Le dernier adversaire tombe. Pour quelques secondes, le village devient silencieux.</p>';
 
-  if(!b.enemyDefeated&&villageHeroAlone(s))h+='<p><strong>Le dernier de tes hommes vient de tomber.</strong> Les hommes pâles se tournent vers toi. Rester ici serait suicidaire : il faut te replier.</p>';
+  if(!b.enemyDefeated&&villageHeroAlone(s)){
+    h+=b.round===0
+      ?'<p><strong>Tu es arrivé jusqu’ici sans aucun homme encore capable de se battre à tes côtés.</strong> Face au village entier, donner l’assaut seul serait suicidaire : il faut te replier.</p>'
+      :'<p><strong>Le dernier de tes hommes vient de tomber.</strong> Les hommes pâles se tournent vers toi. Rester ici serait suicidaire : il faut te replier.</p>';
+  }
   return h;
 }
 function useCavePistolsInAssault(s){
@@ -1534,7 +1563,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:94,pageMapVersion:15,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:95,pageMapVersion:15,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
