@@ -1,6 +1,6 @@
 /* La Grotte de Valombre — Service Worker
    IMPORTANT : augmenter APP_VERSION à chaque nouvelle mise en ligne. */
-const APP_VERSION = 'reference-68.278-book02-inline-rules-button-v89';
+const APP_VERSION = 'reference-68.279-book02-hale-soldier-count-v90';
 const CACHE_PREFIX = 'chroniques-ages-dev-';
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 
