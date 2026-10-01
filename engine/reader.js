@@ -511,6 +511,10 @@ function render() {
     `;
 
     btn.addEventListener('click', () => {
+      if (choice.modalHtml) {
+        const html = typeof choice.modalHtml === 'function' ? choice.modalHtml(state) : choice.modalHtml;
+        return showModal(choice.modalTitle || 'Règles', html);
+      }
       if (choice.action === 'resolveDice') { btn.disabled = true; return resolvePendingDice(); }
       if (choice.action === 'checkpoint') return restartFromCheckpoint();
       if (choice.action === 'restart') return restartGame();
