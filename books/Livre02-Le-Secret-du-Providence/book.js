@@ -548,6 +548,8 @@ function villageAssaultHtml(s){
   else h+='<p>Tu comptes <strong>'+String(b.enemy)+'</strong> hommes pâles capables de se battre.</p>';
   if(!b.flankUsed&&(s.flags.flankingSoldiers||0)>0)h+='<p>Tes <strong>'+String(s.flags.flankingSoldiers)+' soldat'+((s.flags.flankingSoldiers||0)>1?'s sont':' est')+' en position de l’autre côté du village</strong>. Au premier échange, chacun lancera un dé supplémentaire grâce au feu croisé.</p>';
 
+  if(b.pistolOpeningLoss>0)h+='<p><strong>Tu dégaines les deux pistolets trouvés dans la grotte.</strong> Deux détonations éclatent presque en même temps. <strong>'+String(b.pistolOpeningLoss)+' homme'+(b.pistolOpeningLoss>1?'s pâles tombent':' pâle tombe')+'</strong> avant que la bataille ne commence vraiment.</p>';
+
   h+=`<div class="combat-roll-result crew-battle-result">
     <div class="combat-roll-title">Assaut du village</div>
     <div class="crew-strength-preview">
@@ -604,15 +606,29 @@ function villageAssaultHtml(s){
   if(!b.enemyDefeated&&villageHeroAlone(s))h+='<p><strong>Le dernier de tes hommes vient de tomber.</strong> Les hommes pâles se tournent vers toi. Rester ici serait suicidaire : il faut te replier.</p>';
   return h;
 }
+function useCavePistolsInAssault(s){
+  const b=initVillageAssault(s);
+  if(s.flags.cavePistolsUsed||!s.inventory?.pistolets_silex||b.enemy<=0)return;
+  const loss=markVillageEnemyLoss(s,2);
+  s.flags.cavePistolsUsed=true;
+  b.pistolOpeningLoss=loss;
+  delete s.inventory.pistolets_silex;
+}
+
 function villageAssaultChoices(s){
   const b=initVillageAssault(s);
   if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];
   if(b.enemyDefeated)return[{label:'Rejoindre la prison',to:'villageAssaultVictory'}];
   if(villageHeroAlone(s))return[{label:'Fuir vers la forêt',to:'villageRetreat'}];
-  return[
+  const out=[];
+  if(b.round===0&&!s.flags.cavePistolsUsed&&s.inventory?.pistolets_silex){
+    out.push({label:'Utiliser les deux pistolets',stay:true,inlineCombat:true,effect:x=>useCavePistolsInAssault(x)});
+  }
+  out.push(
     {label:'Mener la charge — test de Force',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'charge')},
     {label:'Couvrir tes hommes — test de Dextérité',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'cover')}
-  ];
+  );
+  return out;
 }
 
 function addThrowingBlades(s,n=1){
@@ -1191,7 +1207,7 @@ coveClearing:{title:'La crique cachée',text:s=>'<p>Vous tirez la chaloupe sous 
 
 caveTunnel:{title:'Sous la roche',text:'<p>La lumière disparaît rapidement derrière vous.</p><p>Au bout de quelques mètres, la grotte cesse de ressembler à une cavité naturelle.</p><p>Les parois ont été égalisées. Des marches grossières ont été taillées dans le sol. De petits renfoncements réguliers longent les murs comme s’ils avaient autrefois accueilli des lampes.</p><p>Plus loin, une lumière verticale tombe depuis une ouverture très haute dans la roche.</p>',choices:[{label:'Avancer vers la lumière',to:'caveShrine'}]},
 
-caveShrine:{title:'Le sanctuaire',text:'<p>Le passage débouche dans une salle ronde.</p><p>Un rayon de lumière traverse une fissure du plafond et tombe exactement sur un petit monticule de pierre.</p><p>Une statuette y repose.</p><p>Elle représente une créature marine au corps massif, entourée d’une multitude de tentacules.</p><p>Mais ce sont surtout les fresques qui couvrent les murs qui retiennent ton attention.</p><p>La première montre un navire en pleine mer, son pont rempli de marins. Sous la coque, un immense kraken semble attaché au bâtiment par ses tentacules.</p><p>La deuxième représente le même navire posé sur une plage. Devant lui, <strong>trois points bleus</strong> ont été peints.</p><p>La troisième montre le navire repartant seul, sans personne à bord. Au centre du pont, une carte est posée bien en évidence.</p><p>La dernière fresque montre des tentacules surgissant de l’eau et emportant des hommes vers la créature.</p><p>Le cercle noir est peint au-dessus de toute la scène.</p><p>Tu repenses au vieux dicton : <em>l’île mange les marins et recrache les bateaux.</em></p><p>Ce n’était peut-être pas une image.</p>',onEnter:s=>s.flags.caveTruth=true,choices:[{label:'Prendre la statuette',to:'caveExit',effect:s=>{if(!s.flags.guardianStatue){s.flags.guardianStatue=true;addItem(s,'statue_gardien','Statuette du Gardien','Une petite statue de pierre représentant une créature marine aux multiples tentacules.');}}},{label:'Laisser la statuette en place',to:'caveExit'}]},
+caveShrine:{title:'Le sanctuaire',text:'<p>Le passage débouche dans une salle ronde.</p><p>Un rayon de lumière traverse une fissure du plafond et tombe sur les fresques qui couvrent les murs.</p><p>La première montre un navire en pleine mer, son pont rempli de marins. Sous la coque, un immense kraken semble attaché au bâtiment par ses tentacules.</p><p>La deuxième représente le même navire posé sur une plage. Devant lui, <strong>trois points bleus</strong> ont été peints.</p><p>La troisième montre le navire repartant seul, sans personne à bord. Au centre du pont, une carte est posée bien en évidence.</p><p>La dernière fresque montre des tentacules surgissant de l’eau et emportant des hommes vers la créature.</p><p>Le cercle noir est peint au-dessus de toute la scène.</p><p>Tu repenses au vieux dicton : <em>l’île mange les marins et recrache les bateaux.</em></p><p>Ce n’était peut-être pas une image.</p><p>Au pied des fresques, le sol est encombré d’affaires abandonnées : bottes, ceinturons, vestes de marin, sacs éventrés, sabres, mousquets et pièces d’équipement provenant de plusieurs équipages.</p><p>Certains objets portent les marques de la Royal Navy. D’autres appartenaient manifestement à des marchands ou à des flibustiers.</p><p>Tu comprends que les hommes pâles retirent à leurs prisonniers tout ce qui pourrait les encombrer avant de les emmener plus loin.</p><p>Sous une veste de cuir durcie par le sel, tu découvres <strong>deux pistolets à silex</strong> enveloppés dans un morceau de toile huilée.</p><p>Les mécanismes semblent encore fonctionner.</p><p>Et les deux armes sont chargées.</p>',onEnter:s=>{s.flags.caveTruth=true;s.flags.caveVisitedDay=true;if(!s.inventory?.pistolets_silex&&!s.flags.cavePistolsUsed)addItem(s,'pistolets_silex','Deux pistolets à silex','Deux pistolets trouvés parmi les affaires abandonnées dans le sanctuaire. Les deux armes sont chargées.');},choices:[{label:'Emporter les pistolets et quitter la grotte',to:'caveExit'}]},
 
 caveExit:{title:'Vers le village',text:'<p>Vous quittez le sanctuaire par un passage étroit qui remonte derrière la paroi.</p><p>Quelques minutes plus tard, vous retrouvez la forêt.</p><p>Des voix arrivent de l’autre côté des arbres.</p><p>Vous ralentissez.</p><p>Le village est tout proche.</p>',choices:[{label:'Approcher discrètement',to:'villageRear'}]},
 
@@ -1237,9 +1253,9 @@ villageNightGuard2:{title:'Le second garde',noImage:true,text:s=>'<p>Tu laisses 
 
 villageNightFight:{title:'Le combat dans le village',noImage:true,text:s=>nightVillageFightHtml(s),choices:s=>nightVillageFightChoices(s)},
 
-villageNightSearch:{title:'Fouiller l’île',noImage:true,text:s=>{if(s.flags.guardianStatue)return '<p>Tu parcours l’île dans l’obscurité, mais tu ne trouves rien qui puisse réellement t’aider davantage.</p><p>La seule découverte importante de cette île est déjà entre tes mains : la statuette du Gardien.</p>';if(s.flags.caveTruth)return '<p>Tu parcours les sentiers, les plages et les hauteurs de l’île.</p><p>Rien.</p><p>Tu ne trouves ni arme, ni embarcation, ni passage caché.</p><p>Il ne reste qu’un seul endroit que tu n’as pas véritablement exploité.</p><p>La grotte.</p><p>Et cette étrange statuette que tu as laissée sur place.</p><p>Tu retournes devant son entrée.</p>';return '<p>Tu décides de rester loin du village.</p><p>Si quelque chose peut encore t’aider, tu dois le trouver avant le lever du jour.</p><p>Tu parcours l’île dans l’obscurité pendant de longues minutes.</p><p>Entre deux parois rocheuses, tu finis par apercevoir une ouverture sombre.</p><p>Une grotte.</p><p>Au-dessus de l’entrée, un cercle noir a été gravé dans la pierre.</p>';},choices:s=>{if(s.flags.guardianStatue)return[{label:'Retourner au village avec la statuette',to:'villageNightStatue'},{label:'Tenter de fuir l’île à la nage',to:'villageNightSwim'},{label:'Attaquer le village de front',to:'villageNightFight'}];if(s.flags.caveTruth)return[{label:'Prendre la statuette',to:'villageNightStatue',effect:x=>{if(!x.flags.guardianStatue){x.flags.guardianStatue=true;addItem(x,'statue_gardien','Statuette du Gardien','Une petite statue de pierre représentant une créature marine aux multiples tentacules.');}}},{label:'Tenter de fuir l’île à la nage',to:'villageNightSwim'},{label:'Attaquer le village de front',to:'villageNightFight'}];return[{label:'Entrer dans la grotte',to:'villageNightCave'}];}},
+villageNightSearch:{title:'Fouiller l’île',noImage:true,text:s=>{if(s.flags.guardianStatue)return '<p>Tu parcours l’île dans l’obscurité, mais tu ne trouves rien qui puisse réellement t’aider davantage.</p><p>La statuette du Gardien est déjà entre tes mains.</p>';if(s.flags.caveVisitedDay)return '<p>Tu parcours les sentiers, les plages et les hauteurs de l’île.</p><p>Rien.</p><p>Tu ne trouves ni embarcation, ni passage caché, ni autre refuge.</p><p>Une idée finit par s’imposer.</p><p>La grotte que tu as visitée plus tôt.</p><p>Tu n’avais pas eu le temps d’en examiner chaque recoin.</p><p>Tu retournes vers le cercle noir gravé dans la roche.</p>';return '<p>Tu décides de rester loin du village.</p><p>Si quelque chose peut encore t’aider, tu dois le trouver avant le lever du jour.</p><p>Tu parcours l’île dans l’obscurité pendant de longues minutes.</p><p>Entre deux parois rocheuses, tu finis par apercevoir une ouverture sombre.</p><p>Une grotte.</p><p>Au-dessus de l’entrée, un cercle noir a été gravé dans la pierre.</p>';},choices:s=>{if(s.flags.guardianStatue)return[{label:'Retourner au village avec la statuette',to:'villageNightStatue'},{label:'Tenter de fuir l’île à la nage',to:'villageNightSwim'},{label:'Attaquer le village de front',to:'villageNightFight'}];const out=[{label:s.flags.caveVisitedDay?'Retourner fouiller la grotte':'Entrer dans la grotte',to:'villageNightCave'}];if(s.flags.caveVisitedDay){out.push({label:'Tenter de fuir l’île à la nage',to:'villageNightSwim'},{label:'Attaquer le village de front',to:'villageNightFight'});}return out;}},
 
-villageNightCave:{title:'Le sanctuaire dans la nuit',noImage:true,text:'<p>Tu avances dans la grotte à tâtons.</p><p>Les parois deviennent régulières, puis des marches taillées dans la roche te conduisent jusqu’à une salle ronde.</p><p>Un mince rayon de lune traverse une fissure très haute.</p><p>Sur un petit monticule de pierre repose la statuette.</p><p>La créature sculptée possède un corps massif entouré de tentacules.</p><p>Autour d’elle, les fresques racontent la même histoire : des navires attirés jusqu’ici, des hommes emportés, puis des bâtiments repartant seuls.</p><p>Cette fois, tu ne laisses pas la statuette derrière toi.</p><p>Tu la prends.</p>',onEnter:s=>{s.flags.caveTruth=true;if(!s.flags.guardianStatue){s.flags.guardianStatue=true;addItem(s,'statue_gardien','Statuette du Gardien','Une petite statue de pierre représentant une créature marine aux multiples tentacules.');}},choices:[{label:'Retourner au village avec la statuette',to:'villageNightStatue'}]},
+villageNightCave:{title:'Le sanctuaire dans la nuit',noImage:true,text:s=>s.flags.caveVisitedDay?'<p>Tu retrouves le sanctuaire et les fresques découvertes plus tôt.</p><p>Dans l’obscurité, tu prends cette fois le temps de fouiller la salle beaucoup plus minutieusement.</p><p>Derrière un amas de manteaux, de cuir et de vieux équipements, ta main rencontre une cavité dans la roche.</p><p>Tu dégages les objets qui en masquent l’entrée.</p><p>Un petit renfoncement apparaît.</p><p>À l’intérieur repose une statuette de pierre.</p><p>Elle représente une créature marine au corps massif, entourée d’une multitude de tentacules.</p><p>Tu reconnais immédiatement la créature représentée sur les fresques.</p><p>Le Gardien.</p><p>Tu prends la statuette.</p>':'<p>Tu avances dans la grotte à tâtons.</p><p>Les parois deviennent régulières, puis des marches taillées dans la roche te conduisent jusqu’à une salle ronde.</p><p>Des fresques couvrent les murs : des navires attirés jusqu’ici, des hommes conduits vers la mer, puis des bâtiments repartant seuls.</p><p>Au pied des peintures s’entassent des affaires de marins et de flibustiers abandonnées sur place.</p><p>En les écartant pour fouiller la salle, tu découvres un petit renfoncement dans la roche.</p><p>À l’intérieur repose une statuette représentant une créature marine massive entourée de tentacules.</p><p>Le même Gardien que celui peint sur les murs.</p><p>Tu prends la statuette.</p>',onEnter:s=>{s.flags.caveTruth=true;s.flags.caveVisitedNight=true;if(!s.flags.guardianStatue){s.flags.guardianStatue=true;addItem(s,'statue_gardien','Statuette du Gardien','Une petite statue de pierre représentant une créature marine aux multiples tentacules.');}},choices:[{label:'Retourner au village avec la statuette',to:'villageNightStatue'}]},
 
 villageNightStatue:{title:'Sous le regard du Gardien',noImage:true,text:s=>villageNightStatueHtml(s),onEnter:s=>resolveNightStatueVillage(s),choices:[{label:'Continuer',to:'villageNightAftermath'}]},
 
@@ -1393,6 +1409,7 @@ const DEV_TEST_ITEM_CATALOG=[
  {id:'bracelet_force',name:'Bracelet de force · Force +2',description:'Bracelet obtenu au début de l’enquête.',force:2,flag:'forceBracelet'},
  {id:'bracelet_force_ravin',name:'Bracelet du ravin · Force +2',description:'Bracelet trouvé sur le corps au fond du ravin.',force:2,flag:'ravineForceBracelet'},
  {id:'bague_crane',name:'Bague au crâne',description:'La bague reconnue par les hommes pâles.',flag:'skullRing'},
+ {id:'pistolets_silex',name:'Deux pistolets à silex',description:'Deux pistolets chargés trouvés dans le sanctuaire.'},
  {id:'statue_gardien',name:'Statuette du Gardien',description:'La statuette trouvée dans le sanctuaire de la grotte.',flag:'guardianStatue'}
 ];
 
@@ -1517,7 +1534,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:93,pageMapVersion:15,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:94,pageMapVersion:15,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
