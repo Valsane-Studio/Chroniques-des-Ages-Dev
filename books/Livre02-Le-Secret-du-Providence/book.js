@@ -371,6 +371,8 @@ function villageAssaultHtml(s){
     ${b.round===0?villageAssaultRulesHtml():''}
   </div>`;
 
+  if(b.round>0)h+='<div class="combat-rules-reminder-wrap"><button type="button" class="combat-rules-reminder" data-story-modal="village-assault-rules">Rappeler les règles du combat</button></div>';
+
   if(l){
     const actionTitle=l.action==='charge'?'Mener la charge':'Couvrir les hommes';
     h+='<div class="combat-roll-result crew-battle-result"><div class="combat-roll-title">'+actionTitle+' — tour '+String(b.round)+'</div>';
@@ -409,21 +411,11 @@ function villageAssaultHtml(s){
 function villageAssaultChoices(s){
   const b=initVillageAssault(s);
   if(s.hp<=0||b.failed)return[{label:'La fin du voyage',to:'death'}];
-
-  const reminder={label:'Rappeler les règles du combat',modalTitle:'Règles du combat',modalHtml:villageAssaultRulesHtml};
-
-  if(b.enemyDefeated){
-    const out=[{label:'Rejoindre la prison',to:'villageAssaultVictory'}];
-    if(b.round>0)out.push(reminder);
-    return out;
-  }
-
-  const out=[
+  if(b.enemyDefeated)return[{label:'Rejoindre la prison',to:'villageAssaultVictory'}];
+  return[
     {label:'Mener la charge — test de Force',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'charge')},
     {label:'Couvrir tes hommes — test de Dextérité',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'cover')}
   ];
-  if(b.round>0)out.push(reminder);
-  return out;
 }
 
 function addThrowingBlades(s,n=1){
@@ -1294,7 +1286,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:87,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:88,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
@@ -1307,6 +1299,7 @@ BookRegistry.register({
  resetSeriesOnRestart:true,showMissingIllustrationPlaceholder:true,story:STORY,pageOrder:PAGE_ORDER,pageByNode:PAGE_BY_NODE,navigationTitles:PAGE_NAV_TITLES,padPage,
  imageBaseForPage:n=>`Le-Secret-du-Providence-${padPage(n)}`,imageCandidatesForPage:n=>[`Le-Secret-du-Providence-${padPage(n)}`,`pages/Le-Secret-du-Providence-${padPage(n)}`],imageExtensions:['jpg','jpeg','png'],
  createInitialState,rules:{currentForce,currentDexterity,combatPower,weaponLabel,currentProtection,applyDamage},characterSheetHtml,inventory,
+ storyModals:{'village-assault-rules':{title:'Règles du combat',html:villageAssaultRulesHtml}},
  checkpoints:[{node:'c20',label:'Zone de disparition',onlyIfNone:true},{node:'c34',label:'Arrivée sur l’île'},{node:'c57',label:'Retour sur le Providence'}],
  conclusion:{successNodes:['c69'],deathNodes:['death'],successTitle:'À suivre',deathTitle:'Votre aventure s’achève ici',successText:'Vous avez atteint la fin de cette version de test du Secret du Providence.',deathText:'Votre mission s’arrête ici. Vous pouvez reprendre au dernier point de sauvegarde ou recommencer.',showJournalRecap:true},
  exportSeriesMemory(){return {};}
