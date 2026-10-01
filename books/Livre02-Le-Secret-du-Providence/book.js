@@ -364,7 +364,7 @@ function villageAssaultHtml(s){
     <p>À chaque tour, tu choisis aussi ton action :</p>
     <p><strong>Mener la charge :</strong> si ton test de Force réussit, tu neutralises <strong>1 homme pâle supplémentaire</strong>. En cas d’échec, tu subis <strong>1D3 dégâts</strong>.</p>
     <p><strong>Couvrir tes hommes :</strong> si ton test de Dextérité réussit, tu annules <strong>une perte dans ton groupe</strong> pendant ce tour.</p>
-    <p><strong>Pousser vers la prison :</strong> tu avances d’<strong>une étape</strong>. Il faut atteindre <strong>3 étapes</strong> pour ouvrir la prison et libérer les marins du Providence. Pendant ce tour, tu renonces simplement à mener la charge ou à couvrir tes hommes : les Valeurs de combat restent inchangées.</p>
+    <p><strong>Pousser vers la prison :</strong> tu avances vers la prison. Il faut avancer sur <strong>3 tours</strong> pour ouvrir la prison et libérer les marins du Providence. Pendant le tour où tu avances, tu ne peux rien faire d’autre : ni mener la charge, ni couvrir tes hommes.</p>
   </div>`;
 
   if(l){
@@ -1288,7 +1288,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:81,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:82,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
