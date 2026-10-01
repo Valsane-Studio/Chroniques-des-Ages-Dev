@@ -357,8 +357,15 @@ function villageAssaultHtml(s){
       <div><strong>Objectif</strong><span>Atteindre la prison : <strong>${b.progress}/3</strong></span><span>${b.prisonOpen?'Prison ouverte':'Il faut progresser sous le feu'}</span></div>
       <div><strong>Forces</strong><span>Soldats : <strong>${s.soldiers||0}</strong> · Hale : <strong>${s.flags.haleAlive===false?'hors de combat':'présent'}</strong></span><span>Marins libérés : <strong>${b.marines}</strong> · Hommes pâles : <strong>${b.enemy}</strong></span></div>
     </div>
-    <p>Chaque soldat réussit sur <strong>1–4</strong>. Hale et les marins du Providence réussissent sur <strong>1–3</strong>. Les hommes pâles réussissent normalement sur <strong>1</strong>.</p>
-    <p><strong>Mener la charge</strong> ajoute un ennemi neutralisé si ton test de Force réussit ; en cas d’échec, tu subis 1D3 dégâts. <strong>Couvrir tes hommes</strong> annule une perte si ton test de Dextérité réussit. <strong>Pousser vers la prison</strong> avance d’une étape, mais les hommes pâles réussissent sur <strong>1–2</strong> pendant ce tour.</p>
+    <p>Comme lors des combats contre les pirates, chaque groupe possède une <strong>Valeur de combat</strong> qui représente à la fois son équipement et son entraînement.</p>
+    <p>Tes soldats sont aguerris et bien équipés : <strong>Valeur de combat 4</strong>. Chaque dé faisant <strong>1, 2, 3 ou 4</strong> est une réussite.</p>
+    <p><strong>Hale</strong>, s’il est encore avec toi, possède une <strong>Valeur de combat 3</strong>. Les marins du <strong>Providence</strong>, si tu parviens à les libérer pendant la bataille, ont eux aussi une <strong>Valeur de combat 3</strong> : chaque dé faisant <strong>1, 2 ou 3</strong> est une réussite.</p>
+    <p>Les hommes pâles sont moins entraînés et moins bien équipés : <strong>Valeur de combat 1</strong>. Seul un <strong>1</strong> est une réussite.</p>
+    <p>Chaque combattant lance <strong>1D6</strong>. <strong>Chaque réussite met un adversaire hors de combat.</strong> À chaque nouvel assaut, tous les combattants encore debout relancent leur dé.</p>
+    <p>À chaque tour, tu choisis aussi ton action :</p>
+    <p><strong>Mener la charge :</strong> si ton test de Force réussit, tu neutralises <strong>1 homme pâle supplémentaire</strong>. En cas d’échec, tu subis <strong>1D3 dégâts</strong>.</p>
+    <p><strong>Couvrir tes hommes :</strong> si ton test de Dextérité réussit, tu annules <strong>une perte dans ton groupe</strong> pendant ce tour.</p>
+    <p><strong>Pousser vers la prison :</strong> tu avances d’<strong>une étape</strong>. Il faut atteindre <strong>3 étapes</strong> pour ouvrir la prison et libérer les marins du Providence. En contrepartie, tu exposes davantage ton groupe : pendant ce tour, les hommes pâles passent temporairement à <strong>Valeur de combat 2</strong> et réussissent sur <strong>1 ou 2</strong>.</p>
   </div>`;
 
   if(l){
@@ -1282,7 +1289,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:78,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:79,pageMapVersion:13,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
