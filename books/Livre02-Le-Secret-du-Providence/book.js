@@ -834,8 +834,8 @@ const padPage=n=>String(n).padStart(3,'0');
 const DEV_TEST_ITEM_CATALOG=[
  {id:'diamant_bleu',name:'Pierre bleue',description:'La pierre laissée près de la carte du Providence.',flag:'baitStone'},
  {id:'poudre_verte',name:'Poudre verte',description:'La poudre très fine trouvée dans la réserve du Providence.'},
- {id:'couteaux_jet',name:'Lames de lancer ×5',description:'Cinq lames équilibrées pour tester les passages qui les utilisent.',special:'blades'},
- {id:'caisse_rhum',name:'Tonneaux de rhum ×3',description:'Marchandise de négociation avec les pirates.',special:'rum'},
+ {id:'couteaux_jet',name:'Lames de lancer',description:'Cinq lames équilibrées pour tester les passages qui les utilisent.',special:'blades'},
+ {id:'caisse_rhum',name:'Tonneaux de rhum',description:'Marchandise de négociation avec les pirates.',special:'rum'},
  {id:'gold_test',name:'100 pièces d’or',description:'Réserve de test pour les achats et négociations.',special:'gold'},
  {id:'gantelets_marchands',name:'Gantelets renforcés · Protection +3',description:'Protection donnée par les marchands.',protection:3,flag:'southProtectionGift'},
  {id:'gantelets',name:'Gantelets renforcés · Protection +4',description:'Protection récupérée sur les pirates.',protection:4,flag:'gauntlets'},
