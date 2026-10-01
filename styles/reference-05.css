@@ -4462,3 +4462,27 @@ body.no-status-tags .app-shell {
 .crew-casualty-line strong{
   color:inherit;
 }
+
+/* Livre 02 — rappel discret des règles pendant l'assaut */
+.combat-rules-reminder-wrap{
+  display:flex;
+  justify-content:flex-end;
+  margin:8px 0 5px;
+}
+.combat-rules-reminder{
+  appearance:none;
+  border:1px solid rgba(99,76,49,.42);
+  background:rgba(245,236,216,.34);
+  color:#65513d;
+  font:inherit;
+  font-size:12px;
+  line-height:1.2;
+  padding:5px 8px;
+  cursor:pointer;
+  box-shadow:none;
+}
+.combat-rules-reminder:hover,
+.combat-rules-reminder:focus-visible{
+  background:rgba(245,236,216,.68);
+  border-color:rgba(99,76,49,.68);
+}
