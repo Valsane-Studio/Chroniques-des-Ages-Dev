@@ -1266,7 +1266,7 @@ ringKillThree:{title:'Profiter de leur hésitation',text:'<p>Tu fais un signe br
 
 villageAssault:{title:'Donner l’assaut',text:s=>villageAssaultHtml(s),onEnter:s=>initVillageAssault(s),choices:s=>villageAssaultChoices(s)},
 
-villageRetreat:{title:'Le repli',noImage:true,text:'<p>Le dernier de tes hommes s’effondre.</p><p>Autour de toi, il ne reste plus personne pour tenir la ligne.</p><p>Les hommes pâles se tournent vers toi.</p><p>Tu recules de quelques pas, puis tu cours.</p><p>Tu t’enfonces dans la forêt sans regarder derrière toi. Des cris s’élèvent dans ton dos. Des branches craquent. Ils te poursuivent.</p><p>Tu quittes le sentier, descends une pente couverte de racines et te glisses derrière un énorme rocher.</p><p>Là, presque invisible dans un renfoncement de pierre, tu te plaques contre la roche.</p><p>Les bruits se rapprochent.</p><p>Des pas passent à quelques mètres de toi.</p><p>Puis s’éloignent.</p><p>Tu restes immobile. Longtemps.</p><p>Lorsque tu oses enfin bouger, la lumière a presque disparu entre les arbres.</p><p>La nuit tombe sur l’île.</p>',choices:[{label:'Attendre que la nuit soit complète',to:'villageRetreatNight'}]},
+villageRetreat:{title:'Le repli',noImage:true,text:'<p>Il ne reste plus personne pour tenir la ligne.</p><p>Les hommes pâles se tournent vers toi.</p><p>Tu recules de quelques pas, puis tu cours.</p><p>Tu t’enfonces dans la forêt sans regarder derrière toi. Des cris s’élèvent dans ton dos. Des branches craquent. Ils te poursuivent.</p><p>Tu quittes le sentier, descends une pente couverte de racines et te glisses derrière un énorme rocher.</p><p>Là, presque invisible dans un renfoncement de pierre, tu te plaques contre la roche.</p><p>Les bruits se rapprochent.</p><p>Des pas passent à quelques mètres de toi.</p><p>Puis s’éloignent.</p><p>Tu restes immobile. Longtemps.</p><p>Lorsque tu oses enfin bouger, la lumière a presque disparu entre les arbres.</p><p>La nuit tombe sur l’île.</p>',choices:[{label:'Attendre que la nuit soit complète',to:'villageRetreatNight'}]},
 
 villageRetreatNight:{title:'La nuit',noImage:true,text:'<p>La forêt est désormais plongée dans l’obscurité.</p><p>Au loin, quelques lueurs apparaissent entre les arbres. Le village des hommes pâles est toujours là.</p><p>Tu es seul.</p><p>Mais ils ignorent où tu te trouves.</p><p>Tu dois décider de ce que tu vas faire avant le lever du jour.</p>',choices:s=>[
   {label:'S’approcher discrètement du camp',to:s.flags.guardianStatue?'villageNightStatue':'villageNightGuard1'},
@@ -1563,7 +1563,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:95,pageMapVersion:15,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:96,pageMapVersion:15,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
