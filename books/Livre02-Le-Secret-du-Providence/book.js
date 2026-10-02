@@ -197,13 +197,7 @@ function resolveNightRaid(s){
 function initVillageAssault(s){
   if(s.flags.villageAssaultBattle){
     s.flags.villageAssaultBattle.failed=false;
-    s.flags.villageAssaultBattle.prisonOpen=false;
     s.flags.villageAssaultBattle.progress=0;
-    if(s.flags.freedDuringAssault){
-      s.flags.freedDuringAssault=false;
-      if(!s.flags.captivePrisonersEscaped)setProvidenceMarinesWithParty(s,0);
-      s.flags.providenceSailorsFreed=!!s.flags.captivePrisonersEscaped;
-    }
     if(!Number.isFinite(s.flags.providenceMarinesWithParty)&&Number.isFinite(s.flags.villageAssaultBattle.marines)){
       s.flags.providenceMarinesWithParty=Math.max(0,Math.floor(Number(s.flags.villageAssaultBattle.marines)||0));
     }
@@ -216,7 +210,6 @@ function initVillageAssault(s){
     enemy:initialEnemy,
     round:0,
     progress:0,
-    prisonOpen:false,
     marines:providenceMarinesWithParty(s),
     marineLosses:0,
     flankUsed:false,
@@ -350,8 +343,6 @@ const enemyBefore=b.enemy;
     remainingHits--;
   }
 
-  const prisonOpenedThisRound=false;
-
   if(b.enemy<=0){
     b.enemy=0;
     b.enemyDefeated=true;
@@ -387,8 +378,7 @@ const enemyBefore=b.enemy;
     marineLoss,
     haleLost,
     progressBefore,
-    progressAfter:b.progress,
-    prisonOpenedThisRound
+    progressAfter:b.progress
   };
 }
 function markVillageEnemyLoss(s,n=1){
@@ -1432,7 +1422,7 @@ villageNightStatue:{title:'Sous le regard du Gardien',noImage:true,text:s=>villa
 
 villageNightAftermath:{title:'Après le silence',noImage:true,text:s=>{if(s.flags.freedAtNight)return '<p>Le village est enfin silencieux.</p><p>Tu rejoins la construction aux lourds barreaux aperçue plus tôt.</p><p>Derrière la grille, les derniers marins du <strong>Providence</strong> comprennent peu à peu que leurs gardiens ne reviendront pas.</p><p>Tu forces la serrure et les fais sortir.</p><p>La plupart sont trop faibles pour se battre, mais <strong>trois marins</strong> sont encore capables de marcher et de tenir une arme. Ils restent avec toi.</p><p>Il fait toujours nuit. Personne ne veut risquer une traversée dans l’obscurité.</p>';if(s.flags.captivePrisonersEscaped)return '<p>Le village est enfin silencieux.</p><p>La cage que vous avez ouverte plus tôt est vide. Les prisonniers se sont dispersés dans la forêt pendant votre fuite.</p><p>Les marins du Providence restés avec toi savent que plusieurs des leurs sont encore cachés sur l’île.</p><p>Vous décidez de ne pas tenter la mer avant le jour.</p>';return '<p>Le village est enfin silencieux.</p><p>La prison est déjà ouverte. Les marins du Providence libérés plus tôt se regroupent comme ils le peuvent autour de toi.</p><p>Il fait toujours nuit. Vous vous retranchez dans les bâtiments et attendez que le ciel commence à pâlir.</p>';},onEnter:s=>resolveVillageNightAftermath(s),choices:[{label:'Attendre le lever du jour',to:'villageDawnRegroup'}]},
 
-villageAssaultVictory:{title:'Les derniers marins du Providence',text:s=>{const b=initVillageAssault(s);const marines=providenceMarinesWithParty(s);let h=b.enemyFled?'<p>Les hommes pâles encore debout ont disparu dans la forêt. Aucun ne revient défendre le village.</p>':'<p>Le combat est terminé. Plus aucun homme pâle ne se dresse devant vous.</p>';if(s.flags.freedDuringAssault){h+='<p>La prison est déjà ouverte.</p>';if(marines>0)h+='<p><strong>'+String(marines)+' marin'+(marines>1?'s du Providence ayant combattu à vos côtés se regroupent':' du Providence ayant combattu à vos côtés se regroupe')+'</strong> au milieu des blessés.</p>';else h+='<p>Les marins du Providence qui avaient rejoint le combat ne sont plus en état de poursuivre.</p>';}else h+='<p>Vous rejoignez la cage et attaquez la serrure. Après plusieurs coups, la lourde porte métallique finit par céder.</p><p>Derrière les barreaux se trouvent les derniers matelots du <strong>Providence</strong>.</p><p>Ils sont affamés, blessés et épuisés.</p><p>La plupart ne peuvent pas combattre, mais <strong>trois marins</strong> sont encore capables de marcher et de tenir une arme. Ils rejoignent ton groupe.</p>';h+='<p>Le soleil descend déjà. Entre les hommes épuisés, les blessés et la mer qui entoure l’île, repartir immédiatement serait imprudent.</p><p>Vous barricadez les bâtiments les plus solides et organisez les soins.</p><p>Vous attendrez le lever du jour pour décider comment quitter l’île.</p>';return h;},onEnter:s=>resolveVillageAssaultVictory(s),choices:[{label:'Passer la nuit à l’abri',to:'villageDawnRegroup'}]},
+villageAssaultVictory:{title:'Les derniers marins du Providence',text:s=>{const b=initVillageAssault(s);let h=b.enemyFled?'<p>Les hommes pâles encore debout ont disparu dans la forêt. Aucun ne revient défendre le village.</p>':'<p>Le combat est terminé. Plus aucun homme pâle ne se dresse devant vous.</p>';if(s.flags.providenceSailorsFreed)h+='<p>La prison a déjà été ouverte plus tôt. Les marins du <strong>Providence</strong> encore capables de marcher se regroupent avec vous.</p>';else h+='<p>Vous rejoignez maintenant la cage et attaquez la serrure. Après plusieurs coups, la lourde porte métallique finit par céder.</p><p>Derrière les barreaux se trouvent les derniers matelots du <strong>Providence</strong>.</p><p>Ils sont affamés, blessés et épuisés.</p><p>La plupart ne peuvent pas combattre, mais <strong>trois marins</strong> sont encore capables de marcher et de tenir une arme. Ils rejoignent ton groupe.</p>';h+='<p>Le soleil descend déjà. Entre les hommes épuisés, les blessés et la mer qui entoure l’île, repartir immédiatement serait imprudent.</p><p>Vous barricadez les bâtiments les plus solides et organisez les soins.</p><p>Vous attendrez le lever du jour pour décider comment quitter l’île.</p>';return h;},onEnter:s=>resolveVillageAssaultVictory(s),choices:[{label:'Passer la nuit à l’abri',to:'villageDawnRegroup'}]},
 
 villageDawnRegroup:{title:'Au lever du jour',noImage:true,text:s=>{const marines=providenceMarinesWithParty(s);let h='<p>Une lumière grise finit par apparaître au-dessus de la mer.</p><p>Pour la première fois depuis votre arrivée sur l’île, personne ne vous poursuit.</p>';if(haleWithParty(s))h+='<p>Hale est toujours à tes côtés.</p>';else h+='<p>Hale n’est plus avec toi.</p>';if(marines>0)h+='<p><strong>'+String(marines)+' marin'+(marines>1?'s du Providence restent':' du Providence reste')+' en état de t’accompagner.</strong></p>';if((s.soldiers||0)>0)h+='<p>Tes <strong>'+String(s.soldiers)+' soldat'+(s.soldiers>1?'s survivants se regroupent':' survivant se regroupe')+'</strong> également près de la plage.</p>';h+='<p>Les autres rescapés sont blessés ou épuisés, mais ils sont libres.</p><p>Il faut maintenant trouver comment ramener tout le monde loin de cette île.</p>';return h;},onEnter:s=>resolveVillageDawn(s),choices:[]},
 
@@ -1458,7 +1448,7 @@ deepCaveRevenant:{title:'Celui qui ne respire plus',noImage:true,text:s=>'<p>La 
 
 deepCaveFlooded:{title:'Le passage noyé',noImage:true,text:s=>{if(!s.flags.deepCaveFloodedRolled)return '<p>Le passage descend rapidement.</p><p>L’eau te monte aux chevilles, puis aux genoux.</p><p>Elle est glacée.</p><p>Plus loin, la galerie se resserre et le courant devient brutalement plus fort.</p><p>Quelque chose remue sous la surface derrière toi.</p><p>Tu dois franchir les quelques mètres suivants avant que le niveau ne monte davantage.</p>';let h=diceResultHtml(s);if(s.flags.deepCaveFloodedDex)h+='<p>Tu trouves des prises dans la roche et traverses avant que le courant ne puisse t’emporter.</p>';else h+=damageResultHtml(s,'deepCaveFlooded')+'<p>Le courant te plaque contre la paroi et te fait heurter violemment la roche, mais tu parviens à te dégager.</p>';h+='<p>De l’autre côté, le passage remonte vers une salle parfaitement sèche.</p>';return h;},choices:s=>!s.flags.deepCaveFloodedRolled?[{label:'Traverser — Dextérité',stay:true,diceTest:true,effect:x=>resolveDeepCaveFlooded(x)}]:s.hp<=0?[{label:'La fin du voyage',to:'death'}]:[{label:'Entrer dans la salle',to:'deepCaveSanctum'}]},
 
-deepCaveSanctum:{title:'Le cœur de la grotte',noImage:true,text:'<p>La salle est ronde et étrangement lisse.</p><p>Au centre, une petite plate-forme de pierre domine un bassin d’eau noire.</p><p>Rien ne tombe du plafond.</p><p>Pourtant, la surface du bassin se soulève lentement à intervalles réguliers.</p><p>Comme une respiration.</p><p>Sur la plate-forme repose une statuette.</p><p>Elle représente une créature marine au corps massif entouré d’une multitude de tentacules.</p><p>Sur la paroi derrière elle, un ancien relief montre plusieurs silhouettes humaines agenouillées. Leurs yeux ont été incrustés de petites pierres bleues. Toutes sont tournées vers la statuette.</p><p>À l’écart du groupe, une silhouette de marin reste debout près d’un navire. Un cercle noir est gravé sur son avant-bras. Sous sa coque, la créature passe sans l’attaquer.</p><p>Lorsque tu approches la main, les faibles reflets bleus dans la roche disparaissent tous en même temps.</p><p>Le silence devient absolu.</p><p>Tu prends la statuette.</p>',onEnter:s=>{s.flags.caveTruth=true;s.flags.caveVisitedNight=true;if(!s.flags.guardianStatue){s.flags.guardianStatue=true;addItem(s,'statue_gardien','Statuette du Gardien','Une petite statue de pierre représentant une créature marine aux multiples tentacules.');}},choices:[{label:'Retourner au village pour voir si les hommes pâles la reconnaissent',to:'villageNightStatue'}]},
+deepCaveSanctum:{title:'Le cœur de la grotte',noImage:true,text:'<p>La salle est ronde et étrangement lisse.</p><p>Au centre, une petite plate-forme de pierre domine un bassin d’eau noire.</p><p>Rien ne tombe du plafond.</p><p>Pourtant, la surface du bassin se soulève lentement à intervalles réguliers.</p><p>Comme une respiration.</p><p>Sur la plate-forme repose une statuette.</p><p>Elle représente une créature marine au corps massif entouré d’une multitude de tentacules.</p><p>Sur la paroi derrière elle, un ancien relief montre plusieurs silhouettes humaines agenouillées. Leurs yeux ont été incrustés de petites pierres bleues. Toutes sont tournées vers la statuette.</p><p>À l’écart du groupe, une silhouette de marin reste debout près d’un navire. Un cercle noir est gravé sur son avant-bras. Sous sa coque, la créature passe sans l’attaquer.</p><p>Cette figure n’est pas représentée comme une victime. Elle offre quelque chose aux hommes pâles, puis reprend la mer sous la protection de la créature.</p><p>Le cercle noir n’est donc pas seulement un signe de reconnaissance. Il marque ceux qui participent au piège et obtiennent en retour le droit de naviguer dans ces eaux.</p><p>Lorsque tu approches la main, les faibles reflets bleus dans la roche disparaissent tous en même temps.</p><p>Le silence devient absolu.</p><p>Tu prends la statuette.</p>',onEnter:s=>{s.flags.caveTruth=true;s.flags.caveVisitedNight=true;s.flags.blackCircleBrotherhood=true;if(!s.flags.guardianStatue){s.flags.guardianStatue=true;addItem(s,'statue_gardien','Statuette du Gardien','Une petite statue de pierre représentant une créature marine aux multiples tentacules.');}},choices:[{label:'Retourner au village pour voir si les hommes pâles la reconnaissent',to:'villageNightStatue'}]},
 
 death:{title:'La fin du voyage',text:`<p>La douleur, la fatigue et les blessures finissent par avoir raison de toi.</p><p>Ton voyage s’arrête ici.</p><div class="ending">FIN DE L’AVENTURE</div>`,choices:[{label:'Recommencer',action:'restart'}]}
 };
