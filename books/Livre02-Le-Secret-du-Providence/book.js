@@ -987,6 +987,114 @@ const NORTH_CAPTAIN={name:'CAPITAINE PIRATE',hp:10,dex:9,force:8,damage:2};
 const BANDIT_CHIEF={name:'CHEF DES FAUX MARCHANDS',hp:9,dex:9,force:8,damage:2};
 const ALLIGATOR={name:'ALLIGATOR',hp:8,dex:7,force:8,damage:3};
 const DROWNED_SAILOR={name:'LE NOYÉ',hp:9,dex:8,force:10,damage:3};
+const CLIFF_GUARDIAN={name:'GARDIEN DE LA FALAISE',hp:16,dex:10,force:11,damage:3};
+
+function prepareCliffGuardian(s,key){
+  if(!s.combats)s.combats={};
+  if(!s.combats[key])s.combats[key]={hp:CLIFF_GUARDIAN.hp,round:0,last:null,balance:null,ready:false};
+  return s.combats[key];
+}
+function cliffGuardianBalanceCheck(s,key){
+  const c=prepareCliffGuardian(s,key);
+  if(s.hp<=0||c.hp<=0||c.ready)return;
+  const success=roll3D6(s,'Dextérité',currentDexterity(s));
+  c.balance={
+    success,
+    dice:Array.isArray(s.lastDice)?[...s.lastDice]:[],
+    total:s.lastTotal,
+    penalty:success?0:2
+  };
+  c.ready=true;
+}
+function cliffGuardianRound(s,key){
+  const c=prepareCliffGuardian(s,key);
+  if(s.hp<=0||c.hp<=0||!c.ready)return;
+
+  const balance=c.balance||{success:true,dice:[],total:null,penalty:0};
+  const heroDice=[cryptoDie6(),cryptoDie6()];
+  const enemyDice=[cryptoDie6(),cryptoDie6()];
+  const heroDexterity=Math.max(3,currentDexterity(s)-(balance.penalty||0));
+  const enemyDexterity=CLIFF_GUARDIAN.dex;
+  const heroForce=currentForce(s);
+  const enemyForce=CLIFF_GUARDIAN.force;
+  const heroAttack=heroDexterity+heroForce+heroDice[0]+heroDice[1];
+  const enemyAttack=enemyDexterity+enemyForce+enemyDice[0]+enemyDice[1];
+  const heroWeaponPower=s.weapon&&s.weapon!=='none'?combatPower(s):0;
+  const heroDamage=heroCombatDamage(s);
+  const enemyDamage=enemyCombatDamage(CLIFF_GUARDIAN);
+
+  let outcome='tie',damage=0,protectionAbsorbed=0,hpLost=0;
+  if(heroAttack>enemyAttack){
+    outcome='hero';
+    damage=heroDamage;
+    c.hp=Math.max(0,c.hp-damage);
+  }else if(heroAttack<enemyAttack){
+    outcome='enemy';
+    damage=enemyDamage;
+    const resolution=applyDamage(s,damage);
+    protectionAbsorbed=resolution.absorbed;
+    hpLost=resolution.hpLost;
+  }
+
+  c.round++;
+  c.last={
+    round:c.round,
+    balanceSuccess:balance.success,
+    balanceDice:[...(balance.dice||[])],
+    balanceTotal:balance.total,
+    dexPenalty:balance.penalty||0,
+    heroDice,enemyDice,heroDexterity,enemyDexterity,heroForce,enemyForce,
+    heroAttack,enemyAttack,heroWeaponPower,heroDamage,enemyDamage,
+    outcome,damage,protectionAbsorbed,hpLost,heroHp:s.hp,enemyHp:c.hp
+  };
+  c.balance=null;
+  c.ready=false;
+}
+function cliffGuardianHtml(s,key){
+  const c=prepareCliffGuardian(s,key);
+  const r=c.last;
+  let h='<div class="combat-roll-result"><div class="combat-roll-title">Le gardien de la falaise</div>';
+  h+='<p>Ta Vie : <strong>'+String(s.hp)+'/'+String(s.maxHp)+'</strong> · Vie adverse : <strong>'+String(c.hp)+'/'+String(CLIFF_GUARDIAN.hp)+'</strong></p>';
+
+  if(c.ready&&c.balance){
+    h+='<div class="crew-training-side"><strong>Stabilité sur la falaise — Dextérité</strong><div class="crew-training-dice">'+c.balance.dice.map(v=>renderDie(v)).join('')+'</div>';
+    h+='<p>Total : <strong>'+String(c.balance.total)+'</strong> — <strong>'+(c.balance.success?'réussite':'échec')+'</strong>.</p>';
+    if(c.balance.success)h+='<p>Tu trouves un appui solide malgré le vent. Le prochain échange se joue normalement.</p>';
+    else h+='<p>Un morceau de roche se dérobe sous ton pied. Tu te rattrapes de justesse, mais ta position est mauvaise : <strong>Dextérité −2 pour le prochain échange.</strong></p>';
+    h+='</div>';
+  }else if(!r){
+    h+='<p>Le vent et le sol friable rendent chaque mouvement dangereux. Avant chaque échange, tu dois réussir un <strong>test de Dextérité</strong>.</p>';
+    h+='<p>En cas d’échec, ton appui cède et tu subis <strong>−2 Dextérité</strong> pour l’échange qui suit.</p>';
+  }else{
+    h+='<div class="crew-training-side"><strong>Stabilité avant l’échange</strong><div class="crew-training-dice">'+r.balanceDice.map(v=>renderDie(v)).join('')+'</div>';
+    h+='<p>Total : <strong>'+String(r.balanceTotal)+'</strong> — <strong>'+(r.balanceSuccess?'réussite':'échec')+'</strong>'+(r.dexPenalty?' · Dextérité −2 appliquée':'')+'.</p></div>';
+    h+='<div class="combat-roll-grid">';
+    h+='<div class="combat-side"><strong>TOI</strong><div class="combat-dice">'+renderDie(r.heroDice[0])+renderDie(r.heroDice[1])+'</div><p>Dextérité '+String(r.heroDexterity)+' + Force '+String(r.heroForce)+' + dés '+String(r.heroDice[0]+r.heroDice[1])+'</p><p class="combat-total">Attaque : <strong>'+String(r.heroAttack)+'</strong></p></div>';
+    h+='<div class="combat-versus">VS</div>';
+    h+='<div class="combat-side"><strong>GARDIEN</strong><div class="combat-dice">'+renderDie(r.enemyDice[0])+renderDie(r.enemyDice[1])+'</div><p>Dextérité '+String(r.enemyDexterity)+' + Force '+String(r.enemyForce)+' + dés '+String(r.enemyDice[0]+r.enemyDice[1])+'</p><p class="combat-total">Attaque : <strong>'+String(r.enemyAttack)+'</strong></p></div>';
+    h+='</div>';
+    if(r.outcome==='hero'){
+      h+='<div class="combat-outcome"><strong>Tu remportes l’échange.</strong><br>Tu infliges <strong>'+String(r.damage)+'</strong> dégâts.'+(c.hp<=0?'<br><strong>Le gardien vacille puis s’effondre sur la pierre.</strong>':'')+'</div>';
+    }else if(r.outcome==='enemy'){
+      h+='<div class="combat-outcome"><strong>Le gardien remporte l’échange.</strong><br>Tu subis <strong>'+String(r.damage)+'</strong> dégâts.';
+      if(r.protectionAbsorbed>0)h+=' Ta protection en absorbe <strong>'+String(r.protectionAbsorbed)+'</strong>.';
+      if(r.hpLost>0)h+=' Tu perds <strong>'+String(r.hpLost)+'</strong> Vie.';
+      else h+=' Tu ne perds aucun point de Vie.';
+      h+='</div>';
+    }else h+='<div class="combat-outcome"><strong>Égalité.</strong><br>Vos attaques se croisent sans qu’aucun de vous ne trouve l’ouverture.</div>';
+    h+='<div class="combat-life-line">Ta Vie : <strong>'+String(s.hp)+'/'+String(s.maxHp)+'</strong> · Vie adverse : <strong>'+String(c.hp)+'/'+String(CLIFF_GUARDIAN.hp)+'</strong></div>';
+  }
+  h+='</div>';
+  return h;
+}
+function cliffGuardianChoices(s,key,winNode){
+  const c=prepareCliffGuardian(s,key);
+  if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];
+  if(c.hp<=0)return[{label:'Approcher du bord de la falaise',to:winNode}];
+  if(c.ready)return[{label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>cliffGuardianRound(x,key)}];
+  return[{label:'Tester ton équilibre — Dextérité',stay:true,diceTest:true,effect:x=>cliffGuardianBalanceCheck(x,key)}];
+}
+
 
 function stripCapturedEquipment(s){
   if(s.flags.captiveEquipmentRemoved)return;
@@ -1123,7 +1231,7 @@ function resolveDeepCaveFlooded(s){
 
 function createInitialState(){
   return {
-    node:'start',pageMapVersion:21,heroGender:'female',heroName:'Eleanor',
+    node:'start',pageMapVersion:22,heroGender:'female',heroName:'Eleanor',
     inventory:{},flags:{},visited:{},history:[],journal:'',
     hp:18,maxHp:18,baseForce:8,baseDexterity:13,forceBonus:0,dexBonus:0,dexPenalty:0,
     weapon:'naval_sword',protection:0,goldCoins:0,
@@ -1502,9 +1610,13 @@ deepCaveSanctum:{title:'Le cœur de la grotte',noImage:true,text:'<p>La salle es
 
 deepCaveCliffPassage:{title:'Plus loin sous la roche',noImage:true,text:'<p>Le passage monte d’abord doucement, puis devient un long couloir naturel taillé dans une roche noire et humide.</p><p>Par endroits, des marches ont été creusées à même la pierre.</p><p>Plus loin, tu découvres de vieux anneaux de fer scellés dans la paroi.</p><p>Certains sont mangés par le sel. D’autres portent encore des restes de corde.</p><p>Le bruit de l’eau devient de plus en plus présent.</p><p>Pas celui d’une rivière.</p><p>Celui de la mer.</p><p>Un souffle froid traverse soudain la galerie.</p><p>Tu continues.</p><p>Le couloir tourne une dernière fois et une lueur grise apparaît devant toi.</p>',choices:[{label:'Rejoindre l’ouverture',to:'deepCaveCliff'}]},
 
-deepCaveCliff:{title:'Au bord de la falaise',noImage:true,text:'<p>Tu débouches à flanc de falaise.</p><p>En contrebas, une étroite anse disparaît presque entièrement sous la roche.</p><p>L’eau y est noire et agitée.</p><p>Un courant extrêmement puissant longe la paroi avant de partir droit vers le large.</p><p>Des anneaux d’amarrage ont été fixés dans la pierre. Une vieille échelle descend jusqu’à une petite plate-forme naturelle.</p><p>Et là, dans l’ombre, un ancien bateau est encore attaché à la falaise.</p><p>La coque est usée, mais elle flotte.</p><p>Tu regardes le courant, les amarres, puis l’ouverture vers la mer.</p><p>Tout devient évident.</p><p>Les navires vidés de leurs équipages pouvaient être conduits jusqu’ici, attachés le temps de les préparer, puis libérés dans ce courant.</p><p>Il suffisait ensuite de couper les amarres.</p><p>La mer faisait le reste.</p><p><strong>L’île mange les marins et recrache les bateaux.</strong></p><p>Devant toi se trouve maintenant un moyen de partir.</p>',onEnter:s=>{s.flags.secretCliffFound=true;},choices:[{label:'Prendre le vieux bateau et quitter l’île maintenant',to:'deepCaveEscapeEnding'},{label:'Renoncer à fuir et retourner au village avec la statuette',to:'villageNightStatue'}]},
+deepCaveCliff:{title:'La falaise',noImage:true,text:'<p>Tu débouches soudain à l’air libre.</p><p>La falaise tombe presque à pic devant toi.</p><p>Le vide s’ouvre au-delà d’une étroite bande de roche humide.</p><p>Le vent te frappe au visage avec une violence inattendue. Un véritable souffle marin remonte de la mer et s’engouffre contre la paroi.</p><p>Tu avances avec précaution jusqu’au bord.</p><p>La roche est irrégulière, friable par endroits, couverte de sel.</p><p>Un mouvement sur le côté te fait te retourner.</p><p>Un homme pâle se tient contre la paroi.</p><p>Il est plus grand que ceux du village, plus large d’épaules, solidement bâti. Ses vêtements délavés et le vieux ceinturon qui lui barre la poitrine évoquent un ancien pirate.</p><p>Il ne recule pas.</p><p>Il garde ce passage.</p><p>La corniche est trop étroite pour le contourner. Sous vos pieds, certaines plaques de roche bougent déjà sous les rafales.</p><p>Il tire son arme et avance.</p>',choices:[{label:'Affronter le gardien de la falaise',to:'deepCliffGuardianFight'}]},
 
-deepCaveEscapeEnding:{title:'Quitter l’île',noImage:true,text:s=>{const marines=providenceMarinesWithParty(s);const group=haleWithParty(s)||marines>0;let h=group?'<p>Vous descendez jusqu’au bateau et larguez les amarres.</p>':'<p>Tu descends jusqu’au bateau et largues les amarres.</p>';h+='<p>Le courant saisit immédiatement la coque.</p><p>La falaise glisse derrière '+(group?'vous':'toi')+', puis l’île commence à s’éloigner.</p><p>Pendant quelques minutes, personne ne parle.</p><p>Tu es vivant. Tu as trouvé le moyen de quitter cet endroit.</p><p>Mais les lueurs du village sont encore visibles entre les arbres.</p>';if(group)h+='<p>Ceux qui ont réussi à s’échapper avec toi sont sauvés.</p>';h+='<p>Les autres prisonniers, eux, sont toujours sur l’île.</p><p>Tu le sais au moment même où la côte disparaît dans la nuit : tu as survécu, mais tu as abandonné une partie de ta mission derrière toi.</p><p>Une autre issue était possible.</p><div class="ending">FIN DE L’AVENTURE</div>';return h;},choices:[{label:'Recommencer',action:'restart'}]},
+deepCliffGuardianFight:{title:'Le gardien de la falaise',noImage:true,text:s=>'<p>Le vent hurle contre la roche pendant que le gardien vient à ta rencontre.</p><p>Un faux pas suffirait à te faire perdre l’équilibre.</p>'+cliffGuardianHtml(s,'deepCliffGuardian'),onEnter:s=>prepareCliffGuardian(s,'deepCliffGuardian'),choices:s=>cliffGuardianChoices(s,'deepCliffGuardian','deepCaveBoat')},
+
+deepCaveBoat:{title:'Sous la falaise',noImage:true,text:'<p>Le gardien ne bouge plus.</p><p>Tu reprends ton souffle et avances jusqu’au bord.</p><p>En te penchant au-dessus du vide, tu aperçois enfin ce que la paroi cachait jusque-là.</p><p>Une étroite anse s’enfonce sous la falaise.</p><p>Un vieux bateau y est amarré, presque invisible depuis le large.</p><p>Sa coque est usée, mais elle flotte encore.</p><p>Plus bas, un courant extrêmement puissant longe la paroi avant de partir droit vers la pleine mer.</p><p>Des anneaux de fer et une vieille échelle permettent de rejoindre l’eau.</p><p>Tu comprends alors comment les navires vides pouvaient réapparaître loin de l’île : ils étaient amenés jusqu’ici, puis abandonnés au courant.</p><p>La mer les entraînait au large.</p><p><strong>L’île mange les marins et recrache les bateaux.</strong></p><p>Le bateau devant toi offre un moyen de quitter l’île.</p>',onEnter:s=>{s.flags.secretCliffFound=true;},choices:[{label:'Prendre le vieux bateau et quitter l’île maintenant',to:'deepCaveEscapeEnding'},{label:'Retourner au village avec la statuette',to:'villageNightStatue'}]},
+
+deepCaveEscapeEnding:{title:'Quitter l’île',noImage:true,text:s=>{const marines=providenceMarinesWithParty(s);const group=haleWithParty(s)||marines>0;let h=group?'<p>Vous descendez jusqu’au bateau et larguez les amarres.</p>':'<p>Tu descends jusqu’au bateau et largues les amarres.</p>';h+='<p>Le courant saisit immédiatement la coque.</p><p>La falaise glisse derrière '+(group?'vous':'toi')+', puis l’île commence à s’éloigner.</p><p>Pendant quelques minutes, personne ne parle.</p><p>Tu es vivant. Tu as trouvé le moyen de quitter cet endroit.</p><p>Mais les lueurs du village sont encore visibles entre les arbres.</p>';if(group)h+='<p>Ceux qui ont réussi à s’échapper avec toi sont sauvés.</p>';h+='<p>Les autres prisonniers, eux, sont toujours sur l’île.</p><p>Tu le sais au moment même où la côte disparaît dans la nuit : tu as survécu, mais tu as abandonné une partie de ta mission derrière toi.</p><div class="ending">FIN DE L’AVENTURE</div>';return h;},choices:[{label:'Recommencer',action:'restart'}]},
 
 victoryMissingSailors:{title:'Trois hommes manquent',text:'<p>Les rescapés se regroupent dans le village pendant que vous comptez les hommes du Providence.</p><p>Un marin recommence le compte une seconde fois, puis une troisième.</p><p>Son visage se ferme.</p><blockquote>« Il en manque trois. »</blockquote><p>Il t’explique qu’ils ont été sortis de la cage peu avant l’attaque et emmenés vers les rochers derrière le village.</p><blockquote>« Ceux qu’ils emmènent là-bas ne reviennent pas toujours. Et quand certains reviennent... ils ne sont plus les mêmes. »</blockquote><p>Il regarde vers la masse sombre de la falaise.</p><blockquote>« Si on attend le matin, il sera peut-être trop tard. »</blockquote>',choices:[{label:'Partir à leur recherche',to:'victoryRescueCave'}]},
 
@@ -1522,11 +1634,15 @@ victoryRescueSanctum:{title:'Le cœur du piège',text:'<p>La salle est ronde et 
 
 victoryCliffPassage:{title:'Le couloir des amarres',noImage:true,text:'<p>Vous vous engagez dans le passage.</p><p>La galerie remonte lentement sur plusieurs dizaines de mètres.</p><p>Les parois portent d’anciennes marques de frottement et, à intervalles réguliers, de gros anneaux de fer ont été scellés dans la roche.</p><p>Certains retiennent encore des fragments de corde durcie par le sel.</p><p>Plus vous avancez, plus le grondement de la mer devient fort.</p><p>L’air est humide. Le vent s’engouffre maintenant dans le tunnel par rafales.</p><p>Au bout du couloir, une ouverture découpe un morceau de ciel au-dessus de l’eau.</p>',choices:[{label:'Sortir sur la falaise',to:'victoryCliff'}]},
 
-victoryCliff:{title:'La sortie secrète',noImage:true,text:'<p>Vous débouchez à flanc de falaise.</p><p>En dessous, une anse étroite est presque entièrement cachée depuis le large.</p><p>Un courant violent longe la paroi avant de filer directement vers la pleine mer.</p><p>Une échelle et plusieurs anneaux d’amarrage descendent jusqu’à l’eau.</p><p>Un vieux bâtiment est encore attaché là, protégé dans l’ombre de la roche.</p><p>Sa coque a souffert, mais elle est toujours à flot.</p><p>Tu observes les amarres et le courant.</p><p>Tu comprends enfin ce qui arrivait aux navires après la disparition de leurs équipages.</p><p>Ils étaient amenés jusqu’ici, puis relâchés dans ce courant.</p><p>Quelques heures plus tard, la mer pouvait les rejeter loin de l’île, entièrement vides.</p><p><strong>L’île mange les marins et recrache les bateaux.</strong></p><p>Cette fois, ce bateau peut servir à autre chose.</p><p>Il semble assez solide pour emporter les survivants loin d’ici.</p>',onEnter:s=>{s.flags.secretCliffFound=true;},choices:[{label:'Revenir chercher le marin et prévenir les autres rescapés',to:'victoryRescueReturn'}]},
+victoryCliff:{title:'La falaise',noImage:true,text:'<p>Vous débouchez brusquement à l’air libre.</p><p>La falaise plonge presque verticalement devant vous.</p><p>Le vent fouette ton visage et arrache les vêtements contre le corps. Le souffle marin remonte de la mer avec une force telle qu’il faut se pencher pour avancer.</p><p>Tu approches du bord.</p><p>Sous tes bottes, la roche est humide, irrégulière et fissurée.</p><p>Un bruit de pierre te fait tourner la tête.</p><p>Sur le côté de la corniche, un homme pâle vient de se redresser.</p><p>Il est nettement plus grand que les autres. Un gaillard massif, aux épaules épaisses, avec les restes d’un manteau de marin et un large ceinturon de cuir. À sa carrure et à sa façon de tenir son arme, tu imagines sans peine l’ancien pirate qu’il a pu être.</p><p>Il garde la falaise.</p><p>Le passage est trop étroit pour l’éviter, et personne ne peut le contourner sans s’exposer au vide.</p><p>Une rafale soulève de la poussière de roche entre vous.</p><p>L’homme avance.</p>',choices:[{label:'Affronter le gardien de la falaise',to:'victoryCliffGuardianFight'}]},
+
+victoryCliffGuardianFight:{title:'Le gardien de la falaise',noImage:true,text:s=>'<p>Le duel commence sur la corniche instable.</p><p>Le vent vous pousse vers le vide et la pierre se fend sous les appuis les plus brutaux.</p>'+cliffGuardianHtml(s,'victoryCliffGuardian'),onEnter:s=>prepareCliffGuardian(s,'victoryCliffGuardian'),choices:s=>cliffGuardianChoices(s,'victoryCliffGuardian','victoryCliffBoat')},
+
+victoryCliffBoat:{title:'Sous la falaise',noImage:true,text:'<p>Le gardien s’effondre.</p><p>Le vent continue de hurler autour de vous.</p><p>Tu avances jusqu’au bord de la corniche et regardes enfin en contrebas.</p><p>Une anse étroite est dissimulée sous la paroi.</p><p>Dans son ombre, un vieux bâtiment est encore amarré.</p><p>Sa coque a souffert, mais elle est toujours à flot.</p><p>Une échelle et plusieurs anneaux de fer descendent jusqu’à l’eau.</p><p>Un courant violent longe la falaise avant de filer directement vers le large.</p><p>Tu observes les amarres, puis la direction du courant.</p><p>Le mécanisme devient clair : les navires vidés de leurs équipages étaient conduits jusqu’ici puis relâchés. La mer les emportait loin de l’île.</p><p><strong>L’île mange les marins et recrache les bateaux.</strong></p><p>Le bâtiment paraît assez solide pour transporter les survivants.</p>',onEnter:s=>{s.flags.secretCliffFound=true;},choices:[{label:'Revenir chercher le marin et prévenir les autres rescapés',to:'victoryRescueReturn'}]},
 
 victoryRescueReturn:{title:'Retour au village',text:'<p>Tu retrouves le marin vivant dans le renfoncement où tu l’avais laissé.</p><p>Il parvient à se relever avec de l’aide.</p><p>Vous remontez lentement vers le village.</p><p>Personne ne demande où sont les deux autres lorsqu’il apparaît à l’entrée de la grotte.</p><p>Les rescapés comprennent à vos visages.</p><p>Tu leur racontes alors ce que vous avez découvert au-delà du sanctuaire : la falaise, le courant et le vieux bateau encore amarré sous la roche.</p><p>Pour la première fois depuis votre arrivée sur l’île, vous avez un moyen de ramener tout le monde en mer.</p><p>Les hommes encore valides commencent immédiatement à préparer l’évacuation des blessés.</p>',onEnter:s=>{s.flags.victoryRescueCompleted=true;s.flags.victoryRescuedSailor=true;},choices:[{label:'Évacuer les survivants par la grotte',to:'collectiveCliffEvacuation'}]},
 
-collectiveCliffEvacuation:{title:'Quitter l’île',noImage:true,text:'<p>Le trajet est lent.</p><p>Les hommes valides font plusieurs allers-retours entre le village et la grotte. Les plus faibles sont soutenus à deux. Les blessés incapables de marcher sont transportés sur des civières improvisées.</p><p>Un à un, les rescapés traversent les galeries et atteignent la falaise.</p><p>Le vieux bateau tient toujours contre la roche.</p><p>Lorsque le dernier homme est à bord, vous détachez les amarres.</p><p>Le courant saisit immédiatement la coque et l’arrache à l’anse.</p><p>La falaise recule.</p><p>Puis l’île entière commence à disparaître derrière vous.</p><p>Tu regardes longtemps la côte sombre.</p><p>Tu repenses au vieux dicton.</p><p><strong>L’île mange les marins et recrache les bateaux.</strong></p><p>Cette fois, le bateau qu’elle recrache n’est pas vide.</p><p>Les hommes du Providence sont avec toi.</p><p>Vous avez quitté l’île.</p><div class="ending">FIN DE L’AVENTURE</div>',choices:[{label:'Recommencer',action:'restart'}]},
+collectiveCliffEvacuation:{title:'Quitter l’île',noImage:true,text:'<p>Le trajet est lent.</p><p>Les hommes valides font plusieurs allers-retours entre le village et la grotte. Les plus faibles sont soutenus à deux. Les blessés incapables de marcher sont transportés sur des civières improvisées.</p><p>Un à un, les rescapés traversent les galeries et atteignent la falaise.</p><p>Le vieux bateau tient toujours contre la roche.</p><p>Lorsque le dernier homme est à bord, vous détachez les amarres.</p><p>Le courant saisit immédiatement la coque et l’arrache à l’anse.</p><p>La falaise recule.</p><p>Puis l’île entière commence à disparaître derrière vous.</p><p>Tu regardes longtemps la côte sombre.</p><p>Tu repenses au vieux dicton.</p><p><strong>L’île mange les marins et recrache les bateaux.</strong></p><p>Le bateau gagne le large avec les hommes du Providence à son bord.</p><p>Vous avez quitté l’île.</p><div class="ending">FIN DE L’AVENTURE</div>',choices:[{label:'Recommencer',action:'restart'}]},
 
 death:{title:'La fin du voyage',text:`<p>La douleur, la fatigue et les blessures finissent par avoir raison de toi.</p><p>Ton voyage s’arrête ici.</p><div class="ending">FIN DE L’AVENTURE</div>`,choices:[{label:'Recommencer',action:'restart'}]}
 };
@@ -1653,7 +1769,9 @@ const PAGE_NAV_TITLES = {
   "deepCaveFlooded": "Le passage noyé",
   "deepCaveSanctum": "Le cœur de la grotte",
   "deepCaveCliffPassage": "Plus loin sous la roche",
-  "deepCaveCliff": "Au bord de la falaise",
+  "deepCaveCliff": "La falaise",
+  "deepCliffGuardianFight": "Le gardien de la falaise",
+  "deepCaveBoat": "Sous la falaise",
   "deepCaveEscapeEnding": "Quitter l’île",
   "victoryMissingSailors": "Trois hommes manquent",
   "victoryRescueCave": "Sous les rochers",
@@ -1663,12 +1781,14 @@ const PAGE_NAV_TITLES = {
   "victoryRescueLastSailor": "Le troisième marin",
   "victoryRescueSanctum": "Le cœur du piège",
   "victoryCliffPassage": "Le couloir des amarres",
-  "victoryCliff": "La sortie secrète",
+  "victoryCliff": "La falaise",
+  "victoryCliffGuardianFight": "Le gardien de la falaise",
+  "victoryCliffBoat": "Sous la falaise",
   "victoryRescueReturn": "Retour au village",
   "collectiveCliffEvacuation": "Quitter l’île",
   "death": "La fin du voyage"
 };
-const PAGE_ORDER=['c0','c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c12','c13','c15','c16','c20','search2','north1','north2','north3','north4','east1','east2','east3','eastRefuse','east4','east5','east6','south1','south2','c21','c27','c28','c22','c29','c30','directIsland','c31','pirateApproach','pirateParley','pirateOfferRejected','pirateDealAccepted','c32','c34','c35','c36','c37','ravineDown','ravineMouth','ravineFight','ravineCorpse','ravineExit','c41','c50','c38','c39','c40','c42','c43','c44','c45','c46','c48','c49','c51','c52','c53','c54','c55','c56','c57','islandRetreat','islandBeach','islandBeachFight','islandBeachYield','islandCaptured','islandForestLanding','forestTrap','forestAlligator','islandRecon','coveClearing','caveTunnel','caveShrine','caveExit','villageRear','villageWalkIn','villageRingReturn','villageRingDominance','ringPrisonApproach','ringPrisonRevolt','ringKillThree','villageAssault','villageRetreat','villageRetreatNight','villageNightSwim','villageNightGuard1','villageNightGuard2','villageNightFight','villageNightSearch','villageNightCave','villageNightStatue','villageNightAftermath','villageAssaultVictory','villageDawnRegroup','villageNight','villageNightResult','c68','c69','captiveAmbush','captiveTransfer','captiveRitual','captiveFreeCompanions','deepCaveFork','deepCaveRevenant','deepCaveFlooded','deepCaveSanctum','deepCaveCliffPassage','deepCaveCliff','deepCaveEscapeEnding','victoryMissingSailors','victoryRescueCave','victoryRescueSurvivor','victoryRescueRevenant','victoryRescueRevenantFight','victoryRescueLastSailor','victoryRescueSanctum','victoryCliffPassage','victoryCliff','victoryRescueReturn','collectiveCliffEvacuation','death'];
+const PAGE_ORDER=['c0','c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c12','c13','c15','c16','c20','search2','north1','north2','north3','north4','east1','east2','east3','eastRefuse','east4','east5','east6','south1','south2','c21','c27','c28','c22','c29','c30','directIsland','c31','pirateApproach','pirateParley','pirateOfferRejected','pirateDealAccepted','c32','c34','c35','c36','c37','ravineDown','ravineMouth','ravineFight','ravineCorpse','ravineExit','c41','c50','c38','c39','c40','c42','c43','c44','c45','c46','c48','c49','c51','c52','c53','c54','c55','c56','c57','islandRetreat','islandBeach','islandBeachFight','islandBeachYield','islandCaptured','islandForestLanding','forestTrap','forestAlligator','islandRecon','coveClearing','caveTunnel','caveShrine','caveExit','villageRear','villageWalkIn','villageRingReturn','villageRingDominance','ringPrisonApproach','ringPrisonRevolt','ringKillThree','villageAssault','villageRetreat','villageRetreatNight','villageNightSwim','villageNightGuard1','villageNightGuard2','villageNightFight','villageNightSearch','villageNightCave','villageNightStatue','villageNightAftermath','villageAssaultVictory','villageDawnRegroup','villageNight','villageNightResult','c68','c69','captiveAmbush','captiveTransfer','captiveRitual','captiveFreeCompanions','deepCaveFork','deepCaveRevenant','deepCaveFlooded','deepCaveSanctum','deepCaveCliffPassage','deepCaveCliff','deepCliffGuardianFight','deepCaveBoat','deepCaveEscapeEnding','victoryMissingSailors','victoryRescueCave','victoryRescueSurvivor','victoryRescueRevenant','victoryRescueRevenantFight','victoryRescueLastSailor','victoryRescueSanctum','victoryCliffPassage','victoryCliff','victoryCliffGuardianFight','victoryCliffBoat','victoryRescueReturn','collectiveCliffEvacuation','death'];
 const PAGE_BY_NODE=Object.fromEntries(PAGE_ORDER.map((id,i)=>[id,i]));
 const padPage=n=>String(n).padStart(3,'0');
 
@@ -1826,7 +1946,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:130,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:131,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
