@@ -45,6 +45,7 @@ const bookEyebrow = document.getElementById('bookEyebrow');
 const restartConfirmBackdrop = document.getElementById('restartConfirmBackdrop');
 const restartConfirmYes = document.getElementById('restartConfirmYes');
 const restartConfirmNo = document.getElementById('restartConfirmNo');
+const storyCard = document.querySelector('.story-card');
 
 bookTitle.textContent = BOOK.title;
 bookEyebrow.textContent = BOOK.readerEyebrow || ('Chroniques d’un autre temps - ' + (BOOK.libraryLabel || ('Livre ' + String(BOOK.libraryNumber || 1).padStart(2,'0'))));
