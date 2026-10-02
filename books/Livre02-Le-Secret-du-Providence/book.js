@@ -211,10 +211,12 @@ function initVillageAssault(s){
   s.flags.villageAssaultBattle=b;
   return b;
 }
+function haleWithParty(s){
+  return !!(s.flags?.companion==='hale' && s.flags?.haleAlive!==false);
+}
 function displayedSoldierCount(s){
   const anonymous=Math.max(0,Math.floor(Number(s.soldiers)||0));
-  const haleWithParty=!!(s.flags?.secondIslandPartyReady && s.flags?.companion==='hale' && s.flags?.haleAlive!==false);
-  return anonymous+(haleWithParty?1:0);
+  return anonymous+(haleWithParty(s)?1:0);
 }
 function villageHeroAlone(s){
   return displayedSoldierCount(s)===0;
@@ -531,7 +533,19 @@ function nightStatueVictimCount(s){
 
 function villageNightStatueHtml(s){
   const n=nightStatueVictimCount(s);
-  let h='<p>Tu approches du village avec la statuette entre les mains.</p><p>À mesure que tu avances, les conversations cessent.</p><p>Un homme pâle se tourne vers toi. Puis un autre.</p><p>Aucun ne fuit. Aucun ne lève son arme.</p><p>Ils restent immobiles, comme si la présence de la statuette leur interdisait de réagir.</p>';
+  if(!s.flags.nightStatueActivated){
+    let h='<p>Tu quittes la grotte avec la statuette dans les mains.</p><p>Tu ne sais pas exactement ce qu’elle représente, ni pourquoi elle était cachée si profondément sous l’île.</p><p>Mais le relief aperçu derrière le bassin te revient en mémoire : des silhouettes aux yeux marqués de bleu, agenouillées devant cette même forme de pierre.</p><p>Tu décides de retourner vers le village pour voir si les hommes pâles la reconnaissent.</p>';
+    if(n===1){
+      h+='<p>Lorsque le dernier homme pâle aperçoit la statuette, il s’arrête net.</p><p>Son regard se fixe sur elle.</p><p>Puis son arme descend lentement.</p><p>Il tombe à genoux.</p><p>Il ne te regarde même plus.</p>';
+    }else if(n>=2){
+      h+='<p>Le premier homme pâle qui aperçoit la statuette s’arrête net.</p><p>Son regard se fixe sur elle.</p><p>Puis son arme descend lentement.</p><p>Autour de lui, les autres font de même.</p><p>L’un après l’autre, ils tombent à genoux.</p><p>Personne ne tente de t’approcher.</p><p>Tu comprends maintenant que cette statuette représente pour eux quelque chose de beaucoup plus important qu’un simple objet.</p>';
+    }else{
+      h+='<p>Lorsque tu atteins le village, il est déjà silencieux. Aucun homme pâle ne se dresse encore devant toi.</p>';
+    }
+    return h;
+  }
+
+  let h='';
   if(n===1){
     h+='<p>Tu avances jusqu’à lui et lèves ton épée pour le tuer.</p><p>Il ne se défend pas.</p><p>Quelques secondes plus tard, le silence retombe sur le village.</p><p>Il ne reste plus personne.</p>';
   }else if(n===2){
@@ -961,7 +975,12 @@ function resolveCaptiveCompanionRescue(s){
   s.flags.captiveCompanionRescueRolled=true;
   s.flags.captiveCompanionRescueSuccess=rollDex(s);
   if(!s.flags.captiveCompanionRescueSuccess)rollDamage(s,'captiveCompanionRescue',3);
-  else s.flags.captiveCompanionsFreed=true;
+  else{
+    s.flags.captiveCompanionsFreed=true;
+    s.flags.secondIslandPartyReady=true;
+    s.flags.haleAlive=true;
+    s.flags.companion='hale';
+  }
 }
 
 function resolveDeepCaveFlooded(s){
@@ -1327,7 +1346,7 @@ villageNightSearch:{title:'Fouiller l’île',noImage:true,text:s=>{if(s.flags.g
 
 villageNightCave:{title:'Le sanctuaire dans la nuit',noImage:true,text:s=>{if(s.flags.captivePursued)return '<p>Vous courez dans l’obscurité, Hale et le marin juste derrière toi.</p><p>Les hommes pâles vous suivent. La lumière de leurs torches danse sur les parois et leurs pas résonnent de plus en plus près.</p><p>La galerie descend brutalement.</p><p>Vous franchissez une ouverture étroite dans la roche.</p><p>Puis les bruits derrière vous cessent.</p><p>Tu te retournes.</p><p>Les hommes pâles sont toujours là, quelques mètres plus haut.</p><p>Ils vous regardent depuis l’entrée du passage.</p><p>Aucun ne franchit la limite.</p><p>Dans l’obscurité, leurs yeux renvoient ce faible éclat bleu.</p><p>Puis, lentement, ils reculent.</p><p>Quelque chose dans cette partie de la grotte semble les empêcher — ou les effrayer — d’aller plus loin.</p><p>Devant vous, une faible lueur bleue apparaît puis disparaît au fond de la roche.</p>';if(s.flags.caveVisitedDay)return '<p>Tu retrouves la salle des fresques découverte plus tôt.</p><p>Dans l’obscurité, elle semble différente.</p><p>Un courant d’air froid vient d’un passage que tu n’avais pas remarqué derrière les amas de vêtements et d’équipement.</p><p>Plus loin, quelque chose émet par instants une faible lueur bleue.</p><p>La grotte continue beaucoup plus profondément que tu ne l’imaginais.</p>';return '<p>Tu avances dans la grotte à tâtons.</p><p>Les parois deviennent régulières, puis des marches taillées dans la roche te conduisent jusqu’à une salle couverte de fresques.</p><p>Des navires y sont attirés vers l’île. Des prisonniers sont conduits vers la mer. Des bâtiments repartent ensuite sans équipage.</p><p>Au pied des peintures s’entassent les affaires abandonnées de marins et de flibustiers.</p><p>Derrière cet amas, un passage descend encore dans la roche.</p><p>Une faible lueur bleue apparaît puis disparaît au loin.</p>';},onEnter:s=>{s.flags.caveTruth=true;s.flags.caveVisitedNight=true;},choices:[{label:'S’enfoncer dans la partie profonde de la grotte',to:'deepCaveFork'}]},
 
-villageNightStatue:{title:'Sous le regard du Gardien',noImage:true,text:s=>villageNightStatueHtml(s),onEnter:s=>resolveNightStatueVillage(s),choices:[{label:'Continuer',to:'villageNightAftermath'}]},
+villageNightStatue:{title:'Sous le regard du Gardien',noImage:true,text:s=>villageNightStatueHtml(s),choices:s=>{if(!s.flags.nightStatueActivated){const n=nightStatueVictimCount(s);if(n<=0)return[{label:'Continuer',to:'villageNightAftermath'}];return[{label:'Profiter de leur soumission pour les éliminer',stay:true,effect:x=>{x.flags.nightStatueActivated=true;resolveNightStatueVillage(x);}}];}return[{label:'Continuer',to:'villageNightAftermath'}];}},
 
 villageNightAftermath:{title:'',noImage:true,text:'',choices:[]},
 
@@ -1355,7 +1374,7 @@ deepCaveRevenant:{title:'Celui qui ne respire plus',noImage:true,text:s=>'<p>La 
 
 deepCaveFlooded:{title:'Le passage noyé',noImage:true,text:s=>{if(!s.flags.deepCaveFloodedRolled)return '<p>Le passage descend rapidement.</p><p>L’eau te monte aux chevilles, puis aux genoux.</p><p>Elle est glacée.</p><p>Plus loin, la galerie se resserre et le courant devient brutalement plus fort.</p><p>Quelque chose remue sous la surface derrière toi.</p><p>Tu dois franchir les quelques mètres suivants avant que le niveau ne monte davantage.</p>';let h=diceResultHtml(s);if(s.flags.deepCaveFloodedDex)h+='<p>Tu trouves des prises dans la roche et traverses avant que le courant ne puisse t’emporter.</p>';else h+=damageResultHtml(s,'deepCaveFlooded')+'<p>Le courant te plaque contre la paroi et te fait heurter violemment la roche, mais tu parviens à te dégager.</p>';h+='<p>De l’autre côté, le passage remonte vers une salle parfaitement sèche.</p>';return h;},choices:s=>!s.flags.deepCaveFloodedRolled?[{label:'Traverser — Dextérité',stay:true,diceTest:true,effect:x=>resolveDeepCaveFlooded(x)}]:s.hp<=0?[{label:'La fin du voyage',to:'death'}]:[{label:'Entrer dans la salle',to:'deepCaveSanctum'}]},
 
-deepCaveSanctum:{title:'Le cœur de la grotte',noImage:true,text:'<p>La salle est ronde et étrangement lisse.</p><p>Au centre, une petite plate-forme de pierre domine un bassin d’eau noire.</p><p>Rien ne tombe du plafond.</p><p>Pourtant, la surface du bassin se soulève lentement à intervalles réguliers.</p><p>Comme une respiration.</p><p>Sur la plate-forme repose une statuette.</p><p>Elle représente une créature marine au corps massif entouré d’une multitude de tentacules.</p><p>Lorsque tu approches la main, les faibles reflets bleus dans la roche disparaissent tous en même temps.</p><p>Le silence devient absolu.</p><p>Tu prends la statuette.</p>',onEnter:s=>{s.flags.caveTruth=true;s.flags.caveVisitedNight=true;if(!s.flags.guardianStatue){s.flags.guardianStatue=true;addItem(s,'statue_gardien','Statuette du Gardien','Une petite statue de pierre représentant une créature marine aux multiples tentacules.');}},choices:[{label:'Quitter la grotte et retourner vers le village',to:'villageNightStatue'}]},
+deepCaveSanctum:{title:'Le cœur de la grotte',noImage:true,text:'<p>La salle est ronde et étrangement lisse.</p><p>Au centre, une petite plate-forme de pierre domine un bassin d’eau noire.</p><p>Rien ne tombe du plafond.</p><p>Pourtant, la surface du bassin se soulève lentement à intervalles réguliers.</p><p>Comme une respiration.</p><p>Sur la plate-forme repose une statuette.</p><p>Elle représente une créature marine au corps massif entouré d’une multitude de tentacules.</p><p>Sur la paroi derrière elle, un ancien relief montre plusieurs silhouettes humaines agenouillées. Leurs yeux ont été incrustés de petites pierres bleues. Toutes sont tournées vers la statuette.</p><p>Lorsque tu approches la main, les faibles reflets bleus dans la roche disparaissent tous en même temps.</p><p>Le silence devient absolu.</p><p>Tu prends la statuette.</p>',onEnter:s=>{s.flags.caveTruth=true;s.flags.caveVisitedNight=true;if(!s.flags.guardianStatue){s.flags.guardianStatue=true;addItem(s,'statue_gardien','Statuette du Gardien','Une petite statue de pierre représentant une créature marine aux multiples tentacules.');}},choices:[{label:'Retourner au village pour voir si les hommes pâles la reconnaissent',to:'villageNightStatue'}]},
 
 death:{title:'La fin du voyage',text:`<p>La douleur, la fatigue et les blessures finissent par avoir raison de toi.</p><p>Ton voyage s’arrête ici.</p><div class="ending">FIN DE L’AVENTURE</div>`,choices:[{label:'Recommencer',action:'restart'}]}
 };
@@ -1628,7 +1647,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:99,pageMapVersion:16,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:100,pageMapVersion:16,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
