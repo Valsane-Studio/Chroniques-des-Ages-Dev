@@ -1,6 +1,6 @@
 /* La Grotte de Valombre — Service Worker
    IMPORTANT : augmenter APP_VERSION à chaque nouvelle mise en ligne. */
-const APP_VERSION = 'reference-68.290-book02-hale-statue-flow-v100';
+const APP_VERSION = 'reference-68.291-book02-branch-consolidation-v101';
 const CACHE_PREFIX = 'chroniques-ages-dev-';
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 
