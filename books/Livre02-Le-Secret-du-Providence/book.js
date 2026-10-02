@@ -1078,7 +1078,7 @@ function victoryRescuePartyDescription(s){
   if(parts.length===0)return '<p>Tu n’as plus aucun combattant valide à tes côtés. Tu prends une lampe et pars seul vers les rochers.</p>';
   const total=displayedSoldierCount(s);
   const list=parts.length===1?parts[0]:parts.slice(0,-1).join(', ')+' et '+parts[parts.length-1];
-  return '<p>Les blessés et les rescapés trop faibles pour marcher restent au village. Tous les combattants encore valides partent avec toi : '+list+'.</p><p>Vous êtes donc <strong>'+String(total+1)+'</strong> à descendre dans la grotte, en te comptant.</p>';
+  return '<p>Les blessés et les rescapés trop faibles pour marcher restent au village. Tous les combattants encore valides partent avec toi : '+list+'.</p>';
 }
 
 
@@ -1805,7 +1805,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:127,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:128,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
