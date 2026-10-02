@@ -2041,6 +2041,19 @@ const inventory={
  }
 };
 
+function normalizeProvidenceLoadedState(s){
+ let changed=false;
+ if(s.inventory?.statue_gardien){delete s.inventory.statue_gardien;changed=true;}
+ if(s.flags){
+   for(const key of ['guardianStatue','nightStatueVictims','nightStatueActivated']){
+     if(Object.prototype.hasOwnProperty.call(s.flags,key)){delete s.flags[key];changed=true;}
+   }
+ }
+ if(s.node==='villageNightStatue'){s.node='villageNightGuard1';changed=true;}
+ if(s.visited?.villageNightStatue){delete s.visited.villageNightStatue;changed=true;}
+ return changed;
+}
+
 function characterSheetHtml(s){
  return `<div class="character-modal-sheet"><div class="character-modal-name">${heroName(s)}</div><div class="character-modal-rank">${heroRank()}</div><div class="character-modal-stats">
  <div><span class="tag-copy"><small>Vie</small><strong>${s.hp}/${s.maxHp}</strong></span></div><div><span class="tag-copy"><small>Dextérité</small><strong>${currentDexterity(s)}</strong></span></div><div><span class="tag-copy"><small>Force</small><strong>${currentForce(s)}</strong></span></div><div><span class="tag-copy"><small>Arme</small><strong>+4</strong></span></div><div><span class="tag-copy"><small>Protection</small><strong>${currentProtection(s)}</strong></span></div><div><span class="tag-copy"><small>Soldats</small><strong>${displayedSoldierCount(s)}</strong></span></div>
@@ -2056,6 +2069,8 @@ BookRegistry.register({
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
  normalizeSeriesProfile(p){p.heroName=p.heroGender==='male'?'Edward':'Eleanor';p.baseStats={maxHp:18,force:8,dexterity:13};},
  syncSeriesProfile(s,p){p.heroGender=s.heroGender==='male'?'male':'female';p.heroName=heroName(s);p.baseStats={maxHp:18,force:8,dexterity:13};p.memory={...(p.memory||{})};},
+ normalizeLoadedState(s){return normalizeProvidenceLoadedState(s);},
+ normalizeCheckpoint(s){return normalizeProvidenceLoadedState(s);},
  handleProfileInputChange(s,input){if(input?.classList.contains('hero-gender-input'))setHeroIdentity(s,input.value);},
  statusStats(s){const r=s.maxHp>0?s.hp/s.maxHp:0;return[
   {icon:'♥',label:'Vie',value:`${s.hp}/${s.maxHp}`,cls:r<=.3?'status-critical':r<=.55?'status-warning':''},
