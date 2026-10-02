@@ -1101,7 +1101,7 @@ function createInitialState(){
 }
 
 const STORY={
- start:{sheet:true,title:'Choisis ton personnage',text:s=>`
+ start:{sheet:true,number:'FICHE DU HÉROS',title:'Choisis ton personnage',text:s=>`
    <div class="hero-sheet">
    <div class="hero-selection-title">Qui veux-tu incarner ?</div>
    <div class="hero-selection-copy">La même aventure et les mêmes caractéristiques. Seuls ton identité et ton portrait changent.</div>
@@ -1119,10 +1119,21 @@ const STORY={
     <div class="tag"><span class="tag-copy"><small>Protection</small><strong>${currentProtection(s)}</strong></span></div>
     <div class="tag"><span class="tag-copy"><small>Soldats</small><strong>${s.soldiers}</strong></span></div>
    </div>
-   <div class="combat-rules-card">
-     <div class="combat-rules-title">Règles des combats individuels</div>
-     <p>Personnage et adversaire lancent chacun <strong>2 dés</strong> et ajoutent leur <strong>Dextérité</strong> et leur <strong>Force</strong>.<br>Le meilleur score remporte l’échange. En cas d’égalité, personne n’est blessé.<br>La Force aide à remporter l’échange, mais ne modifie pas les dégâts. Tes dégâts sont de <strong>2 + la Puissance de ton arme</strong> si tu en possèdes une. Les dégâts adverses sont indiqués pendant le combat.</p>
-   </div>
+   </div>`,choices:[{label:'Continuer',to:'startRules',effect:s=>setHeroIdentity(s,heroGender(s))}]},
+
+ startRules:{sheet:true,number:'RÈGLES DU JEU',title:'Avant de commencer',text:s=>`
+   <div class="hero-sheet">
+     <div class="combat-rules-card">
+       <div class="combat-rules-title">Règles des combats individuels</div>
+       <p>Personnage et adversaire lancent chacun <strong>2 dés</strong> et ajoutent leur <strong>Dextérité</strong> et leur <strong>Force</strong>.<br>Le meilleur score remporte l’échange. En cas d’égalité, personne n’est blessé.<br>La Force aide à remporter l’échange, mais ne modifie pas les dégâts. Tes dégâts sont de <strong>2 + la Puissance de ton arme</strong> si tu en possèdes une. Les dégâts adverses sont indiqués pendant le combat.</p>
+     </div>
+     <div class="hero-weapon">Au départ, tu portes un sabre court de marine · Puissance 4.</div>
+     <div class="hero-characteristics" role="note">
+       <div class="hero-info-title">Avant de commencer</div>
+       <p>En bas de l’écran, tu peux consulter à tout moment tes caractéristiques, ton inventaire et ton journal de bord. Tu y retrouveras ton équipement ainsi que les objets découverts pendant l’aventure.</p>
+       <p>Chaque chemin révèle une partie du mystère.</p>
+       <p>Pour en percer tous les secrets, il te faudra peut-être vivre l’aventure plusieurs fois…</p>
+     </div>
    </div>`,choices:[{label:'Commencer l’aventure',to:'c0'}]},
  c0:{title:'Avant le Providence',text:s=>heroGender(s)==='female'?`<p>Tu es née en 1691, près des quais de Portsmouth. Ton père travaillait autour des navires et, très tôt, tu as appris à reconnaître une voile mal réglée, le bruit d’un gréement fatigué et l’odeur du mauvais temps avant même que le ciel ne change.</p><p>Mais la mer n’était pas un avenir destiné aux femmes.</p><p>À quinze ans, tu as coupé tes cheveux, abandonné tes robes et pris une identité masculine. Pour la Royal Navy, tu es devenue Edward. Seules quelques personnes connaissent encore ton véritable prénom : Eleanor.</p><p>Les années ont passé. Tu as appris à vivre parmi les hommes sans jamais laisser tomber le masque. Tu as servi pendant la guerre, connu les tempêtes, les abordages et les longues traversées. Ton sang-froid et ton sens de la navigation t’ont permis de gravir lentement les échelons.</p><p>Aujourd’hui, à vingt-huit ans, tu portes le grade de lieutenant. Une belle carrière s’ouvre devant toi, à condition que personne ne découvre jamais qui tu es réellement.</p><p>Depuis plusieurs mois, tu sers dans les Caraïbes. Port Royal est devenu ton port d’attache.</p>`:`<p>Tu es né en 1691, près des quais de Portsmouth. Ton père travaillait autour des navires et, très tôt, tu as appris à reconnaître une voile mal réglée, le bruit d’un gréement fatigué et l’odeur du mauvais temps avant même que le ciel ne change.</p><p>À quinze ans, tu as rejoint la Royal Navy.</p><p>Les années ont passé. Tu as servi pendant la guerre, connu les tempêtes, les abordages et les longues traversées. Ton sang-froid et ton sens de la navigation t’ont permis de gravir lentement les échelons.</p><p>Aujourd’hui, à vingt-huit ans, tu portes le grade de lieutenant. Tu n’es pas encore un grand nom de la Navy, mais tes supérieurs savent que tu es capable de ramener un navire et ses hommes lorsque la situation tourne mal.</p><p>Depuis plusieurs mois, tu sers dans les Caraïbes. Port Royal est devenu ton port d’attache.</p>`,choices:[{label:'Port Royal — 1719',to:'c1'}]},
  c1:{title:'La mission',text:`<p>Port Royal, Jamaïque — 1719.</p><p>Le jour n’est pas encore complètement levé lorsque tu traverses les quais. L’air est déjà chaud. Entre les mâts serrés dans le port, les cris des dockers se mêlent au claquement des voiles, à l’odeur du goudron, du sel et du bois humide.</p><p>La Jamaïque vit dans une tension permanente. La Grande-Bretagne est en guerre contre l’Espagne, et les routes maritimes des Caraïbes attirent autant les corsaires que les pirates.</p><p>L’ordre qui t’attend porte l’autorité du gouverneur de l’île, Sir Nicholas Lawes. À Londres, le Board of Admiralty est dirigé par James Berkeley, comte de Berkeley, mais ici les décisions doivent parfois être prises sans attendre plusieurs mois qu’un courrier traverse l’Atlantique.</p><p>Si cette mission t’est confiée, ce n’est pas par hasard. Tu connais déjà ces eaux. Tu as escorté des navires marchands, poursuivi des navires suspects et, quelques mois plus tôt, ramené à Port Royal un navire endommagé qu’une partie de son équipage croyait perdu.</p><p>Cette fois, il ne s’agit pourtant pas d’un combat.</p><p>Le Providence, navire marchand appartenant à Edmund Harcourt, aurait dû rentrer depuis quatre jours. Vingt-sept hommes se trouvaient à bord. Aucun message. Aucun survivant. Aucune épave.</p><p>Tu parcours son manifeste avant de partir. Rien d’exceptionnel : sucre, indigo, outils, quelques caisses de tissus et des lettres commerciales. Aucune cargaison précieuse. Aucun trésor. S’il a quitté sa route, ce n’était donc pas pour livrer une marchandise secrète prévue au départ.</p><p>On te confie le Resolute, un petit sloop armé, rapide et suffisamment maniable pour s’approcher des côtes difficiles. Environ <strong>soixante-dix marins chevronnés</strong> assurent la navigation, les voiles et les canons.</p><p>À eux s’ajoutent <strong>dix soldats aguerris</strong> de la garnison de Port Royal. Tu les connais. Certains ont déjà combattu sous tes ordres. Tu leur fais confiance et, si des pirates tentent un abordage, ils sauront se défendre.</p><p>Comme avant chaque mission, tu décides d’étudier les différents chemins possibles afin d’arriver rapidement, mais aussi avec le moins de risques possible.</p><p>Chaque heure perdue risque de rendre le sauvetage plus compliqué et tu le sais. Malheureusement, certains passages sont dangereux à traverser.</p><p>Il va falloir prendre une décision.</p>`,choices:[{label:'Étudier la carte',to:'c2'}]},
@@ -1677,10 +1688,24 @@ function devTestInventoryHtml(s){
  </div>`;
 }
 
+function showInventoryEffectResult(api,title,html,terminal=false){
+ api.showModal(title,`
+   <div class="inventory-effect-result">${html}</div>
+   <div class="inventory-actions">
+     <button class="inventory-action-btn" data-action="${terminal?'close-effect-result':'back-inventory'}">
+       ${terminal?'Continuer':'Retour à l’inventaire'}
+     </button>
+   </div>`);
+}
+
 const inventory={
  topLine:s=>`Or : ${s.goldCoins||0} · Arme : ${weaponLabel(s)} · Soldats : ${displayedSoldierCount(s)}`,
  extraHtml:s=>`<div class="inventory-equipment-card"><div class="inventory-equipment-title">État de l’expédition</div><div class="inventory-equipment-row"><span>Soldats survivants</span><strong>${s.soldiers}/${s.maxSoldiers}</strong></div><div class="inventory-equipment-row"><span>Avec toi sur l’île</span><strong>${displayedSoldierCount(s)}</strong></div><div class="inventory-equipment-row"><span>Protection</span><strong>${currentProtection(s)}</strong></div></div>`+devSoldierCountHtml(s)+devTestInventoryHtml(s),
  actionHtml:()=>'',handleAction(action,s,api){
+   if(action==='close-effect-result'){
+     api.closeModal();
+     return true;
+   }
    if(action.startsWith('dev-set-soldiers:')){
      const n=Math.max(0,Math.min(4,Math.floor(Number(action.slice('dev-set-soldiers:'.length))||0)));
      s.soldiers=n;
@@ -1726,7 +1751,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:118,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:119,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
