@@ -113,6 +113,7 @@ function prepareSecondIslandParty(s){
     const volunteers=Math.min(Math.max(0,4-expedition),survivors);
     s.flags.pirateAnonymousLoss=anonymousLosses;
     s.flags.pirateAttackLoss=anonymousLosses+1;
+    s.flags.pirateSailorLoss=5;
     s.flags.haleVolunteers=volunteers;
     s.flags.shipRepairSoldiers=Math.max(0,survivors-volunteers);
     s.expeditionSoldiers=expedition+volunteers;
@@ -1346,7 +1347,7 @@ c55:{title:'La plage',text:s=>'<p>La mer réapparaît enfin entre les arbres.</p
 
 c56:{title:'Retour à la plage',text:s=>{
   if(s.flags.commander==='hale'){
-    let h='<p>Lorsque la mer réapparaît entre les arbres, le premier bruit que tu entends est celui des marteaux.</p><p>Le Resolute est toujours là, mais son gréement a été déchiqueté par les tirs et plusieurs impacts noirs marquent la coque.</p><p>Le Providence est toujours au mouillage un peu plus loin.</p><p>Sur le pont du Resolute, des hommes transportent les blessés.</p><p>Hale vient à ta rencontre, le visage fermé.</p><blockquote>« Les pirates sont arrivés avant votre retour. J’ai attendu trop longtemps. »</blockquote><p>Il baisse les yeux une seconde.</p><blockquote>« Briggs est mort pendant l’abordage. »</blockquote><p>Au total, l’attaque a coûté <strong>'+String(s.flags.pirateAttackLoss||1)+' soldat'+((s.flags.pirateAttackLoss||1)>1?'s':'')+'</strong>, Briggs compris.</p>';
+    let h='<p>Lorsque la mer réapparaît entre les arbres, le premier bruit que tu entends est celui des marteaux.</p><p>Le Resolute est toujours là, mais son gréement a été déchiqueté par les tirs et plusieurs impacts noirs marquent la coque.</p><p>Le Providence est toujours au mouillage un peu plus loin.</p><p>Sur le pont du Resolute, des hommes transportent les blessés.</p><p>Hale vient à ta rencontre, le visage fermé.</p><blockquote>« Les pirates sont arrivés avant votre retour. J’ai attendu trop longtemps. »</blockquote><p>Il baisse les yeux une seconde.</p><blockquote>« Briggs est mort pendant l’abordage. »</blockquote><p>Au total, l’attaque a coûté <strong>'+String(s.flags.pirateAttackLoss||1)+' soldat'+((s.flags.pirateAttackLoss||1)>1?'s':'')+'</strong>, Briggs compris. <strong>'+String(s.flags.pirateSailorLoss||5)+' marins</strong> ont également été tués pendant l’abordage.</p>';
     if((s.flags.haleVolunteers||0)>0){
       h+='<p>Parmi les survivants encore capables de se battre, <strong>'+String(s.flags.haleVolunteers)+' soldat'+((s.flags.haleVolunteers||0)>1?'s ont':' a')+' refusé de t’abandonner</strong>.</p>';
       if((s.soldiers||0)>0)h+='<p>Ils se préparent à repartir avec toi et Hale.</p>';
@@ -1751,7 +1752,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:123,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:124,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
