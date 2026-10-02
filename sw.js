@@ -1,6 +1,6 @@
 /* La Grotte de Valombre — Service Worker
    IMPORTANT : augmenter APP_VERSION à chaque nouvelle mise en ligne. */
-const APP_VERSION = 'reference-68.310-combat-image-case-v120';
+const APP_VERSION = 'reference-68.311-consumable-result-modals-v121';
 const CACHE_PREFIX = 'chroniques-ages-dev-';
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 
