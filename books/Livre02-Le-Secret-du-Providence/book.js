@@ -1068,6 +1068,19 @@ function needsVictoryRescueAct(s){
   return !s.flags.caveVisitedNight && !s.flags.victoryRescueCompleted;
 }
 
+function victoryRescuePartyDescription(s){
+  const parts=[];
+  const soldiers=Math.max(0,Math.floor(Number(s.soldiers)||0));
+  const marines=providenceMarinesWithParty(s);
+  if(haleWithParty(s))parts.push('Hale');
+  if(soldiers>0)parts.push(String(soldiers)+' soldat'+(soldiers>1?'s':'')+' de la garnison');
+  if(marines>0)parts.push(String(marines)+' marin'+(marines>1?'s':'')+' du Providence');
+  if(parts.length===0)return '<p>Tu n’as plus aucun combattant valide à tes côtés. Tu prends une lampe et pars seul vers les rochers.</p>';
+  const total=displayedSoldierCount(s);
+  const list=parts.length===1?parts[0]:parts.slice(0,-1).join(', ')+' et '+parts[parts.length-1];
+  return '<p>Les blessés et les rescapés trop faibles pour marcher restent au village. Tous les combattants encore valides partent avec toi : '+list+'.</p><p>Vous êtes donc <strong>'+String(total+1)+'</strong> à descendre dans la grotte, en te comptant.</p>';
+}
+
 
 function captivePursuitHtml(s){
   const marines=providenceMarinesWithParty(s);
@@ -1489,7 +1502,7 @@ deepCaveSanctum:{title:'Le cœur de la grotte',noImage:true,text:'<p>La salle es
 
 victoryMissingSailors:{title:'Trois hommes manquent',text:'<p>Les rescapés se regroupent dans le village pendant que vous comptez les hommes du Providence.</p><p>Un marin recommence le compte une seconde fois, puis une troisième.</p><p>Son visage se ferme.</p><blockquote>« Il en manque trois. »</blockquote><p>Il t’explique qu’ils ont été sortis de la cage peu avant l’attaque et emmenés vers les rochers derrière le village.</p><blockquote>« Ceux qu’ils emmènent là-bas ne reviennent pas toujours. Et quand certains reviennent... ils ne sont plus les mêmes. »</blockquote><p>Il regarde vers la masse sombre de la falaise.</p><blockquote>« Si on attend le matin, il sera peut-être trop tard. »</blockquote>',choices:[{label:'Partir à leur recherche',to:'victoryRescueCave'}]},
 
-victoryRescueCave:{title:'Sous les rochers',text:'<p>Tu laisses les blessés sous la garde des hommes encore capables de tenir une arme et prends une lampe.</p><p>Derrière les dernières huttes, un sentier étroit rejoint une ouverture dans la roche.</p><p>À l’intérieur, l’air devient immédiatement plus froid.</p><p>Sur le sol, des traces récentes apparaissent dans la poussière : des pas, des marques de semelles traînées, puis un morceau de toile arraché.</p><p>Le tissu porte encore les couleurs du Providence.</p><p>Les traces descendent vers les profondeurs.</p>',choices:[{label:'Suivre les traces',to:'victoryRescueSurvivor'}]},
+victoryRescueCave:{title:'Sous les rochers',text:s=>victoryRescuePartyDescription(s)+'<p>Tu prends une lampe et passes derrière les dernières huttes. Un sentier étroit rejoint une ouverture dans la roche.</p><p>À l’intérieur, l’air devient immédiatement plus froid.</p><p>Sur le sol, des traces récentes apparaissent dans la poussière : des pas, des marques de semelles traînées, puis un morceau de toile arraché.</p><p>Le tissu porte encore les couleurs du Providence.</p><p>Les traces descendent vers les profondeurs.</p>',choices:[{label:'Suivre les traces',to:'victoryRescueSurvivor'}]},
 
 victoryRescueSurvivor:{title:'Encore vivant',text:'<p>Quelques dizaines de mètres plus bas, un souffle rauque te fait t’arrêter.</p><p>Dans un renfoncement de la galerie, un homme est recroquevillé contre la roche.</p><p>Sa veste est celle du Providence.</p><p>Il lève les yeux vers toi. Ils sont encore parfaitement humains.</p><p>Il est épuisé, mais vivant.</p><blockquote>« Les deux autres... plus bas. »</blockquote><p>Il raconte avoir profité d’un instant de confusion pour se dégager et ramper jusqu’ici.</p><blockquote>« L’un d’eux ne parlait déjà plus. Ils l’ont emmené vers la lumière bleue. L’autre était encore conscient. »</blockquote><p>Il est trop faible pour continuer. Tu l’installes à l’abri dans le renfoncement et lui promets de revenir.</p>',choices:[{label:'Continuer vers les deux autres',to:'victoryRescueRevenant'}]},
 
@@ -1792,7 +1805,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:126,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:127,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
