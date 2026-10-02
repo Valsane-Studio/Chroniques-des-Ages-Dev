@@ -129,10 +129,10 @@ function prepareSecondIslandParty(s){
 }
 function keepSecondIslandSoldiersTogether(s){s.flags.flankingSoldiers=0;}
 function secondIslandLocalSoldiers(s){
-  const expedition=Math.max(0,Math.floor(Number(s.expeditionSoldiers)||0));
-  if(expedition>0)return expedition;
   if((s.flags.flankingSoldiers||0)>0)return 0;
-  return Math.max(0,Math.floor(Number(s.soldiers)||0));
+  const expedition=Math.max(0,Math.floor(Number(s.expeditionSoldiers)||0));
+  const current=Math.max(0,Math.floor(Number(s.soldiers)||0));
+  return Math.max(expedition,current);
 }
 function canSplitSecondIslandParty(s){
   return s.flags.haleAlive!==false && secondIslandLocalSoldiers(s)>=2;
@@ -1751,7 +1751,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:121,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:122,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
