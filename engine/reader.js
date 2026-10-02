@@ -395,9 +395,10 @@ function render() {
   const transformedView = renderNodeId !== state.node;
   const node = STORY[renderNodeId] || STORY.start;
   const pendingDice = !transformedView && state.pendingDice?.destination === state.node ? state.pendingDice : null;
+  storyCard?.classList.toggle('sheet-page', !!node.sheet);
   if (node.sheet) {
     ++pageImageLoadToken; // annule une éventuelle image de la page précédente
-    chapterNumber.textContent = BOOK.sheetLabel || 'FICHE DU HÉROS';
+    chapterNumber.textContent = node.number || BOOK.sheetLabel || 'FICHE DU HÉROS';
     imageFrame.classList.add('hidden');
   } else {
     const mappedPage = PAGE_BY_NODE[renderNodeId];
