@@ -591,8 +591,7 @@ function resolveNightStatueVillage(s){
 function villageAssaultRulesHtml(){
   return `<div class="village-assault-rules">
     <p>Comme lors des combats contre les pirates, chaque groupe possède une <strong>Valeur de combat</strong> qui représente à la fois son équipement et son entraînement.</p>
-    <p>Tes soldats sont aguerris et bien équipés : <strong>Valeur de combat 4</strong>. Chaque dé faisant <strong>1, 2, 3 ou 4</strong> est une réussite.</p>
-    <p><strong>Hale</strong> combat comme tes autres soldats : <strong>Valeur de combat 4</strong>.</p>
+    <p>Tes soldats sont aguerris et bien équipés : <strong>Valeur de combat 4</strong>. Hale est compté parmi eux lorsqu’il combat à tes côtés. Chaque dé faisant <strong>1, 2, 3 ou 4</strong> est une réussite.</p>
     <p>Les hommes pâles sont moins entraînés et moins bien équipés : <strong>Valeur de combat 1</strong>. Seul un <strong>1</strong> est une réussite.</p>
     <p>Chaque combattant lance <strong>1D6</strong>. <strong>Chaque réussite met un adversaire hors de combat.</strong> À chaque nouvel assaut, tous les combattants encore debout relancent leur dé.</p>
     <p>À chaque tour, tu choisis aussi ton action :</p>
@@ -604,6 +603,11 @@ function villageAssaultRulesHtml(){
 function villageAssaultHtml(s){
   const b=initVillageAssault(s);
   const l=b.last;
+  const totalSoldiers=displayedSoldierCount(s);
+  const soldierDetails=[];
+  if(haleWithParty(s))soldierDetails.push('Hale');
+  if(b.marines>0)soldierDetails.push(String(b.marines)+' marin'+(b.marines>1?'s':'')+' du Providence');
+  const soldierDetail=soldierDetails.length?' · dont '+soldierDetails.join(' et '):'';
   let h='<p>Le village éclate en mouvement. Les hommes pâles saisissent leurs armes pendant que tes hommes prennent position.</p>';
   if(b.initialEnemy<9)h+='<p>Grâce à leur hésitation devant la bague, <strong>trois hommes pâles sont déjà tombés</strong>. Il en reste <strong>'+String(b.enemy)+'</strong> au début de l’assaut.</p>';
   else h+='<p>Tu comptes <strong>'+String(b.enemy)+'</strong> hommes pâles capables de se battre.</p>';
@@ -614,7 +618,7 @@ function villageAssaultHtml(s){
   h+=`<div class="combat-roll-result crew-battle-result">
     <div class="combat-roll-title">Assaut du village</div>
     <div class="crew-strength-preview">
-      <div><strong>Ton groupe</strong><span>Soldats : <strong>${s.soldiers||0}</strong> · Hale : <strong>${haleWithParty(s)?'présent':'absent'}</strong>${b.marines>0?' · Marins du Providence : <strong>'+String(b.marines)+'</strong>':''}</span></div>
+      <div><strong>Ton groupe</strong><span>Soldats : <strong>${totalSoldiers}</strong>${soldierDetail}</span></div>
       <div><strong>Adversaires</strong><span>Hommes pâles : <strong>${b.enemy}</strong></span></div>
     </div>
     ${b.round===0?villageAssaultRulesHtml():''}
@@ -644,10 +648,10 @@ function villageAssaultHtml(s){
         h+='</div>';
       }
 
-      h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Ton groupe</strong><span>Soldats et Hale : réussite sur 1–4 · marins libérés : 1–3</span></div>';
-      if(l.soldierDice.length)h+='<p>Soldats</p><div class="crew-training-dice">'+villageBattleDiceRow(l.soldierDice,4)+'</div>';
+      h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Ton groupe</strong><span>Garnison, Hale compris : réussite sur 1–4 · marins libérés : 1–3</span></div>';
+      const regularDice=[...l.soldierDice,...l.haleDice];
+      if(regularDice.length)h+='<p>Soldats'+(l.haleDice.length?' — Hale compris':'')+'</p><div class="crew-training-dice">'+villageBattleDiceRow(regularDice,4)+'</div>';
       if(l.flankDice.length)h+='<p>Feu croisé</p><div class="crew-training-dice">'+villageBattleDiceRow(l.flankDice,4)+'</div>';
-      if(l.haleDice.length)h+='<p>Hale</p><div class="crew-training-dice">'+villageBattleDiceRow(l.haleDice,4)+'</div>';
       if(l.marineDice.length)h+='<p>Marins du Providence</p><div class="crew-training-dice">'+villageBattleDiceRow(l.marineDice,3)+'</div>';
       h+='<p><strong>'+String(l.enemyLoss)+' homme'+(l.enemyLoss>1?'s pâles tombent':' pâle tombe')+'.</strong></p></div>';
 
@@ -1752,7 +1756,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:124,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:125,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
