@@ -182,14 +182,24 @@ function resolveIslandLogTrap(s){
 function resolveNightRaid(s){
   if(s.flags.nightRaidRolled)return;
   s.flags.nightRaidRolled=true;
-  const n=Math.max(0,Math.floor(Number(s.soldiers)||0));
+  s.flags.villageTime='night';
+  const n=Math.max(0,displayedSoldierCount(s));
   const rolls=[];for(let i=0;i<n;i++)rolls.push(cryptoDie6());
-  s.flags.nightRaidRolls=rolls;s.flags.nightRaidAlerts=rolls.filter(v=>v===6).length;s.flags.nightRaidKills=n;
+  const b=initVillageAssault(s);
+  const kills=Math.min(n,Math.max(0,Math.floor(Number(b.enemy)||0)));
+  b.enemy=Math.max(0,b.enemy-kills);
+  if(b.enemy<=0){b.enemy=0;b.enemyDefeated=true;}
+  s.flags.nightRaidRolls=rolls;
+  s.flags.nightRaidAlerts=rolls.filter(v=>v===6).length;
+  s.flags.nightRaidKills=kills;
 }
 
 function initVillageAssault(s){
   if(s.flags.villageAssaultBattle){
     s.flags.villageAssaultBattle.failed=false;
+    if(!Number.isFinite(s.flags.providenceMarinesWithParty)&&Number.isFinite(s.flags.villageAssaultBattle.marines)){
+      s.flags.providenceMarinesWithParty=Math.max(0,Math.floor(Number(s.flags.villageAssaultBattle.marines)||0));
+    }
     return s.flags.villageAssaultBattle;
   }
   const initialEnemy=Math.max(0,9-Math.max(0,Math.floor(Number(s.flags.paleAssaultLoss)||0)));
@@ -199,7 +209,7 @@ function initVillageAssault(s){
     round:0,
     progress:0,
     prisonOpen:false,
-    marines:0,
+    marines:providenceMarinesWithParty(s),
     marineLosses:0,
     flankUsed:false,
     moraleTurns:null,
@@ -214,15 +224,29 @@ function initVillageAssault(s){
 function haleWithParty(s){
   return !!(s.flags?.companion==='hale' && s.flags?.haleAlive!==false);
 }
+function providenceMarinesWithParty(s){
+  if(Number.isFinite(s.flags?.providenceMarinesWithParty))return Math.max(0,Math.floor(Number(s.flags.providenceMarinesWithParty)||0));
+  const b=s.flags?.villageAssaultBattle;
+  return b&&Number.isFinite(b.marines)?Math.max(0,Math.floor(Number(b.marines)||0)):0;
+}
+function setProvidenceMarinesWithParty(s,n){
+  const value=Math.max(0,Math.floor(Number(n)||0));
+  s.flags.providenceMarinesWithParty=value;
+  if(s.flags.villageAssaultBattle)s.flags.villageAssaultBattle.marines=value;
+  return value;
+}
+function ensureProvidenceMarinesWithParty(s,n){
+  return setProvidenceMarinesWithParty(s,Math.max(providenceMarinesWithParty(s),Math.max(0,Math.floor(Number(n)||0))));
+}
 function displayedSoldierCount(s){
   const anonymous=Math.max(0,Math.floor(Number(s.soldiers)||0));
-  return anonymous+(haleWithParty(s)?1:0);
+  return anonymous+(haleWithParty(s)?1:0)+providenceMarinesWithParty(s);
 }
 function villageHeroAlone(s){
   return displayedSoldierCount(s)===0;
 }
 function villageBattleAllies(s,b){
-  return Math.max(0,Math.floor(Number(s.soldiers)||0))+(s.flags.haleAlive===false?0:1)+Math.max(0,Math.floor(Number(b.marines)||0));
+  return Math.max(0,Math.floor(Number(s.soldiers)||0))+(haleWithParty(s)?1:0)+Math.max(0,Math.floor(Number(b.marines)||0));
 }
 function removeVillageAssaultSoldiers(s,n){
   let remaining=Math.max(0,Math.floor(Number(n)||0));
@@ -249,7 +273,7 @@ function villageAssaultRound(s,action){
 const enemyBefore=b.enemy;
   const soldiersBefore=Math.max(0,Math.floor(Number(s.soldiers)||0));
   const marinesBefore=Math.max(0,Math.floor(Number(b.marines)||0));
-  const haleBefore=s.flags.haleAlive!==false;
+  const haleBefore=haleWithParty(s);
   const progressBefore=b.progress;
   const moraleBefore=b.moraleTurns;
 
@@ -308,6 +332,7 @@ const enemyBefore=b.enemy;
 
   const marineLoss=Math.min(marinesBefore,remainingHits);
   b.marines=Math.max(0,marinesBefore-marineLoss);
+  setProvidenceMarinesWithParty(s,b.marines);
   b.marineLosses+=marineLoss;
   remainingHits-=marineLoss;
 
@@ -323,7 +348,8 @@ const enemyBefore=b.enemy;
   if(!b.prisonOpen&&b.progress>=3&&s.hp>0){
     b.prisonOpen=true;
     prisonOpenedThisRound=true;
-    b.marines+=3;
+    ensureProvidenceMarinesWithParty(s,3);
+    b.marines=providenceMarinesWithParty(s);
     s.flags.providenceSailorsFreed=true;
     s.flags.freedDuringAssault=true;
   }
@@ -661,7 +687,7 @@ function useCavePistolsInAssault(s){
 function villageAssaultChoices(s){
   const b=initVillageAssault(s);
   if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];
-  if(b.enemyDefeated)return[{label:'Rejoindre la prison',to:'villageAssaultVictory'}];
+  if(b.enemyDefeated)return[{label:s.flags.villageTime==='night'?'Rejoindre la prison dans le village silencieux':'Rejoindre la prison',to:s.flags.villageTime==='night'?'villageNightAftermath':'villageAssaultVictory'}];
   if(villageHeroAlone(s))return[{label:'Fuir vers la forêt',to:'villageRetreat'}];
   const out=[];
   if(b.round===0&&!s.flags.cavePistolsUsed&&s.inventory?.pistolets_silex){
@@ -959,6 +985,29 @@ const BANDIT_CHIEF={name:'CHEF DES FAUX MARCHANDS',hp:9,dex:9,force:8,damage:2};
 const ALLIGATOR={name:'ALLIGATOR',hp:8,dex:7,force:8,damage:3};
 const DROWNED_SAILOR={name:'LE NOYÉ',hp:9,dex:8,force:10,damage:3};
 
+function stripCapturedEquipment(s){
+  if(s.flags.captiveEquipmentRemoved)return;
+  s.flags.captiveEquipmentRemoved=true;
+  s.inventory={};
+  s.goldCoins=0;
+  s.weapon='none';
+  s.protection=0;
+  s.forceBonus=0;
+  s.flags.skullRing=false;
+  s.flags.guardianStatue=false;
+  s.flags.gauntlets=false;
+  s.flags.southProtectionGift=false;
+  s.flags.forceBracelet=false;
+  s.flags.ravineForceBracelet=false;
+}
+function equipFoundSabre(s){
+  s.weapon='naval_sword';
+  s.flags.captiveFoundSabre=true;
+}
+function leaveHaleBehind(s){
+  s.flags.haleAlive=false;
+  s.flags.companion=null;
+}
 function resolveCaptiveAmbush(s){
   if(s.flags.captiveAmbushRolled)return;
   s.flags.captiveAmbushRolled=true;
@@ -967,6 +1016,10 @@ function resolveCaptiveAmbush(s){
   else{
     s.flags.providenceSailorsFreed=true;
     s.flags.captivePrisonersEscaped=true;
+    s.flags.haleAlive=true;
+    s.flags.companion='hale';
+    ensureProvidenceMarinesWithParty(s,2);
+    equipFoundSabre(s);
   }
 }
 
@@ -975,12 +1028,58 @@ function resolveCaptiveCompanionRescue(s){
   s.flags.captiveCompanionRescueRolled=true;
   s.flags.captiveCompanionRescueSuccess=rollDex(s);
   if(!s.flags.captiveCompanionRescueSuccess)rollDamage(s,'captiveCompanionRescue',3);
-  else{
+  if(s.flags.captiveCompanionRescueSuccess){
     s.flags.captiveCompanionsFreed=true;
     s.flags.secondIslandPartyReady=true;
     s.flags.haleAlive=true;
     s.flags.companion='hale';
+    ensureProvidenceMarinesWithParty(s,1);
+  }else{
+    leaveHaleBehind(s);
+    setProvidenceMarinesWithParty(s,0);
   }
+}
+
+function prepareDeepCaveRevenant(s){
+  if(!s.combats)s.combats={};
+  if(s.combats.deepCaveRevenant)return;
+  let hp=DROWNED_SAILOR.hp;
+  if(haleWithParty(s)){
+    hp=Math.max(1,hp-3);
+    s.flags.deepCaveHaleAssist=true;
+  }
+  s.combats.deepCaveRevenant={hp,round:0,last:null};
+}
+
+function captivePursuitHtml(s){
+  const marines=providenceMarinesWithParty(s);
+  let who='Tu cours dans l’obscurité';
+  if(haleWithParty(s)&&marines===1)who='Vous courez dans l’obscurité, Hale et le marin du Providence juste derrière toi';
+  else if(haleWithParty(s)&&marines>1)who='Vous courez dans l’obscurité, Hale et '+String(marines)+' marins du Providence juste derrière toi';
+  else if(haleWithParty(s))who='Vous courez dans l’obscurité, Hale juste derrière toi';
+  else if(marines===1)who='Vous courez dans l’obscurité, le marin du Providence juste derrière toi';
+  else if(marines>1)who='Vous courez dans l’obscurité avec '+String(marines)+' marins du Providence';
+  return '<p>'+who+'.</p><p>Les hommes pâles vous suivent. La lumière de leurs torches danse sur les parois et leurs pas résonnent de plus en plus près.</p><p>La galerie descend brutalement.</p><p>Vous franchissez une ouverture étroite dans la roche.</p><p>Puis les bruits derrière vous cessent.</p><p>Tu te retournes.</p><p>Les hommes pâles sont toujours là, quelques mètres plus haut.</p><p>Ils vous regardent depuis l’entrée du passage.</p><p>Aucun ne franchit la limite.</p><p>Dans l’obscurité, leurs yeux renvoient ce faible éclat bleu.</p><p>Puis, lentement, ils reculent.</p><p>Quelque chose dans cette partie de la grotte semble les empêcher — ou les effrayer — d’aller plus loin.</p><p>Devant vous, une faible lueur bleue apparaît puis disparaît au fond de la roche.</p>';
+}
+
+function resolveVillageNightAftermath(s){
+  s.flags.villageTime='night';
+  if(!s.flags.providenceSailorsFreed){
+    s.flags.providenceSailorsFreed=true;
+    ensureProvidenceMarinesWithParty(s,3);
+    s.flags.freedAtNight=true;
+  }
+}
+function resolveVillageAssaultVictory(s){
+  if(s.flags.villageTime!=='night')s.flags.villageTime='day';
+  if(!s.flags.providenceSailorsFreed){
+    s.flags.providenceSailorsFreed=true;
+    ensureProvidenceMarinesWithParty(s,3);
+  }
+  s.flags.villageAssaultWon=true;
+}
+function resolveVillageDawn(s){
+  s.flags.villageTime='dawn';
 }
 
 function resolveDeepCaveFlooded(s){
@@ -992,7 +1091,7 @@ function resolveDeepCaveFlooded(s){
 
 function createInitialState(){
   return {
-    node:'start',pageMapVersion:16,heroGender:'female',heroName:'Eleanor',
+    node:'start',pageMapVersion:17,heroGender:'female',heroName:'Eleanor',
     inventory:{},flags:{},visited:{},history:[],journal:'',
     hp:18,maxHp:18,baseForce:8,baseDexterity:13,forceBonus:0,dexBonus:0,dexPenalty:0,
     weapon:'naval_sword',protection:0,goldCoins:0,
@@ -1231,7 +1330,7 @@ c45:{title:'L’île d’en face',text:`<p>D’autres passages sont plus récent
 
 c46:{title:'La carte locale',text:`<p>Une carte grossière de la région relie les deux îles.</p><p>Votre village est ici.</p><p>L’île aux trois lumières est seulement à quelques milles au sud-est.</p><p>Un ancien a tracé une croix sur sa crique et écrit :</p><blockquote>« On peut y entrer facilement. C’est en repartir qui pose problème. »</blockquote><p>Tu recopies les indications utiles.</p><p>Si vous devez finalement approcher cette île, vous savez désormais exactement où elle se trouve.</p>`,onEnter:s=>s.flags.villageArchives=true,choices:[{label:'Retourner sur la place',to:'c38'}]},
 
-c47:{title:'Retour au village',text:`<p>Tu retrouves la rue principale et les maisons silencieuses.</p><p>Il reste encore des traces à comprendre.</p>`,choices:[{label:'Continuer l’enquête',to:'c38'}]},
+
 
 c48:{title:'La jetée',text:`<p>À l’autre extrémité du village, la petite jetée a été partiellement détruite.</p><p>Deux barques sont renversées. Une troisième a brûlé jusqu’à la ligne de flottaison.</p><p>Dans le sable humide, les traces sont nombreuses mais encore lisibles.</p><p>Plusieurs groupes sont arrivés depuis la mer.</p><p>Puis les mêmes pas repartent vers l’eau.</p><p>Entre eux, de longues marques parallèles traversent la plage.</p><p>Quelque chose de lourd a été traîné jusqu’aux embarcations.</p>`,choices:[{label:'Suivre les traces',to:'c49'}]},
 
@@ -1282,7 +1381,7 @@ islandBeachFight:{title:'Trop nombreux',text:'<p>Tu tires ton sabre et cries l�
 
 islandBeachYield:{title:'Ne pas provoquer le massacre',text:'<p>Tu lèves lentement les mains et ordonnes à tout le monde de garder ses armes basses.</p><p>Les hommes pâles avancent sans courir.</p><p>Aucun ne parle.</p><p>Ils viennent assez près pour que tu distingues les cicatrices, le sel incrusté dans leurs vêtements et les restes d’anciens uniformes.</p><p>Tu essaies de leur parler.</p><p>Un choc brutal derrière la tête coupe ta phrase.</p><p>Autour de toi, les autres s’effondrent presque au même instant.</p><p>Noir.</p>',onEnter:s=>{s.flags.beachCaptured=true;s.flags.beachYielded=true;if(!Number.isFinite(s.flags.capturedSoldiers))s.flags.capturedSoldiers=Math.max(0,Math.floor(Number(s.soldiers)||0));s.soldiers=0;s.expeditionSoldiers=0;},choices:[{label:'Reprendre connaissance',to:'islandCaptured'}]},
 
-islandCaptured:{title:'Prisonniers',text:s=>'<p>Tu reprends connaissance avec un goût de sang dans la bouche et les poignets liés.</p><p>Hale est étendu non loin de toi. Il respire.</p>'+((s.flags.capturedSoldiers||0)>0?'<p>Plusieurs de tes soldats sont eux aussi ligotés. Les hommes pâles les relèvent un à un.</p>':'')+'<p>On vous pousse ensuite vers l’intérieur de l’île.</p><p>À travers les arbres apparaissent les premières huttes du village.</p><p>À mesure que vous approchez, tu remarques de nouveau cette étrangeté dans les regards : lorsqu’un homme pâle traverse la lumière d’une torche, ses yeux renvoient parfois un éclat bleu qui disparaît aussitôt.</p>',choices:[{label:'Voir où ils vous emmènent',to:'c68'}]},
+islandCaptured:{title:'Prisonniers',text:s=>'<p>Tu reprends connaissance avec un goût de sang dans la bouche et les poignets liés.</p><p>Ton sabre a disparu. Tes poches ont été vidées et tout ton équipement a été retiré.</p><p>Hale est étendu non loin de toi. Il respire.</p>'+((s.flags.capturedSoldiers||0)>0?'<p>Plusieurs de tes soldats sont eux aussi ligotés. Les hommes pâles les relèvent un à un.</p>':'')+'<p>On vous pousse ensuite vers l’intérieur de l’île.</p><p>À travers les arbres apparaissent les premières huttes du village.</p><p>À mesure que vous approchez, tu remarques de nouveau cette étrangeté dans les regards : lorsqu’un homme pâle traverse la lumière d’une torche, ses yeux renvoient parfois un éclat bleu qui disparaît aussitôt.</p>',onEnter:s=>stripCapturedEquipment(s),choices:[{label:'Voir où ils vous emmènent',to:'c68'}]},
 
 islandForestLanding:{title:'La côte boisée',text:s=>{const n=secondIslandLocalSoldiers(s);return '<p>Vous longez l’île jusqu’à une portion de côte où la forêt descend presque dans l’eau.</p><p>La chaloupe trouve un passage entre les racines et les rochers.</p><p>Devant vous, aucun chemin. Seulement une végétation épaisse.</p><p>Tu es avec Hale et <strong>'+String(n)+' soldat'+(n>1?'s':'')+'</strong>.</p><p>Vous pouvez débarquer tous ensemble.</p>'+(canSplitSecondIslandParty(s)?'<p>Vous êtes assez nombreux pour vous séparer. Hale et toi pouvez débarquer ici pendant que les soldats restent dans la chaloupe et poursuivent le tour de l’île pour chercher un autre point d’accès.</p>':'');},choices:s=>{const out=[{label:'Débarquer tous ensemble',to:'forestTrap',effect:x=>keepSecondIslandSoldiersTogether(x)}];if(canSplitSecondIslandParty(s))out.push({label:'Hale et toi débarquez — envoyer les soldats plus loin avec la chaloupe',to:'forestTrap',effect:x=>sendSecondIslandSoldiersAround(x)});return out;}},
 
@@ -1302,17 +1401,9 @@ caveExit:{title:'Vers le village',text:'<p>Vous quittez le sanctuaire par un pas
 
 villageRear:{title:'Derrière le village',text:s=>{let h='<p>Depuis les arbres, tu découvres enfin le village des hommes pâles.</p><p>Ils sont nombreux. Ils se déplacent lentement entre des huttes construites avec des morceaux de navires.</p><p>Certains portent de vieux vêtements de marins. D’autres ont le torse nu. Plusieurs sont armés de sabres, de mousquets ou de longues lances.</p><p>Le calme du lieu est presque plus inquiétant que des cris.</p><p>À cette distance, quelque chose semble parfois luire dans leurs yeux. Un reflet bleu très faible qui disparaît dès qu’ils tournent la tête.</p><p>Certains restent immobiles pendant de longues secondes, sans le moindre mouvement visible de respiration.</p>';if((s.flags.flankingSoldiers||0)>0)h+='<p>Un mouvement attire ton regard de l’autre côté du village.</p><p>Des visages apparaissent entre les feuilles.</p><p><strong>Les '+String(s.flags.flankingSoldiers)+' soldat'+(s.flags.flankingSoldiers>1?'s':'')+' envoyés autour de l’île ont trouvé un autre passage.</strong></p><p>Tu lèves lentement la main. L’un d’eux te voit et répond au signe.</p><p>Vous pouvez agir des deux côtés.</p>';return h;},choices:s=>[{label:'Avancer dans le village pour comprendre ce qui se passe',to:'villageWalkIn'},{label:(s.flags.flankingSoldiers||0)>0?'Attaquer immédiatement de façon coordonnée':'Attaquer immédiatement le village',to:'villageAssault'},{label:'Attendre la nuit pour agir',to:'villageNight'}]},
 
-villageWalkIn:{title:'Entrer à découvert',text:s=>{let h='<p>Tu ranges ton arme et quittes lentement la couverture des arbres.</p><p>Les premiers hommes pâles vous observent avec surprise, mais personne ne vous attaque.</p><p>On vous laisse avancer jusqu’au centre du village.</p><p>Un homme plus âgé vient à votre rencontre. Son regard reste calme.</p>';if(s.flags.guardianStatue){h+='<p>Lorsque la statuette apparaît entre tes mains, tout change.</p><p>Les yeux s’écarquillent autour de toi. Certains reculent. D’autres hésitent encore, comme s’ils ne savaient plus s’ils devaient vous attaquer.</p><p>Puis, presque d’un seul mouvement, ils se prosternent.</p><p>Un silence total tombe sur la place.</p><p>Personne n’ose plus bouger.</p>';return h;}if(s.flags.skullRing){h+='<p>Les hommes continuent de s’approcher calmement.</p><p>Soudain, l’un d’eux aperçoit la bague au crâne et interpelle les autres.</p><p>Le groupe s’immobilise.</p><p>Un long moment d’hésitation passe entre eux. Les regards se croisent. Plusieurs visages se crispent.</p><p>Ils ne semblent plus savoir comment agir.</p><p>Tu dois réagir vite.</p>';return h;}return h+'<p>Quelque chose de froid vient alors se poser contre ton cou.</p><p>Tu n’as pas le temps de réagir.</p><p>Tes jambes cessent de te porter.</p><p>Les voix s’éloignent.</p><p>Tes yeux se ferment.</p><p>Noir.</p><div class="ending">FIN DE L’AVENTURE</div>';},onEnter:s=>{if(!s.flags.guardianStatue&&!s.flags.skullRing)s.hp=0;},choices:s=>{if(s.flags.guardianStatue)return[{label:'Observer leur réaction',to:'villageStatueSubmission'}];if(s.flags.skullRing)return[{label:'Les attaquer immédiatement',to:'villageAssault'},{label:'Leur tendre la bague pour la rendre',to:'villageRingReturn'},{label:'Lever la bague bien haut au-dessus de toi',to:'villageRingDominance'}];return[{label:'Recommencer',action:'restart'}];}},
+villageWalkIn:{title:'Entrer à découvert',text:s=>{let h='<p>Tu ranges ton arme et quittes lentement la couverture des arbres.</p><p>Les premiers hommes pâles vous observent avec surprise, mais personne ne vous attaque.</p><p>On vous laisse avancer jusqu’au centre du village.</p><p>Un homme plus âgé vient à votre rencontre. Son regard reste calme.</p>';if(s.flags.skullRing){h+='<p>Les hommes continuent de s’approcher calmement.</p><p>Soudain, l’un d’eux aperçoit la bague au crâne et interpelle les autres.</p><p>Le groupe s’immobilise.</p><p>Un long moment d’hésitation passe entre eux. Les regards se croisent. Plusieurs visages se crispent.</p><p>Ils ne semblent plus savoir comment agir.</p><p>Tu dois réagir vite.</p>';return h;}return h+'<p>Quelque chose de froid vient alors se poser contre ton cou.</p><p>Tu n’as pas le temps de réagir.</p><p>Tes jambes cessent de te porter.</p><p>Les voix s’éloignent.</p><p>Tes yeux se ferment.</p><p>Noir.</p><div class="ending">FIN DE L’AVENTURE</div>';},onEnter:s=>{if(!s.flags.skullRing)s.hp=0;},choices:s=>s.flags.skullRing?[{label:'Les attaquer immédiatement',to:'villageAssault'},{label:'Leur tendre la bague pour la rendre',to:'villageRingReturn'},{label:'Lever la bague bien haut au-dessus de toi',to:'villageRingDominance'}]:[{label:'Recommencer',action:'restart'}]},
 
-villageStatueSubmission:{title:'À genoux',text:'<p>La statuette reste bien en vue entre tes mains.</p><p>Autour de toi, les hommes pâles restent prosternés, le front baissé.</p><p>Certains tremblent légèrement. D’autres n’osent même plus lever les yeux vers toi.</p><p>Au fond de la place, tu distingues une construction fermée par de lourds barreaux métalliques. Cela ressemble à une prison.</p>',choices:s=>{const out=[{label:'Marcher lentement vers la prison, la statuette bien en vue',to:'statuePrison'}];if((s.soldiers||0)>0)out.push({label:'Demander à tes hommes de les tuer sur-le-champ',to:'statueExecution'});return out;}},
 
-statuePrison:{title:'La prison',text:'<p>Tu avances lentement à travers le village, la statuette tenue devant toi.</p><p>Les hommes pâles s’écartent sans relever la tête.</p><p>La construction est bien une prison. Une cage aux lourds barreaux métalliques occupe presque tout l’intérieur.</p><p>Derrière, des hommes amaigris et craintifs se serrent contre les parois.</p><p>Tu reconnais les derniers matelots du <strong>Providence</strong>.</p><p>Leurs vêtements sont déchirés. Plusieurs sont blessés. Tous paraissent épuisés.</p><p>Tu te tournes vers celui qui semble diriger les hommes pâles et lui fais signe d’ouvrir.</p><p>Il hésite une seconde, puis obéit.</p><p>La serrure claque. La lourde porte s’ouvre.</p><p>Les marins sortent lentement, trop faibles pour courir, mais leur soulagement est immédiat lorsqu’ils comprennent que vous êtes venus pour eux.</p>',onEnter:s=>{s.flags.providenceSailorsFreed=true;s.flags.freedByStatue=true;},choices:[]},
-
-statueExecution:{title:'Sous le regard du Gardien',text:'<p>Tu fais signe à tes hommes.</p><p>Les armes se lèvent.</p><p>Les hommes pâles ne cherchent pas à fuir. Ils ne tentent même pas de se défendre.</p><p>Ils se laissent tuer les uns après les autres, sans un cri.</p><p>La peur que leur inspire la statuette semble plus forte encore que leur peur de mourir.</p><p>Lorsqu’il n’en reste plus qu’un, tu croises son regard.</p><p>Pour la première fois, tu n’y vois plus seulement quelque chose d’étrange ou d’inhumain.</p><p>Tu y vois de la peur. Et peut-être un reste d’humanité.</p><p>Ta main hésite.</p>',onEnter:s=>{s.flags.palesExecuted=true;},choices:[{label:'Épargner le dernier homme',to:'statueSpareLast'},{label:'Ne laisser aucun survivant',to:'statueKillLast'}]},
-
-statueSpareLast:{title:'Un prisonnier',text:'<p>Tu arrêtes tes hommes d’un geste.</p><p>Le dernier homme pâle reste immobile.</p><p>Vous lui liez solidement les poignets et les bras avant de l’attacher à un poteau près de la place.</p><p>Puis vous rejoignez la prison.</p><p>La serrure résiste, mais à plusieurs vous finissez par forcer la lourde porte métallique.</p><p>Les hommes enfermés derrière les barreaux sont les derniers matelots du Providence.</p><p>Ils sortent un à un, blessés, affamés et épuisés, mais reconnaissants de vous voir.</p>',onEnter:s=>{s.flags.palePrisoner=true;s.flags.providenceSailorsFreed=true;},choices:[]},
-
-statueKillLast:{title:'Ouvrir la cage',text:'<p>Le dernier homme pâle tombe à son tour.</p><p>Le village devient silencieux.</p><p>Vous vous précipitez vers la prison et forcez la serrure de la lourde cage métallique.</p><p>Derrière les barreaux, les hommes amaigris sont bien les derniers matelots du Providence.</p><p>La porte finit par céder.</p><p>Ils sortent lentement, blessés, affamés et épuisés, mais leur soulagement est immense lorsqu’ils comprennent que vous êtes venus les chercher.</p>',onEnter:s=>{s.flags.palesAllDead=true;s.flags.providenceSailorsFreed=true;},choices:[]},
 
 villageRingReturn:{title:'Rendre la bague',text:'<p>Tu avances lentement la main et leur présentes la bague, comme pour la rendre.</p><p>La tension semble retomber presque aussitôt.</p><p>Plusieurs hommes baissent leurs armes.</p><p>Le vieil homme s’approche et récupère la bague sans un mot.</p><p>Pendant une seconde, tu crois avoir désamorcé la situation.</p><p>Puis tout bascule.</p><p>Tu comprends trop tard que la bague était la seule chose qui les faisait hésiter.</p><p>Noir.</p><div class="ending">FIN DE L’AVENTURE</div>',onEnter:s=>{if(s.inventory?.bague_crane)delete s.inventory.bague_crane;s.flags.skullRing=false;s.hp=0;},choices:[{label:'Recommencer',action:'restart'}]},
 
@@ -1324,11 +1415,11 @@ ringPrisonRevolt:{title:'La supercherie',text:'<p>Tu n’es plus qu’à quelque
 
 ringKillThree:{title:'Profiter de leur hésitation',text:'<p>Tu fais un signe bref à tes hommes.</p><p>Ils comprennent immédiatement.</p><p>Trois hommes pâles tombent avant que le reste du groupe réalise ce qui se passe.</p><p>Puis un cri retentit.</p><p>La confusion disparaît.</p><p>Les hommes pâles saisissent leurs armes et se jettent sur vous.</p><p>La bataille générale commence, mais ils sont déjà trois de moins.</p>',onEnter:s=>{s.flags.paleAssaultLoss=3;s.flags.ringFraudDiscovered=true;},choices:[{label:'Combattre',to:'villageAssault'}]},
 
-villageAssault:{title:'Donner l’assaut',text:s=>villageAssaultHtml(s),onEnter:s=>initVillageAssault(s),choices:s=>villageAssaultChoices(s)},
+villageAssault:{title:'Donner l’assaut',text:s=>villageAssaultHtml(s),onEnter:s=>{if(!s.flags.villageTime)s.flags.villageTime='day';initVillageAssault(s);},choices:s=>villageAssaultChoices(s)},
 
 villageRetreat:{title:'Le repli',noImage:true,text:'<p>Il ne reste plus personne pour tenir la ligne.</p><p>Les hommes pâles se tournent vers toi.</p><p>Tu recules de quelques pas, puis tu cours.</p><p>Tu t’enfonces dans la forêt sans regarder derrière toi. Des cris s’élèvent dans ton dos. Des branches craquent. Ils te poursuivent.</p><p>Tu quittes le sentier, descends une pente couverte de racines et te glisses derrière un énorme rocher.</p><p>Là, presque invisible dans un renfoncement de pierre, tu te plaques contre la roche.</p><p>Les bruits se rapprochent.</p><p>Des pas passent à quelques mètres de toi.</p><p>Puis s’éloignent.</p><p>Tu restes immobile. Longtemps.</p><p>Lorsque tu oses enfin bouger, la lumière a presque disparu entre les arbres.</p><p>La nuit tombe sur l’île.</p>',choices:[{label:'Attendre que la nuit soit complète',to:'villageRetreatNight'}]},
 
-villageRetreatNight:{title:'La nuit',noImage:true,text:'<p>La forêt est désormais plongée dans l’obscurité.</p><p>Au loin, quelques lueurs apparaissent entre les arbres. Le village des hommes pâles est toujours là.</p><p>Tu es seul.</p><p>Mais ils ignorent où tu te trouves.</p><p>Tu dois décider de ce que tu vas faire avant le lever du jour.</p>',choices:s=>[
+villageRetreatNight:{title:'La nuit',noImage:true,text:'<p>La forêt est désormais plongée dans l’obscurité.</p><p>Au loin, quelques lueurs apparaissent entre les arbres. Le village des hommes pâles est toujours là.</p><p>Tu es seul.</p><p>Mais ils ignorent où tu te trouves.</p><p>Tu dois décider de ce que tu vas faire avant le lever du jour.</p>',onEnter:s=>{s.flags.villageTime='night';},choices:s=>[
   {label:'S’approcher discrètement du camp',to:s.flags.guardianStatue?'villageNightStatue':'villageNightGuard1'},
   {label:'Tenter de fuir l’île à la nage',to:'villageNightSwim'},
   {label:'Fouiller l’île en espérant trouver quelque chose qui puisse t’aider',to:'villageNightSearch'}
@@ -1344,33 +1435,35 @@ villageNightFight:{title:'Le combat dans le village',noImage:true,text:s=>nightV
 
 villageNightSearch:{title:'Fouiller l’île',noImage:true,text:s=>{if(s.flags.guardianStatue)return '<p>Tu parcours l’île dans l’obscurité, mais tu ne trouves rien qui puisse réellement t’aider davantage.</p><p>La statuette du Gardien est déjà entre tes mains.</p>';if(s.flags.caveVisitedDay)return '<p>Tu parcours les sentiers, les plages et les hauteurs de l’île.</p><p>Rien.</p><p>Tu ne trouves ni embarcation, ni passage caché, ni autre refuge.</p><p>Une idée finit par s’imposer.</p><p>La grotte que tu as visitée plus tôt.</p><p>Tu n’avais pas eu le temps d’en examiner chaque recoin.</p><p>Tu retournes vers le cercle noir gravé dans la roche.</p>';return '<p>Tu décides de rester loin du village.</p><p>Si quelque chose peut encore t’aider, tu dois le trouver avant le lever du jour.</p><p>Tu parcours l’île dans l’obscurité pendant de longues minutes.</p><p>Entre deux parois rocheuses, tu finis par apercevoir une ouverture sombre.</p><p>Une grotte.</p><p>Au-dessus de l’entrée, un cercle noir a été gravé dans la pierre.</p>';},choices:s=>{if(s.flags.guardianStatue)return[{label:'Retourner au village avec la statuette',to:'villageNightStatue'},{label:'Tenter de fuir l’île à la nage',to:'villageNightSwim'},{label:'Attaquer le village de front',to:'villageNightFight'}];const out=[{label:s.flags.caveVisitedDay?'Retourner fouiller la grotte':'Entrer dans la grotte',to:'villageNightCave'}];if(s.flags.caveVisitedDay){out.push({label:'Tenter de fuir l’île à la nage',to:'villageNightSwim'},{label:'Attaquer le village de front',to:'villageNightFight'});}return out;}},
 
-villageNightCave:{title:'Le sanctuaire dans la nuit',noImage:true,text:s=>{if(s.flags.captivePursued)return '<p>Vous courez dans l’obscurité, Hale et le marin juste derrière toi.</p><p>Les hommes pâles vous suivent. La lumière de leurs torches danse sur les parois et leurs pas résonnent de plus en plus près.</p><p>La galerie descend brutalement.</p><p>Vous franchissez une ouverture étroite dans la roche.</p><p>Puis les bruits derrière vous cessent.</p><p>Tu te retournes.</p><p>Les hommes pâles sont toujours là, quelques mètres plus haut.</p><p>Ils vous regardent depuis l’entrée du passage.</p><p>Aucun ne franchit la limite.</p><p>Dans l’obscurité, leurs yeux renvoient ce faible éclat bleu.</p><p>Puis, lentement, ils reculent.</p><p>Quelque chose dans cette partie de la grotte semble les empêcher — ou les effrayer — d’aller plus loin.</p><p>Devant vous, une faible lueur bleue apparaît puis disparaît au fond de la roche.</p>';if(s.flags.caveVisitedDay)return '<p>Tu retrouves la salle des fresques découverte plus tôt.</p><p>Dans l’obscurité, elle semble différente.</p><p>Un courant d’air froid vient d’un passage que tu n’avais pas remarqué derrière les amas de vêtements et d’équipement.</p><p>Plus loin, quelque chose émet par instants une faible lueur bleue.</p><p>La grotte continue beaucoup plus profondément que tu ne l’imaginais.</p>';return '<p>Tu avances dans la grotte à tâtons.</p><p>Les parois deviennent régulières, puis des marches taillées dans la roche te conduisent jusqu’à une salle couverte de fresques.</p><p>Des navires y sont attirés vers l’île. Des prisonniers sont conduits vers la mer. Des bâtiments repartent ensuite sans équipage.</p><p>Au pied des peintures s’entassent les affaires abandonnées de marins et de flibustiers.</p><p>Derrière cet amas, un passage descend encore dans la roche.</p><p>Une faible lueur bleue apparaît puis disparaît au loin.</p>';},onEnter:s=>{s.flags.caveTruth=true;s.flags.caveVisitedNight=true;},choices:[{label:'S’enfoncer dans la partie profonde de la grotte',to:'deepCaveFork'}]},
+villageNightCave:{title:'Le sanctuaire dans la nuit',noImage:true,text:s=>{if(s.flags.captivePursued)return captivePursuitHtml(s);if(s.flags.caveVisitedDay)return '<p>Tu retrouves la salle des fresques découverte plus tôt.</p><p>Dans l’obscurité, elle semble différente.</p><p>Un courant d’air froid vient d’un passage que tu n’avais pas remarqué derrière les amas de vêtements et d’équipement.</p><p>Plus loin, quelque chose émet par instants une faible lueur bleue.</p><p>La grotte continue beaucoup plus profondément que tu ne l’imaginais.</p>';return '<p>Tu avances dans la grotte à tâtons.</p><p>Les parois deviennent régulières, puis des marches taillées dans la roche te conduisent jusqu’à une salle couverte de fresques.</p><p>Des navires y sont attirés vers l’île. Des prisonniers sont conduits vers la mer. Des bâtiments repartent ensuite sans équipage.</p><p>Au pied des peintures s’entassent les affaires abandonnées de marins et de flibustiers.</p><p>Derrière cet amas, un passage descend encore dans la roche.</p><p>Une faible lueur bleue apparaît puis disparaît au loin.</p>';},onEnter:s=>{s.flags.caveTruth=true;s.flags.caveVisitedNight=true;if(s.flags.capturedRoute)s.flags.villageTime='night';},choices:[{label:'S’enfoncer dans la partie profonde de la grotte',to:'deepCaveFork'}]},
 
 villageNightStatue:{title:'Sous le regard du Gardien',noImage:true,text:s=>villageNightStatueHtml(s),choices:s=>{if(!s.flags.nightStatueActivated){const n=nightStatueVictimCount(s);if(n<=0)return[{label:'Continuer',to:'villageNightAftermath'}];return[{label:'Profiter de leur soumission pour les éliminer',stay:true,effect:x=>{x.flags.nightStatueActivated=true;resolveNightStatueVillage(x);}}];}return[{label:'Continuer',to:'villageNightAftermath'}];}},
 
-villageNightAftermath:{title:'',noImage:true,text:'',choices:[]},
+villageNightAftermath:{title:'Après le silence',noImage:true,text:s=>{if(!s.flags.providenceSailorsFreed)return '<p>Le village est enfin silencieux.</p><p>Tu rejoins la construction aux lourds barreaux aperçue plus tôt.</p><p>Derrière la grille, les derniers marins du <strong>Providence</strong> comprennent peu à peu que leurs gardiens ne reviendront pas.</p><p>Tu forces la serrure et les fais sortir.</p><p>La plupart sont trop faibles pour se battre, mais <strong>trois marins</strong> sont encore capables de marcher et de tenir une arme. Ils restent avec toi.</p><p>Il fait toujours nuit. Personne ne veut risquer une traversée dans l’obscurité.</p>';if(s.flags.captivePrisonersEscaped)return '<p>Le village est enfin silencieux.</p><p>La cage que vous avez ouverte plus tôt est vide. Les prisonniers se sont dispersés dans la forêt pendant votre fuite.</p><p>Les marins du Providence restés avec toi savent que plusieurs des leurs sont encore cachés sur l’île.</p><p>Vous décidez de ne pas tenter la mer avant le jour.</p>';return '<p>Le village est enfin silencieux.</p><p>La prison est déjà ouverte. Les marins du Providence libérés plus tôt se regroupent comme ils le peuvent autour de toi.</p><p>Il fait toujours nuit. Vous vous retranchez dans les bâtiments et attendez que le ciel commence à pâlir.</p>';},onEnter:s=>resolveVillageNightAftermath(s),choices:[{label:'Attendre le lever du jour',to:'villageDawnRegroup'}]},
 
-villageAssaultVictory:{title:'Les derniers marins du Providence',text:'<p>Plus aucun homme pâle ne se dresse entre vous et la prison.</p><p>Vous rejoignez la cage et attaquez la serrure. Après plusieurs coups, la lourde porte métallique finit par céder.</p><p>Derrière les barreaux se trouvent les derniers matelots du <strong>Providence</strong>.</p><p>Ils sont affamés, blessés et épuisés. Certains tiennent à peine debout.</p><p>Lorsqu’ils comprennent que vous êtes venus les chercher, plusieurs restent silencieux quelques secondes, comme s’ils n’osaient pas encore croire qu’ils sont libres.</p><p>La mission n’est pourtant pas terminée. Il faut encore quitter cette île.</p>',onEnter:s=>{s.flags.providenceSailorsFreed=true;s.flags.villageAssaultWon=true;},choices:[]},
+villageAssaultVictory:{title:'Les derniers marins du Providence',text:s=>s.flags.freedDuringAssault?'<p>Les derniers hommes pâles sont hors de combat.</p><p>La prison est déjà ouverte. Les marins du <strong>Providence</strong> qui ont pu combattre avec vous se regroupent au milieu des blessés.</p><p>Le soleil descend déjà. Entre les hommes épuisés, les blessés et la mer qui entoure l’île, repartir immédiatement serait imprudent.</p><p>Vous barricadez les bâtiments les plus solides et organisez les soins.</p><p>Vous attendrez le lever du jour pour décider comment quitter l’île.</p>':'<p>Plus aucun homme pâle ne se dresse entre vous et la prison.</p><p>Vous rejoignez la cage et attaquez la serrure. Après plusieurs coups, la lourde porte métallique finit par céder.</p><p>Derrière les barreaux se trouvent les derniers matelots du <strong>Providence</strong>.</p><p>Ils sont affamés, blessés et épuisés.</p><p>La plupart ne peuvent pas combattre, mais <strong>trois marins</strong> sont encore capables de marcher et de tenir une arme. Ils rejoignent ton groupe.</p><p>Le soleil descend déjà. Vous décidez de fortifier le village et d’attendre le lever du jour avant de reprendre la mer.</p>',onEnter:s=>resolveVillageAssaultVictory(s),choices:[{label:'Passer la nuit à l’abri',to:'villageDawnRegroup'}]},
 
-villageNight:{title:'Attendre la nuit',text:s=>'<p>Vous restez cachés jusqu’à la disparition complète du soleil.</p><p>Peu à peu, les feux s’éteignent dans le village.</p><p>Les hommes pâles regagnent leurs huttes.</p><p>Deux sentinelles seulement restent visibles.</p>'+((s.flags.flankingSoldiers||0)>0?'<p>De l’autre côté, tu aperçois parfois le reflet discret d’une lame : l’autre groupe est toujours en position.</p>':'')+'<p>Vous attendez encore.</p><p>Le moment venu, chaque soldat doit progresser sans bruit. Chacun lancera un dé. <strong>Seul un 6 signifie que l’ennemi a le temps de donner l’alerte avant d’être tué.</strong></p>',choices:[{label:'Donner le signal et lancer les dés',to:'villageNightResult',effect:s=>resolveNightRaid(s)}]},
+villageDawnRegroup:{title:'Au lever du jour',noImage:true,text:s=>{const marines=providenceMarinesWithParty(s);let h='<p>Une lumière grise finit par apparaître au-dessus de la mer.</p><p>Pour la première fois depuis votre arrivée sur l’île, personne ne vous poursuit.</p>';if(haleWithParty(s))h+='<p>Hale est toujours à tes côtés.</p>';else h+='<p>Hale n’est plus avec toi.</p>';if(marines>0)h+='<p><strong>'+String(marines)+' marin'+(marines>1?'s du Providence restent':' du Providence reste')+' en état de t’accompagner.</strong></p>';if((s.soldiers||0)>0)h+='<p>Tes <strong>'+String(s.soldiers)+' soldat'+(s.soldiers>1?'s survivants se regroupent':' survivant se regroupe')+'</strong> également près de la plage.</p>';h+='<p>Les autres rescapés sont blessés ou épuisés, mais ils sont libres.</p><p>Il faut maintenant trouver comment ramener tout le monde loin de cette île.</p>';return h;},onEnter:s=>resolveVillageDawn(s),choices:[]},
 
-villageNightResult:{title:'Dans le silence',text:s=>{let h='<p>Les silhouettes se mettent en mouvement.</p>';if((s.flags.nightRaidRolls||[]).length)h+='<p>Jets des soldats : '+s.flags.nightRaidRolls.map(v=>'<strong>'+v+'</strong>').join(' · ')+'.</p>';else h+=s.flags.haleAlive===false?'<p>Tu n’as plus aucun soldat à envoyer. Tu devras agir seul.</p>':'<p>Tu n’as plus aucun soldat à envoyer. Hale et toi devrez agir seuls.</p>';h+='<p>'+String(s.flags.nightRaidKills||0)+' homme'+((s.flags.nightRaidKills||0)>1?'s sont neutralisés':' est neutralisé')+' dans les premières secondes.</p>';if((s.flags.nightRaidAlerts||0)===0)h+='<p>Aucun cri. Le village dort encore.</p>';else if(s.flags.nightRaidAlerts===1)h+='<p>Un seul homme parvient à pousser un cri avant de tomber. Une lumière s’allume dans une hutte.</p>';else h+='<p><strong>'+String(s.flags.nightRaidAlerts)+' alertes éclatent presque en même temps.</strong> Des portes s’ouvrent dans tout le village.</p>';return h;},choices:[]},
+villageNight:{title:'Attendre la nuit',text:s=>'<p>Vous restez cachés jusqu’à la disparition complète du soleil.</p><p>Peu à peu, les feux s’éteignent dans le village.</p><p>Les hommes pâles regagnent leurs huttes.</p><p>Deux sentinelles seulement restent visibles.</p>'+((s.flags.flankingSoldiers||0)>0?'<p>De l’autre côté, tu aperçois parfois le reflet discret d’une lame : l’autre groupe est toujours en position.</p>':'')+'<p>Vous attendez encore.</p><p>Le moment venu, chaque combattant de ton groupe progressera sans bruit. Chacun lancera un dé. <strong>Seul un 6 signifie que l’ennemi a le temps de donner l’alerte avant d’être neutralisé.</strong></p>',onEnter:s=>{s.flags.villageTime='night';},choices:[{label:'Donner le signal et lancer les dés',to:'villageNightResult',effect:s=>resolveNightRaid(s)}]},
+
+villageNightResult:{title:'Dans le silence',text:s=>{const b=initVillageAssault(s);let h='<p>Les silhouettes se mettent en mouvement.</p>';if((s.flags.nightRaidRolls||[]).length)h+='<p>Jets du groupe : '+s.flags.nightRaidRolls.map(v=>'<strong>'+v+'</strong>').join(' · ')+'.</p>';else h+='<p>Tu n’as personne à envoyer en avant.</p>';h+='<p>'+String(s.flags.nightRaidKills||0)+' homme'+((s.flags.nightRaidKills||0)>1?'s pâles sont neutralisés':' pâle est neutralisé')+' dans les premières secondes.</p>';if((s.flags.nightRaidAlerts||0)===0)h+='<p>Aucun cri. Le village dort encore.</p>';else if(s.flags.nightRaidAlerts===1)h+='<p>Un seul homme parvient à pousser un cri avant de tomber. Une lumière s’allume dans une hutte.</p>';else h+='<p><strong>'+String(s.flags.nightRaidAlerts)+' alertes éclatent presque en même temps.</strong> Des portes s’ouvrent dans tout le village.</p>';if(b.enemy<=0)h+='<p>Plus aucun homme pâle ne se montre.</p>';else h+='<p>Il en reste <strong>'+String(b.enemy)+'</strong> capables de se battre.</p>';return h;},choices:s=>{const b=initVillageAssault(s);if(b.enemy<=0)return[{label:'Rejoindre la prison',to:'villageNightAftermath'}];return[{label:'Poursuivre l’attaque',to:'villageAssault'}];}},
 
 c68:{title:'La cage',text:'<p>On vous enferme dans une grande cage faite de poutres de navires et de barreaux récupérés sur plusieurs bâtiments.</p><p>À l’intérieur, des habitants du village voisin se serrent contre les parois.</p><p>Avec eux se trouvent plusieurs hommes portant encore les vêtements du <strong>Providence</strong>.</p><p>L’un d’eux reconnaît immédiatement ton uniforme.</p><blockquote>« Lieutenant... vous nous avez retrouvés. »</blockquote><p>Sa joie ne dure qu’une seconde.</p><p>Un homme pâle passe devant la cage.</p><p>Il porte une vieille veste du Providence.</p><p>Le marin près de toi devient livide.</p><blockquote>« Je le connais. »</blockquote><p>L’homme pâle s’arrête.</p><p>Il tourne lentement la tête vers la voix.</p><p>Dans l’ombre, ses yeux prennent un reflet bleu.</p><p>Mais son visage ne montre aucune reconnaissance.</p>',choices:[{label:'Demander au marin ce qu’il sait',to:'c69'}]},
 
 c69:{title:'Ceux qui reviennent',text:'<p>Le marin attend que le garde se soit éloigné.</p><blockquote>« Il était des nôtres. Ils l’ont emmené il y a quatre nuits. »</blockquote><p>Tu lui demandes comment il peut en être certain.</p><blockquote>« Sa veste. Sa cicatrice à la joue. Sa façon de marcher. C’est lui. »</blockquote><p>Il baisse encore la voix.</p><blockquote>« Mais il ne me reconnaît plus. Il ne parle plus. Je ne l’ai jamais vu dormir. »</blockquote><p>Depuis leur capture, les hommes pâles viennent chercher quelques prisonniers chaque nuit.</p><p>Certains ne reviennent jamais.</p><p>D’autres réapparaissent plusieurs jours plus tard parmi les gardes.</p><p>La peau blanchie.</p><p>Le regard vide.</p><p>Et cette lueur bleue dans les yeux.</p><p>Le soleil disparaît derrière les arbres.</p><p>Autour de la cage, les torches commencent à s’allumer.</p>',choices:[{label:'Attendre et voir ce qu’ils font des prisonniers',to:'captiveTransfer'},{label:'Préparer les prisonniers à attaquer dès que la cage s’ouvrira',to:'captiveAmbush'}]},
 
-captiveAmbush:{title:'À l’ouverture de la cage',noImage:true,text:s=>{if(!s.flags.captiveAmbushRolled)return '<p>Tu expliques ton plan à voix basse.</p><p>Lorsque les gardes ouvriront, il faudra agir avant qu’ils comprennent.</p><p>Hale se place près de la porte. Deux marins du Providence se rapprochent derrière lui.</p><p>Des pas approchent.</p><p>La serrure tourne.</p><p>Tu n’auras qu’une seconde.</p>';let h=diceResultHtml(s);if(s.flags.captiveAmbushSuccess){h+='<p>Au moment où la porte s’ouvre, tu frappes le premier garde et Hale se jette sur le second.</p><p>Les prisonniers poussent ensemble.</p><p>La cage s’ouvre brutalement.</p><p>Des dizaines de captifs se dispersent dans le village et la forêt avant que les hommes pâles puissent refermer le passage.</p><p>Des cris éclatent derrière vous.</p><p>Hale reste près de toi.</p><p>Vous courez vers les rochers, poursuivis par plusieurs silhouettes aux yeux bleus.</p><p>Une ouverture sombre apparaît dans la paroi.</p>';return h;}h+=damageResultHtml(s,'captiveAmbush')+'<p>Tu bouges une fraction de seconde trop tard.</p><p>Une crosse te frappe contre les barreaux et le mouvement des prisonniers s’effondre avant même d’avoir commencé.</p><p>Les gardes referment la porte.</p><p>Quelques heures plus tard, ils reviennent.</p><p>Cette fois, ils te désignent directement.</p>';return h;},choices:s=>!s.flags.captiveAmbushRolled?[{label:'Attaquer à l’ouverture — Dextérité',stay:true,diceTest:true,effect:x=>resolveCaptiveAmbush(x)}]:s.hp<=0?[{label:'La fin du voyage',to:'death'}]:s.flags.captiveAmbushSuccess?[{label:'Entrer dans la grotte pour échapper aux poursuivants',to:'villageNightCave',effect:x=>{x.flags.capturedRoute=true;}}]:[{label:'Se laisser emmener',to:'captiveTransfer'}]},
+captiveAmbush:{title:'À l’ouverture de la cage',noImage:true,text:s=>{if(!s.flags.captiveAmbushRolled)return '<p>Tu expliques ton plan à voix basse.</p><p>Lorsque les gardes ouvriront, il faudra agir avant qu’ils comprennent.</p><p>Hale se place près de la porte. Deux marins du Providence se rapprochent derrière lui.</p><p>Des pas approchent.</p><p>La serrure tourne.</p><p>Tu n’auras qu’une seconde.</p>';let h=diceResultHtml(s);if(s.flags.captiveAmbushSuccess){h+='<p>Au moment où la porte s’ouvre, tu frappes le premier garde et lui arraches son sabre. Hale se jette sur le second.</p><p>Les prisonniers poussent ensemble.</p><p>La cage s’ouvre brutalement.</p><p>Des dizaines de captifs se dispersent dans le village et la forêt avant que les hommes pâles puissent refermer le passage.</p><p>Deux marins du Providence restent avec Hale et toi.</p><p>Des cris éclatent derrière vous.</p><p>Vous courez vers les rochers, poursuivis par plusieurs silhouettes aux yeux bleus.</p><p>Une ouverture sombre apparaît dans la paroi.</p>';return h;}h+=damageResultHtml(s,'captiveAmbush')+'<p>Tu bouges une fraction de seconde trop tard.</p><p>Une crosse te frappe contre les barreaux et le mouvement des prisonniers s’effondre avant même d’avoir commencé.</p><p>Les gardes referment la porte.</p><p>Quelques heures plus tard, ils reviennent.</p><p>Cette fois, ils te désignent directement.</p>';return h;},choices:s=>!s.flags.captiveAmbushRolled?[{label:'Attaquer à l’ouverture — Dextérité',stay:true,diceTest:true,effect:x=>resolveCaptiveAmbush(x)}]:s.hp<=0?[{label:'La fin du voyage',to:'death'}]:s.flags.captiveAmbushSuccess?[{label:'Entrer dans la grotte pour échapper aux poursuivants',to:'villageNightCave',effect:x=>{x.flags.capturedRoute=true;x.flags.captivePursued=true;x.flags.villageTime='night';}}]:[{label:'Se laisser emmener',to:'captiveTransfer'}]},
 
 captiveTransfer:{title:'Choisis parmi les prisonniers',noImage:true,text:'<p>La nuit est complètement tombée lorsqu’un groupe d’hommes pâles arrive devant la cage.</p><p>Ils n’échangent presque aucun mot.</p><p>Un doigt te désigne.</p><p>Puis Hale.</p><p>Puis un marin du Providence.</p><p>La porte s’ouvre.</p><p>On vous lie les poignets derrière le dos et on vous entraîne hors du village.</p><p>Sur le chemin, une silhouette vous croise.</p><p>Le marin du Providence s’arrête net.</p><blockquote>« C’est lui... »</blockquote><p>L’homme pâle porte les restes d’un uniforme de son équipage.</p><p>Il tourne la tête.</p><p>Ses yeux brillent faiblement dans l’obscurité.</p><p>Il passe à côté de vous sans ralentir.</p>',choices:[{label:'Continuer jusqu’à leur destination',to:'captiveRitual'}]},
 
-captiveRitual:{title:'Sous la roche',noImage:true,text:'<p>On vous conduit jusqu’à une ouverture basse dans la falaise.</p><p>À l’intérieur, l’air est froid et chargé d’embruns.</p><p>Des affaires s’entassent contre les parois : bottes, manteaux, sabres, mousquets, ceinturons et sacs provenant d’innombrables équipages.</p><p>Les hommes pâles vous retirent tout ce qui pourrait gêner vos mouvements et le jettent avec le reste.</p><p>Plus loin, quelque chose frappe lentement contre la roche.</p><p>Pas comme une vague.</p><p>Comme quelque chose d’immense qui bougerait sous l’eau.</p><p>Soudain, tout le sol tremble.</p><p>Les flammes vacillent.</p><p>Les hommes pâles se figent.</p><p>Plusieurs tombent à genoux en regardant vers les profondeurs de la grotte.</p><p>Un second grondement monte sous vos pieds.</p><p>Le marin du Providence se débat.</p><p>Une lampe tombe et s’éteint.</p><p>Dans l’obscurité, tu frottes tes liens contre une arête de pierre jusqu’à sentir la corde céder.</p><p>Ta main rencontre le tas d’équipement.</p><p>Tu trouves un sabre.</p>',choices:[{label:'Profiter du chaos et courir dans les galeries',to:'villageNightCave',effect:x=>{x.flags.capturedRoute=true;}},{label:'Essayer d’abord de libérer Hale et le marin',to:'captiveFreeCompanions'}]},
+captiveRitual:{title:'Sous la roche',noImage:true,text:'<p>On vous conduit jusqu’à une ouverture basse dans la falaise.</p><p>À l’intérieur, l’air est froid et chargé d’embruns.</p><p>Le long des parois s’entassent les affaires retirées aux prisonniers : bottes, manteaux, sabres, mousquets, ceinturons et sacs provenant d’innombrables équipages.</p><p>Plus loin, quelque chose frappe lentement contre la roche.</p><p>Pas comme une vague.</p><p>Comme quelque chose d’immense qui bougerait sous l’eau.</p><p>Soudain, tout le sol tremble.</p><p>Les flammes vacillent.</p><p>Les hommes pâles se figent.</p><p>Plusieurs tombent à genoux en regardant vers les profondeurs de la grotte.</p><p>Un second grondement monte sous vos pieds.</p><p>Le marin du Providence se débat.</p><p>Une lampe tombe et s’éteint.</p><p>Dans l’obscurité, tu frottes tes liens contre une arête de pierre jusqu’à sentir la corde céder.</p><p>Ta main rencontre le tas d’équipement.</p><p>Tu trouves un sabre.</p>',onEnter:s=>equipFoundSabre(s),choices:[{label:'Profiter du chaos et courir seul dans les galeries',to:'villageNightCave',effect:x=>{leaveHaleBehind(x);setProvidenceMarinesWithParty(x,0);x.flags.capturedRoute=true;x.flags.captivePursued=true;x.flags.villageTime='night';}},{label:'Essayer d’abord de libérer Hale et le marin',to:'captiveFreeCompanions'}]},
 
-captiveFreeCompanions:{title:'Ne pas partir seul',noImage:true,text:s=>{if(!s.flags.captiveCompanionRescueRolled)return '<p>Tu te glisses jusqu’à Hale dans l’obscurité.</p><p>Les hommes pâles commencent déjà à se relever.</p><p>Tu dois couper ses liens avant qu’une torche ne soit rallumée.</p>';let h=diceResultHtml(s);if(s.flags.captiveCompanionRescueSuccess){h+='<p>La corde cède.</p><p>Hale libère immédiatement le marin pendant que tu saisis un sabre parmi l’équipement abandonné.</p><p>Vous vous engouffrez tous les trois dans un passage latéral.</p><p>Derrière vous, une torche se rallume.</p><p>Un cri éclate.</p><p>Ils vous ont vus.</p><p>Des pas se lancent à votre poursuite dans la galerie.</p>';return h;}h+=damageResultHtml(s,'captiveCompanionRescue')+'<p>Une silhouette surgit derrière toi.</p><p>Tu esquives le premier coup, mais le second te frappe alors que Hale essaie encore de dégager ses poignets.</p><blockquote>« Cours ! »</blockquote><p>Tu n’as plus le temps.</p><p>Tu t’enfonces seul dans le passage pendant que les cris résonnent derrière toi.</p>';return h;},choices:s=>!s.flags.captiveCompanionRescueRolled?[{label:'Libérer Hale — Dextérité',stay:true,diceTest:true,effect:x=>resolveCaptiveCompanionRescue(x)}]:s.hp<=0?[{label:'La fin du voyage',to:'death'}]:[{label:'Fuir plus profondément dans la grotte',to:'villageNightCave',effect:x=>{x.flags.capturedRoute=true;x.flags.captivePursued=true;}}]},
+captiveFreeCompanions:{title:'Ne pas partir seul',noImage:true,text:s=>{if(!s.flags.captiveCompanionRescueRolled)return '<p>Tu te glisses jusqu’à Hale dans l’obscurité.</p><p>Les hommes pâles commencent déjà à se relever.</p><p>Tu dois couper ses liens avant qu’une torche ne soit rallumée.</p>';let h=diceResultHtml(s);if(s.flags.captiveCompanionRescueSuccess){h+='<p>La corde cède.</p><p>Hale libère immédiatement le marin pendant que tu gardes le sabre trouvé dans l’équipement abandonné.</p><p>Vous vous engouffrez tous les trois dans un passage latéral.</p><p>Derrière vous, une torche se rallume.</p><p>Un cri éclate.</p><p>Ils vous ont vus.</p><p>Des pas se lancent à votre poursuite dans la galerie.</p>';return h;}h+=damageResultHtml(s,'captiveCompanionRescue')+'<p>Une silhouette surgit derrière toi.</p><p>Tu esquives le premier coup, mais le second te frappe alors que Hale essaie encore de dégager ses poignets.</p><blockquote>« Cours ! »</blockquote><p>Tu n’as plus le temps.</p><p>Tu t’enfonces seul dans le passage pendant que les cris résonnent derrière toi.</p>';return h;},choices:s=>!s.flags.captiveCompanionRescueRolled?[{label:'Libérer Hale — Dextérité',stay:true,diceTest:true,effect:x=>resolveCaptiveCompanionRescue(x)}]:s.hp<=0?[{label:'La fin du voyage',to:'death'}]:[{label:'Fuir plus profondément dans la grotte',to:'villageNightCave',effect:x=>{x.flags.capturedRoute=true;x.flags.captivePursued=true;x.flags.villageTime='night';}}]},
 
 deepCaveFork:{title:'Deux passages',noImage:true,text:'<p>Le couloir descend jusqu’à une cavité où la roche se sépare en deux passages.</p><p>À gauche, une lueur bleue très faible pulse par instants au fond de la galerie.</p><p>À droite, tu entends de l’eau couler dans l’obscurité.</p><p>Puis un murmure traverse la grotte.</p><p>Tu ne comprends aucun mot.</p><p>Pourtant, pendant une seconde, tu as l’impression qu’il prononce ton nom.</p>',choices:[{label:'Suivre la lueur bleue',to:'deepCaveRevenant'},{label:'Suivre le bruit de l’eau',to:'deepCaveFlooded'}]},
 
-deepCaveRevenant:{title:'Celui qui ne respire plus',noImage:true,text:s=>'<p>La lueur vient d’une petite chambre naturelle.</p><p>Un homme se tient debout au milieu.</p><p>Il porte les restes d’un uniforme de marin mangé par le sel.</p><p>Ses vêtements sont trempés alors qu’aucune eau ne tombe du plafond.</p><p>Sa peau a la couleur de la cire.</p><p>Ses yeux diffusent un reflet bleu beaucoup plus net que ceux des hommes du village.</p><p>Il te regarde.</p><p>Sa poitrine ne bouge pas.</p><p>Sa bouche s’ouvre lentement.</p><p>Aucun son n’en sort.</p><p>Puis il se jette sur toi.</p>'+fightHtml(s,'deepCaveRevenant',DROWNED_SAILOR),choices:s=>{const f=s.combats?.deepCaveRevenant;if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];if(f&&f.hp<=0)return[{label:'Continuer au-delà de la chambre',to:'deepCaveSanctum'}];return[{label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>fightRound(x,'deepCaveRevenant',DROWNED_SAILOR)}];}},
+deepCaveRevenant:{title:'Celui qui ne respire plus',noImage:true,text:s=>'<p>La lueur vient d’une petite chambre naturelle.</p><p>Un homme se tient debout au milieu.</p><p>Il porte les restes d’un uniforme de marin mangé par le sel.</p><p>Ses vêtements sont trempés alors qu’aucune eau ne tombe du plafond.</p><p>Sa peau a la couleur de la cire.</p><p>Ses yeux diffusent un reflet bleu beaucoup plus net que ceux des hommes du village.</p><p>Il te regarde.</p><p>Sa poitrine ne bouge pas.</p><p>Sa bouche s’ouvre lentement.</p><p>Aucun son n’en sort.</p><p>Puis il se jette sur toi.</p>'+(s.flags.deepCaveHaleAssist?'<p>Hale réagit avant toi. Son sabre frappe la créature à l’épaule et la repousse contre la roche. <strong>Son intervention lui a déjà infligé 3 dégâts.</strong></p>':'')+fightHtml(s,'deepCaveRevenant',DROWNED_SAILOR),onEnter:s=>prepareDeepCaveRevenant(s),choices:s=>{const f=s.combats?.deepCaveRevenant;if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];if(f&&f.hp<=0)return[{label:'Continuer au-delà de la chambre',to:'deepCaveSanctum'}];return[{label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>fightRound(x,'deepCaveRevenant',DROWNED_SAILOR)}];}},
 
 deepCaveFlooded:{title:'Le passage noyé',noImage:true,text:s=>{if(!s.flags.deepCaveFloodedRolled)return '<p>Le passage descend rapidement.</p><p>L’eau te monte aux chevilles, puis aux genoux.</p><p>Elle est glacée.</p><p>Plus loin, la galerie se resserre et le courant devient brutalement plus fort.</p><p>Quelque chose remue sous la surface derrière toi.</p><p>Tu dois franchir les quelques mètres suivants avant que le niveau ne monte davantage.</p>';let h=diceResultHtml(s);if(s.flags.deepCaveFloodedDex)h+='<p>Tu trouves des prises dans la roche et traverses avant que le courant ne puisse t’emporter.</p>';else h+=damageResultHtml(s,'deepCaveFlooded')+'<p>Le courant te plaque contre la paroi et te fait heurter violemment la roche, mais tu parviens à te dégager.</p>';h+='<p>De l’autre côté, le passage remonte vers une salle parfaitement sèche.</p>';return h;},choices:s=>!s.flags.deepCaveFloodedRolled?[{label:'Traverser — Dextérité',stay:true,diceTest:true,effect:x=>resolveDeepCaveFlooded(x)}]:s.hp<=0?[{label:'La fin du voyage',to:'death'}]:[{label:'Entrer dans la salle',to:'deepCaveSanctum'}]},
 
@@ -1446,7 +1539,6 @@ const PAGE_NAV_TITLES = {
   "c44": "Les anciens registres",
   "c45": "L'île d'en face",
   "c46": "La carte locale",
-  "c47": "Retour au village",
   "c48": "La jetée",
   "c49": "Vers la mer",
   "c51": "Le journal du guetteur",
@@ -1471,11 +1563,6 @@ const PAGE_NAV_TITLES = {
   "caveExit": "Vers le village",
   "villageRear": "Derrière le village",
   "villageWalkIn": "Entrer à découvert",
-  "villageStatueSubmission": "À genoux",
-  "statuePrison": "La prison",
-  "statueExecution": "Sous le regard du Gardien",
-  "statueSpareLast": "Un prisonnier",
-  "statueKillLast": "Ouvrir la cage",
   "villageRingReturn": "Rendre la bague",
   "villageRingDominance": "Lever la bague",
   "ringPrisonApproach": "Vers les barreaux",
@@ -1491,8 +1578,9 @@ const PAGE_NAV_TITLES = {
   "villageNightSearch": "Fouiller l’île",
   "villageNightCave": "Le sanctuaire dans la nuit",
   "villageNightStatue": "Sous le regard du Gardien",
-  "villageNightAftermath": "",
+  "villageNightAftermath": "Après le silence",
   "villageAssaultVictory": "Les marins du Providence",
+  "villageDawnRegroup": "Au lever du jour",
   "villageNight": "Attendre la nuit",
   "villageNightResult": "Dans le silence",
   "c68": "Les captifs",
@@ -1507,7 +1595,7 @@ const PAGE_NAV_TITLES = {
   "deepCaveSanctum": "Le cœur de la grotte",
   "death": "La fin du voyage"
 };
-const PAGE_ORDER=['c0','c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c12','c13','c15','c16','c20','search2','north1','north2','north3','north4','east1','east2','east3','eastRefuse','east4','east5','east6','south1','south2','c21','c22','c23','c24','c25','c26','c27','c28','c29','c30','directIsland','c31','pirateApproach','pirateParley','pirateOfferRejected','pirateDealAccepted','c32','c34','c35','c36','c37','ravineDown','ravineMouth','ravineFight','ravineCorpse','ravineExit','c41','c50','c38','c39','c40','c42','c43','c44','c45','c46','c47','c48','c49','c51','c52','c53','c54','c55','c56','c57','islandRetreat','islandBeach','islandBeachFight','islandBeachYield','islandCaptured','islandForestLanding','forestTrap','forestAlligator','islandRecon','coveClearing','caveTunnel','caveShrine','caveExit','villageRear','villageWalkIn','villageStatueSubmission','statuePrison','statueExecution','statueSpareLast','statueKillLast','villageRingReturn','villageRingDominance','ringPrisonApproach','ringPrisonRevolt','ringKillThree','villageAssault','villageRetreat','villageRetreatNight','villageNightSwim','villageNightGuard1','villageNightGuard2','villageNightFight','villageNightSearch','villageNightCave','villageNightStatue','villageNightAftermath','villageAssaultVictory','villageNight','villageNightResult','c68','c69','captiveAmbush','captiveTransfer','captiveRitual','captiveFreeCompanions','deepCaveFork','deepCaveRevenant','deepCaveFlooded','deepCaveSanctum','death'];
+const PAGE_ORDER=['c0','c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c12','c13','c15','c16','c20','search2','north1','north2','north3','north4','east1','east2','east3','eastRefuse','east4','east5','east6','south1','south2','c21','c22','c23','c24','c25','c26','c27','c28','c29','c30','directIsland','c31','pirateApproach','pirateParley','pirateOfferRejected','pirateDealAccepted','c32','c34','c35','c36','c37','ravineDown','ravineMouth','ravineFight','ravineCorpse','ravineExit','c41','c50','c38','c39','c40','c42','c43','c44','c45','c46','c48','c49','c51','c52','c53','c54','c55','c56','c57','islandRetreat','islandBeach','islandBeachFight','islandBeachYield','islandCaptured','islandForestLanding','forestTrap','forestAlligator','islandRecon','coveClearing','caveTunnel','caveShrine','caveExit','villageRear','villageWalkIn','villageRingReturn','villageRingDominance','ringPrisonApproach','ringPrisonRevolt','ringKillThree','villageAssault','villageRetreat','villageRetreatNight','villageNightSwim','villageNightGuard1','villageNightGuard2','villageNightFight','villageNightSearch','villageNightCave','villageNightStatue','villageNightAftermath','villageAssaultVictory','villageDawnRegroup','villageNight','villageNightResult','c68','c69','captiveAmbush','captiveTransfer','captiveRitual','captiveFreeCompanions','deepCaveFork','deepCaveRevenant','deepCaveFlooded','deepCaveSanctum','death'];
 const PAGE_BY_NODE=Object.fromEntries(PAGE_ORDER.map((id,i)=>[id,i]));
 const padPage=n=>String(n).padStart(3,'0');
 
@@ -1647,7 +1735,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:100,pageMapVersion:16,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:101,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
