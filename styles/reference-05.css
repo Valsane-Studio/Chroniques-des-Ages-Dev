@@ -4486,3 +4486,15 @@ body.no-status-tags .app-shell {
   background:rgba(245,236,216,.68);
   border-color:rgba(99,76,49,.68);
 }
+
+
+/* V68.263 — états vides / image manquante
+   Un HUD sans caractéristiques ne doit jamais laisser sa texture seule à l'écran.
+   Une image marquée hidden doit rester réellement masquée malgré les anciennes règles !important. */
+.status-tags:empty {
+  display: none !important;
+}
+.image-frame .story-image.hidden,
+.image-frame.has-story-image .story-image.hidden {
+  display: none !important;
+}
