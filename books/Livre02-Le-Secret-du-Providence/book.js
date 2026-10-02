@@ -186,11 +186,12 @@ function resolveNightRaid(s){
   const n=Math.max(0,displayedSoldierCount(s));
   const rolls=[];for(let i=0;i<n;i++)rolls.push(cryptoDie6());
   const b=initVillageAssault(s);
-  const kills=Math.min(n,Math.max(0,Math.floor(Number(b.enemy)||0)));
+  const successfulAttacks=rolls.filter(v=>v<=4).length;
+  const kills=Math.min(successfulAttacks,Math.max(0,Math.floor(Number(b.enemy)||0)));
   b.enemy=Math.max(0,b.enemy-kills);
   if(b.enemy<=0){b.enemy=0;b.enemyDefeated=true;}
   s.flags.nightRaidRolls=rolls;
-  s.flags.nightRaidAlerts=rolls.filter(v=>v===6).length;
+  s.flags.nightRaidAlerts=rolls.filter(v=>v>=5).length;
   s.flags.nightRaidKills=kills;
 }
 
@@ -1414,7 +1415,7 @@ villageAssaultVictory:{title:'Les derniers marins du Providence',text:s=>{const 
 
 villageDawnRegroup:{title:'Au lever du jour',noImage:true,text:s=>{const marines=providenceMarinesWithParty(s);let h='<p>Une lumière grise finit par apparaître au-dessus de la mer.</p><p>Pour la première fois depuis votre arrivée sur l’île, personne ne vous poursuit.</p>';if(haleWithParty(s))h+='<p>Hale est toujours à tes côtés.</p>';else h+='<p>Hale n’est plus avec toi.</p>';if(marines>0)h+='<p><strong>'+String(marines)+' marin'+(marines>1?'s du Providence restent':' du Providence reste')+' en état de t’accompagner.</strong></p>';if((s.soldiers||0)>0)h+='<p>Tes <strong>'+String(s.soldiers)+' soldat'+(s.soldiers>1?'s survivants se regroupent':' survivant se regroupe')+'</strong> également près de la plage.</p>';h+='<p>Les autres rescapés sont blessés ou épuisés, mais ils sont libres.</p><p>Il faut maintenant trouver comment ramener tout le monde loin de cette île.</p>';return h;},onEnter:s=>resolveVillageDawn(s),choices:[]},
 
-villageNight:{title:'Attendre la nuit',text:s=>'<p>Vous restez cachés jusqu’à la disparition complète du soleil.</p><p>Peu à peu, les feux s’éteignent dans le village.</p><p>Les hommes pâles regagnent leurs huttes.</p><p>Deux sentinelles seulement restent visibles.</p>'+((s.flags.flankingSoldiers||0)>0?'<p>De l’autre côté, tu aperçois parfois le reflet discret d’une lame : l’autre groupe est toujours en position.</p>':'')+'<p>Vous attendez encore.</p><p>Le moment venu, chaque combattant de ton groupe progressera sans bruit. Chacun lancera un dé. <strong>Seul un 6 signifie que l’ennemi a le temps de donner l’alerte avant d’être neutralisé.</strong></p>',onEnter:s=>{s.flags.villageTime='night';},choices:[{label:'Lancer l’assaut',to:'villageNightResult',effect:s=>resolveNightRaid(s)}]},
+villageNight:{title:'Attendre la nuit',text:s=>'<p>Vous restez cachés jusqu’à la disparition complète du soleil.</p><p>Peu à peu, les feux s’éteignent dans le village.</p><p>Les hommes pâles regagnent leurs huttes.</p><p>Deux sentinelles seulement restent visibles.</p>'+((s.flags.flankingSoldiers||0)>0?'<p>De l’autre côté, tu aperçois parfois le reflet discret d’une lame : l’autre groupe est toujours en position.</p>':'')+'<p>Vous attendez encore.</p><p>Le moment venu, chaque combattant de ton groupe progressera sans bruit. Chacun lancera un dé. <strong>Sur 1, 2, 3 ou 4, un homme pâle est neutralisé. Sur 5 ou 6, l’attaque échoue et l’alerte est donnée.</strong></p>',onEnter:s=>{s.flags.villageTime='night';},choices:[{label:'Lancer l’assaut',to:'villageNightResult',effect:s=>resolveNightRaid(s)}]},
 
 villageNightResult:{title:'Dans le silence',text:s=>{const b=initVillageAssault(s);let h='<p>Les silhouettes se mettent en mouvement.</p>';if((s.flags.nightRaidRolls||[]).length)h+='<p>Jets du groupe : '+s.flags.nightRaidRolls.map(v=>'<strong>'+v+'</strong>').join(' · ')+'.</p>';else h+='<p>Tu n’as personne à envoyer en avant.</p>';h+='<p>'+String(s.flags.nightRaidKills||0)+' homme'+((s.flags.nightRaidKills||0)>1?'s pâles sont neutralisés':' pâle est neutralisé')+' dans les premières secondes.</p>';if((s.flags.nightRaidAlerts||0)===0)h+='<p>Aucun cri. Le village dort encore.</p>';else if(s.flags.nightRaidAlerts===1)h+='<p>Un seul homme parvient à pousser un cri avant de tomber. Une lumière s’allume dans une hutte.</p>';else h+='<p><strong>'+String(s.flags.nightRaidAlerts)+' alertes éclatent presque en même temps.</strong> Des portes s’ouvrent dans tout le village.</p>';if(b.enemy<=0)h+='<p>Plus aucun homme pâle ne se montre.</p>';else h+='<p>Il en reste <strong>'+String(b.enemy)+'</strong> capables de se battre.</p>';return h;},choices:s=>{const b=initVillageAssault(s);if(b.enemy<=0)return[{label:'Rejoindre la prison',to:'villageNightAftermath'}];return[{label:'Poursuivre l’attaque',to:'villageAssault'}];}},
 
@@ -1703,7 +1704,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:116,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:117,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
