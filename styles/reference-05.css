@@ -4507,3 +4507,9 @@ body.no-status-tags .app-shell {
   background-size: 100% 100% !important;
   background-repeat: no-repeat !important;
 }
+
+
+/* V68.265 — le cadre d'illustration ne doit jamais survivre sur une fiche/prologue. */
+.image-frame.hidden {
+  display: none !important;
+}
