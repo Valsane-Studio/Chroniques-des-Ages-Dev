@@ -618,7 +618,7 @@ function villageAssaultHtml(s){
   h+=`<div class="combat-roll-result crew-battle-result">
     <div class="combat-roll-title">Assaut du village</div>
     <div class="crew-strength-preview">
-      <div><strong>Ton groupe</strong><span>Soldats : <strong>${s.soldiers||0}</strong> · Hale : <strong>${s.flags.haleAlive===false?'hors de combat':'présent'}</strong></span></div>
+      <div><strong>Ton groupe</strong><span>Soldats : <strong>${s.soldiers||0}</strong> · Hale : <strong>${haleWithParty(s)?'présent':'absent'}</strong>${b.marines>0?' · Marins du Providence : <strong>'+String(b.marines)+'</strong>':''}</span></div>
       <div><strong>Adversaires</strong><span>Hommes pâles : <strong>${b.enemy}</strong></span></div>
     </div>
     ${b.round===0?villageAssaultRulesHtml():''}
@@ -648,17 +648,19 @@ function villageAssaultHtml(s){
         h+='</div>';
       }
 
-      h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Ton groupe</strong><span>Soldats et Hale : réussite sur 1–4</span></div>';
+      h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Ton groupe</strong><span>Soldats et Hale : réussite sur 1–4 · marins libérés : 1–3</span></div>';
       if(l.soldierDice.length)h+='<p>Soldats</p><div class="crew-training-dice">'+villageBattleDiceRow(l.soldierDice,4)+'</div>';
       if(l.flankDice.length)h+='<p>Feu croisé</p><div class="crew-training-dice">'+villageBattleDiceRow(l.flankDice,4)+'</div>';
       if(l.haleDice.length)h+='<p>Hale</p><div class="crew-training-dice">'+villageBattleDiceRow(l.haleDice,4)+'</div>';
+      if(l.marineDice.length)h+='<p>Marins du Providence</p><div class="crew-training-dice">'+villageBattleDiceRow(l.marineDice,3)+'</div>';
       h+='<p><strong>'+String(l.enemyLoss)+' homme'+(l.enemyLoss>1?'s pâles tombent':' pâle tombe')+'.</strong></p></div>';
 
       h+='<div class="crew-training-side"><div class="crew-training-heading"><strong>Hommes pâles</strong><span>Réussite sur <strong>1</strong></span></div><div class="crew-training-dice">'+villageBattleDiceRow(l.enemyDice,1)+'</div>';
       if(l.prevented)h+='<p>Une de leurs réussites est annulée par ta couverture.</p>';
       if(l.soldierLoss)h+='<p><strong>Tu perds '+String(l.soldierLoss)+' soldat'+(l.soldierLoss>1?'s':'')+'.</strong></p>';
+      if(l.marineLoss)h+='<p><strong>'+String(l.marineLoss)+' marin'+(l.marineLoss>1?'s du Providence tombent':' du Providence tombe')+'.</strong></p>';
       if(l.haleLost)h+='<p><strong>Hale tombe pendant l’affrontement.</strong></p>';
-      if(!l.soldierLoss&&!l.haleLost)h+='<p>Personne ne tombe dans ton groupe.</p>';
+      if(!l.soldierLoss&&!l.marineLoss&&!l.haleLost)h+='<p>Personne ne tombe dans ton groupe.</p>';
       h+='</div>';
 
       h+='<div class="crew-battle-summary"><strong>Soldats restants : '+String(displayedSoldierCount(s))+'</strong> · <strong>Hommes pâles restants : '+String(b.enemy||0)+'</strong></div>';
@@ -667,8 +669,9 @@ function villageAssaultHtml(s){
   }
 
   if(b.enemyDefeated)h+='<p>Le dernier adversaire tombe. Pour quelques secondes, le village devient silencieux.</p>';
+  else if(b.enemyFled)h+='<p>Les hommes pâles encore debout finissent par rompre le combat et disparaissent entre les huttes et les arbres. La place est à vous.</p>';
 
-  if(!b.enemyDefeated&&villageHeroAlone(s)){
+  if(!b.enemyDefeated&&!b.enemyFled&&villageHeroAlone(s)){
     h+=b.round===0
       ?'<p><strong>Tu es arrivé jusqu’ici sans aucun homme encore capable de se battre à tes côtés.</strong> Face au village entier, donner l’assaut seul serait suicidaire : il faut te replier.</p>'
       :'<p><strong>Le dernier de tes hommes vient de tomber.</strong> Les hommes pâles se tournent vers toi. Rester ici serait suicidaire : il faut te replier.</p>';
@@ -687,7 +690,7 @@ function useCavePistolsInAssault(s){
 function villageAssaultChoices(s){
   const b=initVillageAssault(s);
   if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];
-  if(b.enemyDefeated)return[{label:s.flags.villageTime==='night'?'Rejoindre la prison dans le village silencieux':'Rejoindre la prison',to:s.flags.villageTime==='night'?'villageNightAftermath':'villageAssaultVictory'}];
+  if(b.enemyDefeated||b.enemyFled)return[{label:s.flags.villageTime==='night'?'Rejoindre la prison dans le village silencieux':'Rejoindre la prison',to:s.flags.villageTime==='night'?'villageNightAftermath':'villageAssaultVictory'}];
   if(villageHeroAlone(s))return[{label:'Fuir vers la forêt',to:'villageRetreat'}];
   const out=[];
   if(b.round===0&&!s.flags.cavePistolsUsed&&s.inventory?.pistolets_silex){
@@ -1053,13 +1056,14 @@ function prepareDeepCaveRevenant(s){
 
 function captivePursuitHtml(s){
   const marines=providenceMarinesWithParty(s);
+  const group=haleWithParty(s)||marines>0;
   let who='Tu cours dans l’obscurité';
   if(haleWithParty(s)&&marines===1)who='Vous courez dans l’obscurité, Hale et le marin du Providence juste derrière toi';
   else if(haleWithParty(s)&&marines>1)who='Vous courez dans l’obscurité, Hale et '+String(marines)+' marins du Providence juste derrière toi';
   else if(haleWithParty(s))who='Vous courez dans l’obscurité, Hale juste derrière toi';
   else if(marines===1)who='Vous courez dans l’obscurité, le marin du Providence juste derrière toi';
   else if(marines>1)who='Vous courez dans l’obscurité avec '+String(marines)+' marins du Providence';
-  return '<p>'+who+'.</p><p>Les hommes pâles vous suivent. La lumière de leurs torches danse sur les parois et leurs pas résonnent de plus en plus près.</p><p>La galerie descend brutalement.</p><p>Vous franchissez une ouverture étroite dans la roche.</p><p>Puis les bruits derrière vous cessent.</p><p>Tu te retournes.</p><p>Les hommes pâles sont toujours là, quelques mètres plus haut.</p><p>Ils vous regardent depuis l’entrée du passage.</p><p>Aucun ne franchit la limite.</p><p>Dans l’obscurité, leurs yeux renvoient ce faible éclat bleu.</p><p>Puis, lentement, ils reculent.</p><p>Quelque chose dans cette partie de la grotte semble les empêcher — ou les effrayer — d’aller plus loin.</p><p>Devant vous, une faible lueur bleue apparaît puis disparaît au fond de la roche.</p>';
+  return '<p>'+who+'.</p><p>Les hommes pâles '+(group?'vous suivent':'te suivent')+'. La lumière de leurs torches danse sur les parois et leurs pas résonnent de plus en plus près.</p><p>La galerie descend brutalement.</p><p>'+(group?'Vous franchissez':'Tu franchis')+' une ouverture étroite dans la roche.</p><p>Puis les bruits derrière '+(group?'vous':'toi')+' cessent.</p><p>Tu te retournes.</p><p>Les hommes pâles sont toujours là, quelques mètres plus haut.</p><p>Ils '+(group?'vous regardent':'te regardent')+' depuis l’entrée du passage.</p><p>Aucun ne franchit la limite.</p><p>Dans l’obscurité, leurs yeux renvoient ce faible éclat bleu.</p><p>Puis, lentement, ils reculent.</p><p>Quelque chose dans cette partie de la grotte semble les empêcher — ou les effrayer — d’aller plus loin.</p><p>Devant '+(group?'vous':'toi')+', une faible lueur bleue apparaît puis disparaît au fond de la roche.</p>';
 }
 
 function resolveVillageNightAftermath(s){
@@ -1439,7 +1443,7 @@ villageNightCave:{title:'Le sanctuaire dans la nuit',noImage:true,text:s=>{if(s.
 
 villageNightStatue:{title:'Sous le regard du Gardien',noImage:true,text:s=>villageNightStatueHtml(s),choices:s=>{if(!s.flags.nightStatueActivated){const n=nightStatueVictimCount(s);if(n<=0)return[{label:'Continuer',to:'villageNightAftermath'}];return[{label:'Profiter de leur soumission pour les éliminer',stay:true,effect:x=>{x.flags.nightStatueActivated=true;resolveNightStatueVillage(x);}}];}return[{label:'Continuer',to:'villageNightAftermath'}];}},
 
-villageNightAftermath:{title:'Après le silence',noImage:true,text:s=>{if(!s.flags.providenceSailorsFreed)return '<p>Le village est enfin silencieux.</p><p>Tu rejoins la construction aux lourds barreaux aperçue plus tôt.</p><p>Derrière la grille, les derniers marins du <strong>Providence</strong> comprennent peu à peu que leurs gardiens ne reviendront pas.</p><p>Tu forces la serrure et les fais sortir.</p><p>La plupart sont trop faibles pour se battre, mais <strong>trois marins</strong> sont encore capables de marcher et de tenir une arme. Ils restent avec toi.</p><p>Il fait toujours nuit. Personne ne veut risquer une traversée dans l’obscurité.</p>';if(s.flags.captivePrisonersEscaped)return '<p>Le village est enfin silencieux.</p><p>La cage que vous avez ouverte plus tôt est vide. Les prisonniers se sont dispersés dans la forêt pendant votre fuite.</p><p>Les marins du Providence restés avec toi savent que plusieurs des leurs sont encore cachés sur l’île.</p><p>Vous décidez de ne pas tenter la mer avant le jour.</p>';return '<p>Le village est enfin silencieux.</p><p>La prison est déjà ouverte. Les marins du Providence libérés plus tôt se regroupent comme ils le peuvent autour de toi.</p><p>Il fait toujours nuit. Vous vous retranchez dans les bâtiments et attendez que le ciel commence à pâlir.</p>';},onEnter:s=>resolveVillageNightAftermath(s),choices:[{label:'Attendre le lever du jour',to:'villageDawnRegroup'}]},
+villageNightAftermath:{title:'Après le silence',noImage:true,text:s=>{if(s.flags.freedAtNight)return '<p>Le village est enfin silencieux.</p><p>Tu rejoins la construction aux lourds barreaux aperçue plus tôt.</p><p>Derrière la grille, les derniers marins du <strong>Providence</strong> comprennent peu à peu que leurs gardiens ne reviendront pas.</p><p>Tu forces la serrure et les fais sortir.</p><p>La plupart sont trop faibles pour se battre, mais <strong>trois marins</strong> sont encore capables de marcher et de tenir une arme. Ils restent avec toi.</p><p>Il fait toujours nuit. Personne ne veut risquer une traversée dans l’obscurité.</p>';if(s.flags.captivePrisonersEscaped)return '<p>Le village est enfin silencieux.</p><p>La cage que vous avez ouverte plus tôt est vide. Les prisonniers se sont dispersés dans la forêt pendant votre fuite.</p><p>Les marins du Providence restés avec toi savent que plusieurs des leurs sont encore cachés sur l’île.</p><p>Vous décidez de ne pas tenter la mer avant le jour.</p>';return '<p>Le village est enfin silencieux.</p><p>La prison est déjà ouverte. Les marins du Providence libérés plus tôt se regroupent comme ils le peuvent autour de toi.</p><p>Il fait toujours nuit. Vous vous retranchez dans les bâtiments et attendez que le ciel commence à pâlir.</p>';},onEnter:s=>resolveVillageNightAftermath(s),choices:[{label:'Attendre le lever du jour',to:'villageDawnRegroup'}]},
 
 villageAssaultVictory:{title:'Les derniers marins du Providence',text:s=>s.flags.freedDuringAssault?'<p>Les derniers hommes pâles sont hors de combat.</p><p>La prison est déjà ouverte. Les marins du <strong>Providence</strong> qui ont pu combattre avec vous se regroupent au milieu des blessés.</p><p>Le soleil descend déjà. Entre les hommes épuisés, les blessés et la mer qui entoure l’île, repartir immédiatement serait imprudent.</p><p>Vous barricadez les bâtiments les plus solides et organisez les soins.</p><p>Vous attendrez le lever du jour pour décider comment quitter l’île.</p>':'<p>Plus aucun homme pâle ne se dresse entre vous et la prison.</p><p>Vous rejoignez la cage et attaquez la serrure. Après plusieurs coups, la lourde porte métallique finit par céder.</p><p>Derrière les barreaux se trouvent les derniers matelots du <strong>Providence</strong>.</p><p>Ils sont affamés, blessés et épuisés.</p><p>La plupart ne peuvent pas combattre, mais <strong>trois marins</strong> sont encore capables de marcher et de tenir une arme. Ils rejoignent ton groupe.</p><p>Le soleil descend déjà. Vous décidez de fortifier le village et d’attendre le lever du jour avant de reprendre la mer.</p>',onEnter:s=>resolveVillageAssaultVictory(s),choices:[{label:'Passer la nuit à l’abri',to:'villageDawnRegroup'}]},
 
