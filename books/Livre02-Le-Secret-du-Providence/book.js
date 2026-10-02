@@ -680,11 +680,11 @@ function villageAssaultHtml(s){
 }
 function useCavePistolsInAssault(s){
   const b=initVillageAssault(s);
-  if(s.flags.cavePistolsUsed||!s.inventory?.pistolets_silex||b.enemy<=0)return;
-  const loss=markVillageEnemyLoss(s,2);
-  s.flags.cavePistolsUsed=true;
+  const shots=Math.min(2,pistolShotCount(s));
+  if(shots<=0||b.enemy<=0)return;
+  const loss=markVillageEnemyLoss(s,shots);
+  for(let i=0;i<shots;i++)consumePistolShot(s);
   b.pistolOpeningLoss=loss;
-  delete s.inventory.pistolets_silex;
 }
 
 function villageAssaultChoices(s){
@@ -693,8 +693,8 @@ function villageAssaultChoices(s){
   if(b.enemyDefeated||b.enemyFled)return[{label:s.flags.villageTime==='night'?'Rejoindre la prison dans le village silencieux':'Rejoindre la prison',to:s.flags.villageTime==='night'?'villageNightAftermath':'villageAssaultVictory'}];
   if(villageHeroAlone(s))return[{label:'Fuir vers la forêt',to:'villageRetreat'}];
   const out=[];
-  if(b.round===0&&!s.flags.cavePistolsUsed&&s.inventory?.pistolets_silex){
-    out.push({label:'Utiliser les deux pistolets',stay:true,inlineCombat:true,effect:x=>useCavePistolsInAssault(x)});
+  if(b.round===0&&pistolShotCount(s)>0){
+    out.push({label:'Utiliser les pistolets — '+String(pistolShotCount(s))+' tir'+(pistolShotCount(s)>1?'s':'')+' disponible'+(pistolShotCount(s)>1?'s':''),stay:true,inlineCombat:true,effect:x=>useCavePistolsInAssault(x)});
   }
   out.push(
     {label:'Mener la charge — test de Force',stay:true,inlineCombat:true,effect:x=>villageAssaultRound(x,'charge')},
@@ -853,10 +853,120 @@ function crewBattleHtml(s,key,enemyCount=12){
   </div>`;
 }
 
+function throwingBladeCount(s){
+  return Math.max(0,Math.floor(Number(s.inventory?.couteaux_jet?.quantity)||0));
+}
+function pistolShotCount(s){
+  const item=s.inventory?.pistolets_silex;
+  if(!item)return 0;
+  if(Number.isFinite(Number(item.quantity)))return Math.max(0,Math.floor(Number(item.quantity)));
+  // Compatibilité avec les sauvegardes où « deux pistolets » était un objet unique sans quantité.
+  return s.flags.cavePistolsUsed?0:2;
+}
+function consumeThrowingBlade(s){
+  const n=throwingBladeCount(s);
+  if(n<=0)return false;
+  if(n<=1)delete s.inventory.couteaux_jet;
+  else s.inventory.couteaux_jet.quantity=n-1;
+  return true;
+}
+function consumePistolShot(s){
+  const n=pistolShotCount(s);
+  if(n<=0)return false;
+  if(n<=1){
+    delete s.inventory.pistolets_silex;
+    s.flags.cavePistolsUsed=true;
+  }else{
+    if(!s.inventory.pistolets_silex)s.inventory.pistolets_silex={name:'Pistolets à silex',description:'Deux pistolets à silex chargés.'};
+    s.inventory.pistolets_silex.quantity=n-1;
+  }
+  return true;
+}
+function useRangedCombatItem(s,key,e,type,dexPenalty=0,consumeBalance=false){
+  if(!s.combats)s.combats={};
+  const combat=s.combats[key]||(s.combats[key]={hp:e.hp,round:0,last:null});
+  if(s.hp<=0||combat.hp<=0)return;
+
+  const isPistol=type==='pistol';
+  if(isPistol){
+    if(!consumePistolShot(s))return;
+  }else{
+    if(!consumeThrowingBlade(s))return;
+  }
+
+  const dexterity=Math.max(3,currentDexterity(s)-Math.max(0,dexPenalty||0));
+  const success=roll3D6(s,isPistol?'Dextérité — pistolet':'Dextérité — lame de lancer',dexterity);
+  const damage=isPistol?4:2;
+  const before=combat.hp;
+  if(success)combat.hp=Math.max(0,combat.hp-damage);
+  combat.last=null;
+  combat.lastRanged={
+    type,
+    success,
+    dice:Array.isArray(s.lastDice)?[...s.lastDice]:[],
+    total:s.lastTotal,
+    dexterity,
+    dexPenalty:Math.max(0,dexPenalty||0),
+    damage:before-combat.hp,
+    enemyHp:combat.hp,
+    bladesLeft:throwingBladeCount(s),
+    pistolsLeft:pistolShotCount(s)
+  };
+  if(consumeBalance){
+    combat.balance=null;
+    combat.ready=false;
+  }
+}
+function rangedCombatResultHtml(s,key,e){
+  const combat=s.combats?.[key];
+  const r=combat?.lastRanged;
+  if(!r)return '';
+  const pistol=r.type==='pistol';
+  const label=pistol?'Pistolet à silex':'Lame de lancer';
+  const remaining=pistol
+    ?'Tirs de pistolet restants : <strong>'+String(r.pistolsLeft)+'</strong>'
+    :'Lames restantes : <strong>'+String(r.bladesLeft)+'</strong>';
+  const penalty=r.dexPenalty>0?' · malus de stabilité : <strong>−'+String(r.dexPenalty)+'</strong>':'';
+  return '<div class="combat-roll-result"><div class="combat-roll-title">'+label+'</div>'+
+    '<div class="combat-dice">'+r.dice.map(v=>renderDie(v)).join('')+'</div>'+
+    '<p>Dextérité : <strong>'+String(r.dexterity)+'</strong>'+penalty+' · Total : <strong>'+String(r.total)+'</strong>.</p>'+
+    '<div class="combat-outcome">'+(r.success
+      ?'<strong>Le tir atteint sa cible.</strong> Tu infliges <strong>'+String(r.damage)+'</strong> dégât'+(r.damage>1?'s':'')+'.'+(combat.hp<=0&&r.damage>0?'<br><strong>Ton adversaire s’effondre.</strong>':'')
+      :'<strong>Tu manques ta cible.</strong> Aucun dégât.')+
+    '<br><strong>Tu restes hors de portée : aucune riposte sur cette attaque.</strong></div>'+
+    '<div class="combat-life-line">'+remaining+' · Vie adverse : <strong>'+String(combat.hp)+'/'+String(e.hp)+'</strong></div></div>';
+}
+function rangedCombatChoices(s,key,e,dexPenalty=0,consumeBalance=false){
+  const out=[];
+  const blades=throwingBladeCount(s);
+  const pistols=pistolShotCount(s);
+  if(blades>0)out.push({
+    label:'Lancer une lame — '+String(blades)+' restante'+(blades>1?'s':'')+' · Dextérité · 2 dégâts',
+    stay:true,inlineCombat:true,
+    effect:x=>useRangedCombatItem(x,key,e,'blade',dexPenalty,consumeBalance)
+  });
+  if(pistols>0)out.push({
+    label:'Tirer au pistolet — '+String(pistols)+' tir'+(pistols>1?'s':'')+' restant'+(pistols>1?'s':'')+' · Dextérité · 4 dégâts',
+    stay:true,inlineCombat:true,
+    effect:x=>useRangedCombatItem(x,key,e,'pistol',dexPenalty,consumeBalance)
+  });
+  return out;
+}
+function standardFightChoices(s,key,e,deathChoice,winChoice){
+  const combat=s.combats?.[key];
+  if(s.hp<=0)return[deathChoice];
+  if(combat&&combat.hp<=0)return[winChoice];
+  return[
+    {label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>fightRound(x,key,e)},
+    ...rangedCombatChoices(s,key,e)
+  ];
+}
+
 function fightRound(s,key,e){
   if(!s.combats)s.combats={};
   const c=s.combats[key]||(s.combats[key]={hp:e.hp,round:0,last:null});
   if(s.hp<=0||c.hp<=0)return c.last;
+  c.lastRanged=null;
 
   const heroDice=[cryptoDie6(),cryptoDie6()];
   const enemyDice=[cryptoDie6(),cryptoDie6()];
@@ -915,6 +1025,8 @@ function fightHtml(s,key,e){
   const c=s.combats?.[key];
   if(!c)return '';
   const r=c.last;
+
+  if(c.lastRanged)return rangedCombatResultHtml(s,key,e);
 
   if(!r){
     return `<div class="combat-roll-result">
@@ -1009,6 +1121,7 @@ function cliffGuardianBalanceCheck(s,key){
 function cliffGuardianRound(s,key){
   const c=prepareCliffGuardian(s,key);
   if(s.hp<=0||c.hp<=0||!c.ready)return;
+  c.lastRanged=null;
 
   const balance=c.balance||{success:true,dice:[],total:null,penalty:0};
   const heroDice=[cryptoDie6(),cryptoDie6()];
@@ -1056,6 +1169,11 @@ function cliffGuardianHtml(s,key){
   let h='<div class="combat-roll-result"><div class="combat-roll-title">Le gardien de la falaise</div>';
   h+='<p>Ta Vie : <strong>'+String(s.hp)+'/'+String(s.maxHp)+'</strong> · Vie adverse : <strong>'+String(c.hp)+'/'+String(CLIFF_GUARDIAN.hp)+'</strong></p>';
 
+  if(c.lastRanged){
+    h+='</div>'+rangedCombatResultHtml(s,key,CLIFF_GUARDIAN);
+    return h;
+  }
+
   if(c.ready&&c.balance){
     h+='<div class="crew-training-side"><strong>Stabilité sur la falaise — Dextérité</strong><div class="crew-training-dice">'+c.balance.dice.map(v=>renderDie(v)).join('')+'</div>';
     h+='<p>Total : <strong>'+String(c.balance.total)+'</strong> — <strong>'+(c.balance.success?'réussite':'échec')+'</strong>.</p>';
@@ -1091,7 +1209,13 @@ function cliffGuardianChoices(s,key,winNode){
   const c=prepareCliffGuardian(s,key);
   if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];
   if(c.hp<=0)return[{label:'Approcher du bord de la falaise',to:winNode}];
-  if(c.ready)return[{label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>cliffGuardianRound(x,key)}];
+  if(c.ready){
+    const penalty=c.balance?.penalty||0;
+    return[
+      {label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>cliffGuardianRound(x,key)},
+      ...rangedCombatChoices(s,key,CLIFF_GUARDIAN,penalty,true)
+    ];
+  }
   return[{label:'Tester ton équilibre — Dextérité',stay:true,diceTest:true,effect:x=>cliffGuardianBalanceCheck(x,key)}];
 }
 
@@ -1231,7 +1355,7 @@ function resolveDeepCaveFlooded(s){
 
 function createInitialState(){
   return {
-    node:'start',pageMapVersion:22,heroGender:'female',heroName:'Eleanor',
+    node:'start',pageMapVersion:23,heroGender:'female',heroName:'Eleanor',
     inventory:{},flags:{},visited:{},history:[],journal:'',
     hp:18,maxHp:18,baseForce:8,baseDexterity:13,forceBonus:0,dexBonus:0,dexPenalty:0,
     weapon:'naval_sword',protection:0,goldCoins:0,
@@ -1341,7 +1465,7 @@ const STORY={
     <p>Après chaque assaut, les survivants relancent leurs dés jusqu’à l’élimination complète d’un des deux groupes.</p>
   </div>
   ${crewBattleHtml(s,'pirates1',pirateCountForBattle(s,'pirates1'))}`,choices:s=>{const b=ensureCrewBattle(s,'pirates1',pirateCountForBattle(s,'pirates1'),4,1,0);if(s.soldiers<=0)return[{label:'Tes soldats sont anéantis',to:'death'}];if(b.enemy<=0)return[{label:'Sauter sur le pont adverse — affronter le capitaine',to:'c15'}];return[{label:b.round?'Assaut suivant':'Lancer les dés — premier assaut',stay:true,inlineCombat:true,effect:x=>crewBattleRound(x,'pirates1',pirateCountForBattle(x,'pirates1'))}];}},
- c15:{title:'Le capitaine pirate',text:s=>`<p>Tu prends appui sur la rambarde et sautes sur le pont adverse.</p><p>Autour de toi, la mêlée se disperse entre les cordages et les canons. Des hommes reculent, d’autres se jettent les uns sur les autres dans le vacarme des lames et du bois frappé.</p><p>Puis tu le vois.</p><p>Le capitaine pirate ne ressemble pas aux hommes qui se battent autour de lui. Grand, massif, le visage mangé par une barbe noire, il porte un long manteau usé dont les manches sont tachées de sel. Une cicatrice épaisse part de sa pommette et disparaît sous sa barbe.</p><p>Il regarde ses hommes tomber sans bouger.</p><p>Quand ses yeux se posent sur toi, il sourit.</p><p>Il tire lentement son sabre d’abordage. La lame est large, ébréchée près de la pointe.</p><p>Du bout de l’arme, il te fait signe d’approcher.</p>${fightHtml(s,'captain',CAPTAIN)}`,choices:s=>{const c=s.combats?.captain;if(s.hp<=0)return[{label:'Tu t’effondres',to:'death'}];if(c&&c.hp<=0)return[{label:'Fouiller le capitaine',to:'c16'}];return[{label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>fightRound(x,'captain',CAPTAIN)}];}},
+ c15:{title:'Le capitaine pirate',text:s=>`<p>Tu prends appui sur la rambarde et sautes sur le pont adverse.</p><p>Autour de toi, la mêlée se disperse entre les cordages et les canons. Des hommes reculent, d’autres se jettent les uns sur les autres dans le vacarme des lames et du bois frappé.</p><p>Puis tu le vois.</p><p>Le capitaine pirate ne ressemble pas aux hommes qui se battent autour de lui. Grand, massif, le visage mangé par une barbe noire, il porte un long manteau usé dont les manches sont tachées de sel. Une cicatrice épaisse part de sa pommette et disparaît sous sa barbe.</p><p>Il regarde ses hommes tomber sans bouger.</p><p>Quand ses yeux se posent sur toi, il sourit.</p><p>Il tire lentement son sabre d’abordage. La lame est large, ébréchée près de la pointe.</p><p>Du bout de l’arme, il te fait signe d’approcher.</p>${fightHtml(s,'captain',CAPTAIN)}`,choices:s=>{const c=s.combats?.captain;if(s.hp<=0)return[{label:'Tu t’effondres',to:'death'}];if(c&&c.hp<=0)return[{label:'Fouiller le capitaine',to:'c16'}];return standardFightChoices(s,'captain',CAPTAIN,{label:'Tu t’effondres',to:'death'},{label:'Fouiller le capitaine',to:'c16'});}},
  c16:{title:'Les gantelets',text:`<p>Le capitaine pirate est étendu sur le pont, inanimé.</p><p>En te penchant sur lui, tu remarques les gantelets qu’il porte encore aux avant-bras. Ils sont faits d’un cuir épais, renforcé de petites plaques de métal rivetées à la main.</p><p>Le travail est artisanal. Rien d’élégant, mais l’ensemble est solide et étonnamment bien conçu. Les plaques couvrent les zones les plus exposées sans gêner les mouvements.</p><p><strong>Protection +4.</strong></p><p>Avant de regagner le Resolute, tu ordonnes à quelques hommes de fouiller la cale du navire pirate.</p><p>Ils reviennent quelques minutes plus tard avec un petit coffre, plusieurs sacs et trois tonneaux marqués au fer.</p><p>Le coffre contient environ <strong>100 pièces d’or</strong>, probablement accumulées au fil de plusieurs prises.</p><p>Les tonneaux sont remplis de <strong>rhum</strong>. Une cargaison facile à transporter et surtout très utile dans les Caraïbes : elle pourra être offerte, troquée ou servir de monnaie d’échange si la situation l’exige.</p><p><strong>Tu récupères 100 pièces d’or et 3 tonneaux de rhum.</strong></p><p>Avant de quitter la cabine du capitaine, tu trouves aussi un petit carnet de prises. Une entrée récente retient ton attention :</p><blockquote>« Marchand anglais — PROVIDENCE. Aperçu trois nuits plus tôt. Cap au sud-est. Aucun feu. Aucun signal. Plusieurs hommes visibles sur le pont. »</blockquote><p>Quelques lignes plus bas, l’écriture devient plus serrée.</p><blockquote>« Avons tenté de l’approcher. À moins d’un mille, la mer a changé. Pas de vent contraire. Pas de courant visible. Pourtant le bateau avançait comme dans de l’huile. L’eau semblait retenir la coque. »</blockquote><p>La dernière partie a été écrite d’une main beaucoup moins assurée.</p><blockquote>« Une ombre est passée sous nous. Immense. Elle a frappé la coque par dessous. Deux membrures fendues. Avons viré de bord. Le Providence, lui, n’a pas bougé. »</blockquote><p>Tu relis l’entrée.</p><p>Le Providence était encore à flot après sa disparition officielle. Il suivait volontairement un cap qui n’avait aucun sens.</p><p>Mais surtout, quelque chose semblait empêcher les autres navires de l’approcher.</p>`,choices:[{label:'Récupérer le butin et repartir',to:'c20',effect:s=>{if(!s.flags.gauntlets){s.flags.gauntlets=true;addItem(s,'gantelets','Gantelets renforcés','Gantelets artisanaux de cuir épais renforcés de plaques métalliques. Protection +4.');syncProtection(s);}if(!s.flags.firstPirateLoot){s.flags.firstPirateLoot=true;addGold(s,100);addRumCrate(s,3);}}}]},
  c20:{title:'',text:`<p>Le Resolute atteint enfin la zone où le Providence aurait dû être aperçu pour la dernière fois.</p><p>Tu fais réduire la voilure et ordonnes une recherche méthodique.</p><p>Deux hommes montent dans la mâture avec des longues-vues. D’autres scrutent l’eau à la recherche d’un débris, d’un tonneau, d’une voile déchirée.</p><p>Une heure passe.</p><p>Puis une autre.</p><p>Enfin, un marin repêche une planche qui dérive parmi les algues.</p><p>Elle porte encore un fragment de peinture blanche et deux lettres noires : ...VI...</p><p>Sur l’autre face, une marque au fer est encore lisible : E. HARCOURT — PORT ROYAL.</p><p>Le bois provient presque certainement du Providence.</p><p>Tu fais appeler le navigateur. Il observe le courant, consulte la carte puis secoue la tête.</p><blockquote>« Si cette planche s’est détachée récemment, elle vient du sud ou du sud-est. Pas de la route que le Providence devait suivre pour rentrer. »</blockquote><p>Ce n’est plus une simple disparition.</p><p>Le Providence a quitté sa route.</p><p>Un des matelots qui tient la gaffe regarde la planche dériver derrière vous.</p><blockquote>« Mon grand-père disait toujours la même chose à propos de ces eaux : l’île mange les marins et recrache les bateaux. »</blockquote><p>Personne ne rit.</p><p>Reste à comprendre pourquoi le Providence a choisi de s’en approcher.</p>`,choices:[{label:'Reporter l’indice sur la carte',to:'search2'}]},
 
@@ -1361,7 +1485,7 @@ const STORY={
   </div>
   ${crewBattleHtml(s,'piratesNorth',pirateCountForBattle(s,'piratesNorth'))}`,choices:s=>{const b=ensureCrewBattle(s,'piratesNorth',pirateCountForBattle(s,'piratesNorth'),4,1,0);if(s.soldiers<=0)return[{label:'Tes soldats sont anéantis',to:'death'}];if(b.enemy<=0)return[{label:'Passer sur le navire pirate',to:'north3'}];return[{label:b.round?'Assaut suivant':'Lancer les dés — premier assaut',stay:true,inlineCombat:true,effect:x=>crewBattleRound(x,'piratesNorth',pirateCountForBattle(x,'piratesNorth'))}];}},
 
- north3:{title:'',text:s=>`<p>Le dernier groupe de pirates rompt enfin sous la pression. Certains jettent leurs armes, d’autres disparaissent derrière les caisses et les cordages.</p><p>Tu franchis la rambarde et poses le pied sur leur pont.</p><p>La bataille n’est pourtant pas terminée.</p><p>Un homme t’attend près du grand mât.</p><p>Il est plus grand que la plupart de ses hommes et porte un manteau de cuir sombre renforcé aux épaules. Son crâne est rasé sur les côtés, mais une longue tresse noire retombe dans son dos. Une ancienne brûlure lui couvre une partie du cou et remonte jusqu’à la mâchoire.</p><p>À ses pieds, un de ses propres hommes essaie de ramper hors de la mêlée.</p><p>Le capitaine le repousse brutalement du talon sans même baisser les yeux.</p><p>Puis il te regarde.</p><p>Il ne crie pas. Il ne menace pas.</p><p>Il sort simplement un lourd sabre d’abordage, fait rouler son épaule comme s’il s’échauffait, puis avance vers toi.</p><p>Son calme est plus inquiétant que les hurlements de tout son équipage.</p>${fightHtml(s,'northCaptain',NORTH_CAPTAIN)}`,choices:s=>{const c=s.combats?.northCaptain;if(s.hp<=0)return[{label:'Tu t’effondres',to:'death'}];if(c&&c.hp<=0)return[{label:'Fouiller le navire pirate',to:'north4'}];return[{label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>fightRound(x,'northCaptain',NORTH_CAPTAIN)}];}},
+ north3:{title:'',text:s=>`<p>Le dernier groupe de pirates rompt enfin sous la pression. Certains jettent leurs armes, d’autres disparaissent derrière les caisses et les cordages.</p><p>Tu franchis la rambarde et poses le pied sur leur pont.</p><p>La bataille n’est pourtant pas terminée.</p><p>Un homme t’attend près du grand mât.</p><p>Il est plus grand que la plupart de ses hommes et porte un manteau de cuir sombre renforcé aux épaules. Son crâne est rasé sur les côtés, mais une longue tresse noire retombe dans son dos. Une ancienne brûlure lui couvre une partie du cou et remonte jusqu’à la mâchoire.</p><p>À ses pieds, un de ses propres hommes essaie de ramper hors de la mêlée.</p><p>Le capitaine le repousse brutalement du talon sans même baisser les yeux.</p><p>Puis il te regarde.</p><p>Il ne crie pas. Il ne menace pas.</p><p>Il sort simplement un lourd sabre d’abordage, fait rouler son épaule comme s’il s’échauffait, puis avance vers toi.</p><p>Son calme est plus inquiétant que les hurlements de tout son équipage.</p>${fightHtml(s,'northCaptain',NORTH_CAPTAIN)}`,choices:s=>{const c=s.combats?.northCaptain;if(s.hp<=0)return[{label:'Tu t’effondres',to:'death'}];if(c&&c.hp<=0)return[{label:'Fouiller le navire pirate',to:'north4'}];return standardFightChoices(s,'northCaptain',NORTH_CAPTAIN,{label:'Tu t’effondres',to:'death'},{label:'Fouiller le navire pirate',to:'north4'});}},
 
  north4:{title:'',text:s=>`<p>Une fois le capitaine à terre, les derniers pirates cessent de résister.</p><p>Tu fais fouiller rapidement leur navire avant de reprendre la recherche du Providence.</p><p>Dans une caisse dissimulée sous des toiles, tes hommes trouvent une petite bourse contenant <strong>dix pièces d’or</strong>.</p><p>À côté, cinq lames courtes ont été rangées dans un étui de cuir. Leur poids est parfaitement équilibré.</p><p><strong>Tu récupères 5 lames de lancer.</strong></p><p>Dans la cabine, sous un registre de prises, tu trouves une note datée de trois jours plus tôt :</p><blockquote>« Gros marchand anglais aperçu au sud. Aucun pavillon de détresse. Des hommes à la rambarde, raides comme des pendus. Cap sur l’île maudite. Celle qu’on contourne même quand le vent nous y pousse. Le capitaine a ordonné de virer. »</blockquote><p>Une seconde ligne a été ajoutée :</p><blockquote>« Trois lueurs bleues étaient visibles au loin, toujours au même endroit. Le marchand a corrigé son cap dans leur direction. »</blockquote><p>Dans la marge, quelqu’un a ajouté au charbon : PROVIDENCE ?</p><p>Tu comprends mieux leur prudence. Ce n’est pas le Providence qui les a effrayés, mais l’endroit vers lequel il se dirigeait.</p><p>Plus loin dans la cale, un petit tonnelet de rhum porte encore le sceau d’un négociant de Port Royal.</p><p>Il pourrait être bu, offert ou servir de marchandise si vous deviez négocier plus tard.</p>`,onEnter:s=>{if(!s.flags.northPirateLoot){s.flags.northPirateLoot=true;addGold(s,10);addThrowingBlades(s,5);}},choices:[
    {label:'Emporter le tonnelet de rhum',to:'c21',effect:s=>{if(!s.flags.northRum){s.flags.northRum=true;addRumCrate(s,1);}}},
@@ -1390,7 +1514,7 @@ const STORY={
 
  east4:{title:'',text:s=>`<p>La nuit tombe quelques heures après votre séparation.</p><p>Le Resolute poursuit lentement sa recherche sous un ciel sans lune.</p>${s.flags.eastDrank?`<p>Tu t’endors plus vite que d’habitude.</p><p>Lorsque tu ouvres enfin les yeux, tu ne comprends pas immédiatement ce qui t’a réveillé.</p><p>Des pas.</p><p>Des cris étouffés.</p><p>Ton corps paraît lourd et ta bouche est sèche.</p><p>Tu essaies de te lever. Tes jambes répondent avec un temps de retard.</p><p>Le verre.</p><p>Ils avaient mis quelque chose dedans.</p><p>Lorsque tu atteins le pont, un de tes soldats est déjà étendu près du grand mât.</p><p><strong>Vous avez perdu 1 soldat.</strong></p>`:`<p>Un choc contre la coque te réveille immédiatement.</p><p>Puis le bruit caractéristique d’un grappin qui accroche la rambarde.</p><p>Tu es debout avant même que la première alarme ne soit criée.</p><p>Le petit sloop marchand est revenu dans l’obscurité.</p><p>Ses hommes franchissent déjà le bord.</p>`}<p>Les sourires ont disparu.</p><p>Ce ne sont pas des marchands.</p><p>Autour de toi, tes marins et tes soldats se jettent sur les assaillants.</p><p>Le combat se répand sur le pont.</p>`,onEnter:s=>{if(s.flags.eastDrank&&!s.flags.eastDrugLoss){s.flags.eastDrugLoss=true;s.soldiers=Math.max(0,s.soldiers-1);}},choices:[{label:'Foncer défendre le pont',to:'east5'}]},
 
- east5:{title:'',text:s=>`<p>Ton équipage prend rapidement le dessus sur les hommes qui ont franchi la rambarde.</p><p>Au milieu du désordre, le faux capitaine te repère.</p><p>Il n’a plus rien du marchand affable rencontré quelques heures plus tôt.</p><p>Son sourire a disparu. Il tient une courte lame dans une main et un sabre dans l’autre.</p><blockquote>« J’aurais préféré que vous dormiez jusqu’au matin. »</blockquote><p>Il se débarrasse de la petite lame, serre son sabre à deux mains et se dirige vers toi pendant que ses hommes sont repoussés vers la rambarde.</p>${fightHtml(s,'eastBanditChief',BANDIT_CHIEF)}`,choices:s=>{const c=s.combats?.eastBanditChief;if(s.hp<=0)return[{label:'Tu t’effondres',to:'death'}];if(c&&c.hp<=0)return[{label:'Reprendre le contrôle du Resolute',to:'east6'}];return[{label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>fightRound(x,'eastBanditChief',BANDIT_CHIEF)}];}},
+ east5:{title:'',text:s=>`<p>Ton équipage prend rapidement le dessus sur les hommes qui ont franchi la rambarde.</p><p>Au milieu du désordre, le faux capitaine te repère.</p><p>Il n’a plus rien du marchand affable rencontré quelques heures plus tôt.</p><p>Son sourire a disparu. Il tient une courte lame dans une main et un sabre dans l’autre.</p><blockquote>« J’aurais préféré que vous dormiez jusqu’au matin. »</blockquote><p>Il se débarrasse de la petite lame, serre son sabre à deux mains et se dirige vers toi pendant que ses hommes sont repoussés vers la rambarde.</p>${fightHtml(s,'eastBanditChief',BANDIT_CHIEF)}`,choices:s=>{const c=s.combats?.eastBanditChief;if(s.hp<=0)return[{label:'Tu t’effondres',to:'death'}];if(c&&c.hp<=0)return[{label:'Reprendre le contrôle du Resolute',to:'east6'}];return standardFightChoices(s,'eastBanditChief',BANDIT_CHIEF,{label:'Tu t’effondres',to:'death'},{label:'Reprendre le contrôle du Resolute',to:'east6'});}},
 
  east6:{title:'',text:`<p>Lorsque leur chef tombe, la résistance cesse presque immédiatement.</p><p>Les derniers assaillants encore debout jettent leurs armes ou regagnent leur navire avant que tes hommes ne coupent les grappins.</p><p>Le petit sloop s’éloigne dans la nuit avec ce qu’il reste de son équipage.</p><p>Quelques minutes plus tard, il n’est plus qu’une silhouette noire derrière vous.</p><p>Tu regardes la mer vide.</p><p>Un des assaillants capturés, le visage en sang, finit par parler lorsqu’on lui demande pourquoi son équipage connaît si bien cette zone.</p><blockquote>« On a vu votre marchand. Le Providence. Deux nuits avant vous. Il passait sans lanternes. »</blockquote><p>Tu lui demandes pourquoi ils ne l’ont pas attaqué.</p><p>L’homme détourne les yeux.</p><blockquote>« Parce qu’il y avait des lumières vertes sous sa coque. Deux. Comme des yeux. »</blockquote><p>Tu lui demandes où allait le Providence.</p><blockquote>« Vers une lumière bleue, au loin. Elle apparaissait, disparaissait, puis revenait plus loin. Comme si quelqu’un lui montrait la route. »</blockquote><p>Il refuse d’en dire davantage.</p><p>Vous n’avez toujours pas retrouvé le Providence, mais un second élément revient désormais avec insistance : quelque chose se déplace sous les navires.</p><p>Les paroles entendues plus tôt prennent un autre poids.</p><p><em>La Bête aux Mille Bras.</em></p><p>Tu ordonnes de reprendre les recherches dès que le pont est sécurisé.</p>`,choices:[{label:'Poursuivre la recherche du Providence',to:'c21'}]},
 
@@ -1443,7 +1567,7 @@ ravineDown:{title:'Au fond du ravin',text:s=>`<p>Vous laissez le pont au-dessus 
 
 ravineMouth:{title:'La mâchoire',text:s=>diceResultHtml(s)+(s.flags.villageGatorDex?`<p>Tu arraches ton pied au dernier instant. Les mâchoires claquent dans le vide et projettent de la boue sur tes jambes.</p>`:damageResultHtml(s,'villageGatorBite')+`<p>L’animal relâche sa prise, mais reste entre toi et l’autre versant.</p>`)+`<p>Sa queue frappe lentement l’eau sombre.</p>`,choices:[{label:'Combattre',to:'ravineFight'}]},
 
-ravineFight:{title:'L’alligator',text:s=>`<p>L’animal se dresse à moitié hors de l’eau. Le ravin est trop étroit pour le contourner.</p>${fightHtml(s,'villageAlligator',ALLIGATOR)}`,choices:s=>{const f=s.combats?.villageAlligator;if(s.hp<=0)return[{label:'Tu succombes',to:'death'}];if(f&&f.hp<=0)return[{label:'Observer le corps dans la boue',to:'ravineCorpse'}];return[{label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>fightRound(x,'villageAlligator',ALLIGATOR)}];}},
+ravineFight:{title:'L’alligator',text:s=>`<p>L’animal se dresse à moitié hors de l’eau. Le ravin est trop étroit pour le contourner.</p>${fightHtml(s,'villageAlligator',ALLIGATOR)}`,choices:s=>{const f=s.combats?.villageAlligator;if(s.hp<=0)return[{label:'Tu succombes',to:'death'}];if(f&&f.hp<=0)return[{label:'Observer le corps dans la boue',to:'ravineCorpse'}];return standardFightChoices(s,'villageAlligator',ALLIGATOR,{label:'Tu succombes',to:'death'},{label:'Observer le corps dans la boue',to:'ravineCorpse'});}},
 
 ravineCorpse:{title:'Le corps dans la boue',text:`<p>Lorsque l’alligator cesse enfin de bouger, le ravin retrouve son silence.</p><p>Un peu plus loin, tu aperçois un corps à moitié enfoui dans la boue.</p><p>Les vêtements sont ceux d’un marin, mais ils sont trop abîmés pour identifier son navire.</p><p>Autour de son poignet se trouve un bracelet épais de cuir et de métal, encore étonnamment solide malgré l’humidité.</p><p>Il pourrait renforcer ta prise et ton avant-bras au combat.</p>`,choices:[{label:'Prendre le bracelet',to:'ravineExit',effect:s=>{if(!s.flags.ravineForceBracelet){s.flags.ravineForceBracelet=true;s.forceBonus=(s.forceBonus||0)+2;addItem(s,'bracelet_force_ravin','Bracelet renforcé','Un bracelet de cuir et de métal trouvé dans le ravin. Force +2.');}}},{label:'Laisser le corps et remonter',to:'ravineExit'}]},
 
@@ -1526,7 +1650,7 @@ islandForestLanding:{title:'La côte boisée',text:s=>{const n=secondIslandLocal
 
 forestTrap:{title:'Le piège dans les arbres',text:s=>{if(!s.flags.islandLogTrapRolled)return '<p>Vous progressez lentement sous les arbres.</p><p>Le sol est humide et presque aucun rayon de soleil n’atteint la terre.</p><p>Un claquement sec retentit au-dessus de vous.</p><p>Tu lèves les yeux.</p><p>Un énorme tronc hérissé de pointes vient de se libérer entre deux arbres et bascule droit sur le groupe.</p><p>Une fraction de seconde pour réagir.</p><p>Pour toi, il faut réussir un <strong>jet standard de Dextérité</strong>. En cas d’échec, le tronc te blesse : lance un dé à 3 faces pour déterminer les dégâts.</p><p>Pour Hale et chaque soldat présent, un dé est lancé séparément. Sur 1 ou 2, le piège est fatal.</p>';let h='<p>Le tronc traverse le passage dans un fracas de branches et de bois brisé.</p>'+diceResultHtml(s);if(s.flags.islandHeroDex)h+='<p>Tu te jettes de côté juste avant l’impact.</p>';else h+=damageResultHtml(s,'islandLogTrapHero')+'<p>Tu n’es pas assez rapide. Le tronc te heurte avant que tu parviennes à t’écarter.</p>';if(s.flags.islandHaleRoll)h+='<p>Hale : <strong>'+String(s.flags.islandHaleRoll)+'</strong> — '+(s.flags.islandHaleRoll>=3?'réussi':'échec')+'.</p>';if((s.flags.islandSoldierRolls||[]).length)h+='<p>Soldats : '+s.flags.islandSoldierRolls.map(v=>'<strong>'+v+'</strong>').join(' · ')+'.</p>';if(s.flags.islandSoldierDeaths)h+='<p><strong>'+String(s.flags.islandSoldierDeaths)+' soldat'+(s.flags.islandSoldierDeaths>1?'s meurent':' meurt')+' sous le piège.</strong></p>';if(s.flags.haleAlive===false)h+='<p>Hale n’a pas eu le temps de se jeter de côté. Le tronc l’emporte avec lui.</p>';if(s.hp>0)h+='<p>Quand le silence revient, vous repartez entre les arbres.</p>';return h;},choices:s=>!s.flags.islandLogTrapRolled?[{label:'Lancer les dés',stay:true,effect:x=>resolveIslandLogTrap(x)}]:s.hp<=0?[{label:'La fin du voyage',to:'death'}]:[{label:'Continuer dans la forêt',to:'forestAlligator'}]},
 
-forestAlligator:{title:'La boue remue',text:s=>'<p>Le terrain descend vers une zone humide où l’eau brune recouvre les racines.</p><p>Quelque chose glisse sous la surface.</p><p>Une tête massive surgit devant vous, gueule ouverte.</p><p>Un alligator barre le seul passage praticable.</p>'+fightHtml(s,'islandAlligator',ALLIGATOR),choices:s=>{const f=s.combats?.islandAlligator;if(s.hp<=0)return[{label:'Tu succombes',to:'death'}];if(f&&f.hp<=0)return[{label:'Poursuivre vers l’intérieur de l’île',to:'villageRear'}];return[{label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>fightRound(x,'islandAlligator',ALLIGATOR)}];}},
+forestAlligator:{title:'La boue remue',text:s=>'<p>Le terrain descend vers une zone humide où l’eau brune recouvre les racines.</p><p>Quelque chose glisse sous la surface.</p><p>Une tête massive surgit devant vous, gueule ouverte.</p><p>Un alligator barre le seul passage praticable.</p>'+fightHtml(s,'islandAlligator',ALLIGATOR),choices:s=>{const f=s.combats?.islandAlligator;if(s.hp<=0)return[{label:'Tu succombes',to:'death'}];if(f&&f.hp<=0)return[{label:'Poursuivre vers l’intérieur de l’île',to:'villageRear'}];return standardFightChoices(s,'islandAlligator',ALLIGATOR,{label:'Tu succombes',to:'death'},{label:'Poursuivre vers l’intérieur de l’île',to:'villageRear'});}},
 
 islandRecon:{title:'Faire le tour de l’île',text:s=>{const n=secondIslandLocalSoldiers(s);return '<p>Vous restez à distance de la côte et contournez lentement l’île.</p><p>La plage principale disparaît derrière vous.</p><p>Après près d’une heure, Hale aperçoit une ouverture minuscule entre deux parois rocheuses.</p><p>Une crique étroite se cache derrière. De la mer, elle est presque invisible.</p><p>Aucune silhouette. Aucun feu. Aucun bruit.</p><p>Tu es avec Hale et <strong>'+String(n)+' soldat'+(n>1?'s':'')+'</strong>.</p><p>Vous pouvez tous y débarquer.</p>'+(canSplitSecondIslandParty(s)?'<p>Vous êtes assez nombreux pour vous séparer. Hale et toi pouvez descendre ici pendant que les soldats poursuivent le tour de l’île en chaloupe pour chercher un second accès.</p>':'');},choices:s=>{const out=[{label:'Débarquer tous ensemble dans la crique',to:'coveClearing',effect:x=>keepSecondIslandSoldiersTogether(x)}];if(canSplitSecondIslandParty(s))out.push({label:'Hale et toi débarquez — envoyer les soldats poursuivre le tour de l’île',to:'coveClearing',effect:x=>sendSecondIslandSoldiersAround(x)});return out;}},
 
@@ -1534,7 +1658,7 @@ coveClearing:{title:'La crique cachée',text:s=>((s.flags.flankingSoldiers||0)>0
 
 caveTunnel:{title:'Sous la roche',text:'<p>La lumière disparaît rapidement derrière vous.</p><p>Au bout de quelques mètres, la grotte cesse de ressembler à une cavité naturelle.</p><p>Les parois ont été égalisées. Des marches grossières ont été taillées dans le sol. De petits renfoncements réguliers longent les murs comme s’ils avaient autrefois accueilli des lampes.</p><p>Plus loin, une lumière verticale tombe depuis une ouverture très haute dans la roche.</p>',choices:[{label:'Avancer vers la lumière',to:'caveShrine'}]},
 
-caveShrine:{title:'Le sanctuaire',text:s=>'<p>Le passage débouche dans une salle ronde.</p><p>Un rayon de lumière traverse une fissure du plafond et tombe sur les fresques qui couvrent les murs.</p><p>La première montre un navire en pleine mer, son pont rempli de marins. Sous la coque, un immense kraken suit le navire comme une ombre.</p><p>La deuxième représente plusieurs petites embarcations. Sur leurs voiles ou sur le bras des hommes qui les dirigent apparaît toujours le même symbole : un cercle noir fermé.</p><p>Ces marins laissent des pierres bleues et des cartes à bord d’autres navires. Sur la scène suivante, trois feux bleutés sont allumés autour d’une crique, toujours aux mêmes emplacements. Un navire étranger met le cap vers eux.</p><p>La scène suivante montre le navire étranger immobilisé près de la côte. Des hommes sont conduits vers la mer.</p><p>Plus loin, les tentacules emportent les prisonniers dans l’eau.</p><p>Mais les petites embarcations marquées du cercle noir repartent intactes.</p><p>Sur la dernière partie de la fresque, l’une d’elles traverse une mer agitée tandis que la silhouette du kraken passe sous sa coque sans la toucher.</p>'+((s.flags.blackCirclePalm||s.flags.assassinCircle||s.flags.blackCircleMerchant)?'<p>Tu reconnais le symbole. Le vieux marin. L’homme venu te tuer. Le faux marchand.</p>':'')+'<p>Le sens de la fresque devient difficile à ignorer : des marins de l’extérieur entretiennent le piège. Ils conduisent d’autres navires vers l’île et, en échange, la créature semble épargner les leurs.</p><p>Tu repenses au vieux dicton : <em>l’île mange les marins et recrache les bateaux.</em></p><p>Ce n’était peut-être pas seulement une légende. C’était aussi un système.</p><p>Au pied des fresques, le sol est encombré d’affaires abandonnées : bottes, ceinturons, vestes de marin, sacs éventrés, sabres, mousquets et pièces d’équipement provenant de plusieurs équipages.</p><p>Certains objets portent les marques de la Royal Navy. D’autres appartenaient manifestement à des marchands ou à des flibustiers.</p><p>Tu comprends que les hommes pâles retirent à leurs prisonniers tout ce qui pourrait les encombrer avant de les emmener plus loin.</p><p>Sous une veste de cuir durcie par le sel, tu découvres <strong>deux pistolets à silex</strong> enveloppés dans un morceau de toile huilée.</p><p>Les mécanismes semblent encore fonctionner.</p><p>Et les deux armes sont chargées.</p>',onEnter:s=>{s.flags.caveTruth=true;s.flags.caveVisitedDay=true;s.flags.blackCircleBrotherhood=true;if(!s.inventory?.pistolets_silex&&!s.flags.cavePistolsUsed)addItem(s,'pistolets_silex','Deux pistolets à silex','Deux pistolets trouvés parmi les affaires abandonnées dans le sanctuaire. Les deux armes sont chargées.');},choices:[{label:'Emporter les pistolets et quitter la grotte',to:'caveExit'}]},
+caveShrine:{title:'Le sanctuaire',text:s=>'<p>Le passage débouche dans une salle ronde.</p><p>Un rayon de lumière traverse une fissure du plafond et tombe sur les fresques qui couvrent les murs.</p><p>La première montre un navire en pleine mer, son pont rempli de marins. Sous la coque, un immense kraken suit le navire comme une ombre.</p><p>La deuxième représente plusieurs petites embarcations. Sur leurs voiles ou sur le bras des hommes qui les dirigent apparaît toujours le même symbole : un cercle noir fermé.</p><p>Ces marins laissent des pierres bleues et des cartes à bord d’autres navires. Sur la scène suivante, trois feux bleutés sont allumés autour d’une crique, toujours aux mêmes emplacements. Un navire étranger met le cap vers eux.</p><p>La scène suivante montre le navire étranger immobilisé près de la côte. Des hommes sont conduits vers la mer.</p><p>Plus loin, les tentacules emportent les prisonniers dans l’eau.</p><p>Mais les petites embarcations marquées du cercle noir repartent intactes.</p><p>Sur la dernière partie de la fresque, l’une d’elles traverse une mer agitée tandis que la silhouette du kraken passe sous sa coque sans la toucher.</p>'+((s.flags.blackCirclePalm||s.flags.assassinCircle||s.flags.blackCircleMerchant)?'<p>Tu reconnais le symbole. Le vieux marin. L’homme venu te tuer. Le faux marchand.</p>':'')+'<p>Le sens de la fresque devient difficile à ignorer : des marins de l’extérieur entretiennent le piège. Ils conduisent d’autres navires vers l’île et, en échange, la créature semble épargner les leurs.</p><p>Tu repenses au vieux dicton : <em>l’île mange les marins et recrache les bateaux.</em></p><p>Ce n’était peut-être pas seulement une légende. C’était aussi un système.</p><p>Au pied des fresques, le sol est encombré d’affaires abandonnées : bottes, ceinturons, vestes de marin, sacs éventrés, sabres, mousquets et pièces d’équipement provenant de plusieurs équipages.</p><p>Certains objets portent les marques de la Royal Navy. D’autres appartenaient manifestement à des marchands ou à des flibustiers.</p><p>Tu comprends que les hommes pâles retirent à leurs prisonniers tout ce qui pourrait les encombrer avant de les emmener plus loin.</p><p>Sous une veste de cuir durcie par le sel, tu découvres <strong>deux pistolets à silex</strong> enveloppés dans un morceau de toile huilée.</p><p>Les mécanismes semblent encore fonctionner.</p><p>Et les deux armes sont chargées.</p>',onEnter:s=>{s.flags.caveTruth=true;s.flags.caveVisitedDay=true;s.flags.blackCircleBrotherhood=true;if(!s.inventory?.pistolets_silex&&!s.flags.cavePistolsUsed)addItem(s,'pistolets_silex','Deux pistolets à silex','Deux pistolets trouvés parmi les affaires abandonnées dans le sanctuaire. Les deux armes sont chargées.',{quantity:2});},choices:[{label:'Emporter les pistolets et quitter la grotte',to:'caveExit'}]},
 
 caveExit:{title:'Vers le village',text:'<p>Vous quittez le sanctuaire par un passage étroit qui remonte derrière la paroi.</p><p>Quelques minutes plus tard, vous retrouvez la forêt.</p><p>Des voix arrivent de l’autre côté des arbres.</p><p>Vous ralentissez.</p><p>Le village est tout proche.</p>',choices:[{label:'Approcher discrètement',to:'villageRear'}]},
 
@@ -1602,7 +1726,7 @@ captiveFreeCompanions:{title:'Ne pas partir seul',noImage:true,text:s=>{if(!s.fl
 
 deepCaveFork:{title:'Deux passages',noImage:true,text:'<p>Le couloir descend jusqu’à une cavité où la roche se sépare en deux passages.</p><p>À gauche, une lueur bleue très faible pulse par instants au fond de la galerie.</p><p>À droite, tu entends de l’eau couler dans l’obscurité.</p><p>Puis un murmure traverse la grotte.</p><p>Tu ne comprends aucun mot.</p><p>Pourtant, pendant une seconde, tu as l’impression qu’il prononce ton nom.</p>',choices:[{label:'Suivre la lueur bleue',to:'deepCaveRevenant'},{label:'Suivre le bruit de l’eau',to:'deepCaveFlooded'}]},
 
-deepCaveRevenant:{title:'Celui qui ne respire plus',noImage:true,text:s=>'<p>La lueur vient d’une petite chambre naturelle.</p><p>Un homme se tient debout au milieu.</p><p>Il porte les restes d’un uniforme de marin mangé par le sel.</p><p>Ses vêtements sont trempés alors qu’aucune eau ne tombe du plafond.</p><p>Sa peau a la couleur de la cire.</p><p>Ses yeux diffusent un reflet bleu beaucoup plus net que ceux des hommes du village.</p><p>Il te regarde.</p><p>Sa poitrine ne bouge pas.</p><p>Sa bouche s’ouvre lentement.</p><p>Aucun son n’en sort.</p><p>Puis il se jette sur toi.</p>'+(s.flags.deepCaveHaleAssist?'<p>Hale réagit avant toi. Son sabre frappe la créature à l’épaule et la repousse contre la roche. <strong>Son intervention lui a déjà infligé 3 dégâts.</strong></p>':'')+fightHtml(s,'deepCaveRevenant',DROWNED_SAILOR),onEnter:s=>prepareDeepCaveRevenant(s),choices:s=>{const f=s.combats?.deepCaveRevenant;if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];if(f&&f.hp<=0)return[{label:'Continuer au-delà de la chambre',to:'deepCaveSanctum'}];return[{label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>fightRound(x,'deepCaveRevenant',DROWNED_SAILOR)}];}},
+deepCaveRevenant:{title:'Celui qui ne respire plus',noImage:true,text:s=>'<p>La lueur vient d’une petite chambre naturelle.</p><p>Un homme se tient debout au milieu.</p><p>Il porte les restes d’un uniforme de marin mangé par le sel.</p><p>Ses vêtements sont trempés alors qu’aucune eau ne tombe du plafond.</p><p>Sa peau a la couleur de la cire.</p><p>Ses yeux diffusent un reflet bleu beaucoup plus net que ceux des hommes du village.</p><p>Il te regarde.</p><p>Sa poitrine ne bouge pas.</p><p>Sa bouche s’ouvre lentement.</p><p>Aucun son n’en sort.</p><p>Puis il se jette sur toi.</p>'+(s.flags.deepCaveHaleAssist?'<p>Hale réagit avant toi. Son sabre frappe la créature à l’épaule et la repousse contre la roche. <strong>Son intervention lui a déjà infligé 3 dégâts.</strong></p>':'')+fightHtml(s,'deepCaveRevenant',DROWNED_SAILOR),onEnter:s=>prepareDeepCaveRevenant(s),choices:s=>{const f=s.combats?.deepCaveRevenant;if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];if(f&&f.hp<=0)return[{label:'Continuer au-delà de la chambre',to:'deepCaveSanctum'}];return standardFightChoices(s,'deepCaveRevenant',DROWNED_SAILOR,{label:'La fin du voyage',to:'death'},{label:'Continuer au-delà de la chambre',to:'deepCaveSanctum'});}},
 
 deepCaveFlooded:{title:'Le passage noyé',noImage:true,text:s=>{if(!s.flags.deepCaveFloodedRolled)return '<p>Le passage descend rapidement.</p><p>L’eau te monte aux chevilles, puis aux genoux.</p><p>Elle est glacée.</p><p>Plus loin, la galerie se resserre et le courant devient brutalement plus fort.</p><p>Quelque chose remue sous la surface derrière toi.</p><p>Tu dois franchir les quelques mètres suivants avant que le niveau ne monte davantage.</p>';let h=diceResultHtml(s);if(s.flags.deepCaveFloodedDex)h+='<p>Tu trouves des prises dans la roche et traverses avant que le courant ne puisse t’emporter.</p>';else h+=damageResultHtml(s,'deepCaveFlooded')+'<p>Le courant te plaque contre la paroi et te fait heurter violemment la roche, mais tu parviens à te dégager.</p>';h+='<p>De l’autre côté, le passage remonte vers une salle parfaitement sèche.</p>';return h;},choices:s=>!s.flags.deepCaveFloodedRolled?[{label:'Traverser — Dextérité',stay:true,diceTest:true,effect:x=>resolveDeepCaveFlooded(x)}]:s.hp<=0?[{label:'La fin du voyage',to:'death'}]:[{label:'Entrer dans la salle',to:'deepCaveSanctum'}]},
 
@@ -1626,7 +1750,7 @@ victoryRescueSurvivor:{title:'Encore vivant',text:'<p>Quelques dizaines de mètr
 
 victoryRescueRevenant:{title:'L’un des leurs',text:'<p>La galerie débouche dans une petite chambre naturelle.</p><p>Un homme se tient debout au milieu du passage.</p><p>Il porte l’uniforme déchiré du Providence.</p><p>Sa peau est pâle, ses vêtements sont trempés et ses yeux diffusent un reflet bleu froid.</p><p>Tu l’appelles.</p><p>Aucune réaction.</p><p>Sa poitrine ne se soulève pas.</p><p>Puis il tourne brusquement la tête vers toi et se jette en avant.</p>',choices:[{label:'Se défendre',to:'victoryRescueRevenantFight'}]},
 
-victoryRescueRevenantFight:{title:'Le combat',text:s=>'<p>L’ancien marin fond sur toi.</p>'+(s.flags.victoryRescueHaleAssist?'<p>Hale réagit avant toi. Son sabre frappe l’ancien marin à l’épaule et le repousse contre la roche. <strong>Son intervention lui a déjà infligé 3 dégâts.</strong></p>':'')+fightHtml(s,'victoryRescueRevenant',DROWNED_SAILOR),onEnter:s=>prepareVictoryRescueRevenant(s),choices:s=>{const f=s.combats?.victoryRescueRevenant;if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];if(f&&f.hp<=0)return[{label:'Chercher le troisième marin',to:'victoryRescueLastSailor'}];return[{label:'Jeter les dés — combattre',stay:true,inlineCombat:true,effect:x=>fightRound(x,'victoryRescueRevenant',DROWNED_SAILOR)}];}},
+victoryRescueRevenantFight:{title:'Le combat',text:s=>'<p>L’ancien marin fond sur toi.</p>'+(s.flags.victoryRescueHaleAssist?'<p>Hale réagit avant toi. Son sabre frappe l’ancien marin à l’épaule et le repousse contre la roche. <strong>Son intervention lui a déjà infligé 3 dégâts.</strong></p>':'')+fightHtml(s,'victoryRescueRevenant',DROWNED_SAILOR),onEnter:s=>prepareVictoryRescueRevenant(s),choices:s=>{const f=s.combats?.victoryRescueRevenant;if(s.hp<=0)return[{label:'La fin du voyage',to:'death'}];if(f&&f.hp<=0)return[{label:'Chercher le troisième marin',to:'victoryRescueLastSailor'}];return standardFightChoices(s,'victoryRescueRevenant',DROWNED_SAILOR,{label:'La fin du voyage',to:'death'},{label:'Chercher le troisième marin',to:'victoryRescueLastSailor'});}},
 
 victoryRescueLastSailor:{title:'Le troisième marin',text:'<p>Le silence revient dans la galerie.</p><p>Tu continues à descendre.</p><p>Un peu plus loin, près d’un bassin naturel, tu retrouves le troisième marin du Providence.</p><p>Il est allongé contre la roche, les yeux fermés.</p><p>Aucune blessure évidente n’explique sa mort.</p><p>À quelques pas de lui, le passage s’élargit vers une salle ronde. Une faible lueur bleue en éclaire les parois.</p><p>Quelque chose se trouve encore plus loin.</p>',choices:[{label:'Entrer dans la salle',to:'victoryRescueSanctum'}]},
 
@@ -1836,7 +1960,7 @@ function setDevTestItem(s,e,enabled){
  }
  const owned=!!s.inventory?.[e.id];
  if(enabled&&!owned){
-   addItem(s,e.id,e.name.replace(/ ·.*$/,''),e.description);
+   addItem(s,e.id,e.name.replace(/ ·.*$/,''),e.description,e.id==='pistolets_silex'?{quantity:2}:undefined);
    if(e.force)s.forceBonus=(s.forceBonus||0)+e.force;
  }else if(!enabled&&owned){
    delete s.inventory[e.id];
@@ -1946,7 +2070,7 @@ function characterSheetHtml(s){
 BookRegistry.register({
  id:'providence-02',initialMaxHp:18,seriesId:'providence',seriesLabel:'PROVIDENCE',episode:1,orderInSeries:1,
  slug:'le-secret-du-providence',title:'Le Secret du Providence',description:'Une mission maritime de la Royal Navy en 1719.',access:'free',
- contentVersion:131,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
+ contentVersion:132,pageMapVersion:17,saveVersion:1,libraryNumber:2,libraryLabel:'Livre 02',sheetLabel:'FICHE DU PERSONNAGE',
  readerEyebrow:'Chroniques d’un autre temps - Livre 02',
  assetBase:'./books/Livre02-Le-Secret-du-Providence/images',assetBases:['./books/Livre02-Le-Secret-du-Providence/images'],uiAssetBase:'./books/Livre02-Le-Secret-du-Providence/assets',
  seriesProfileDefaults:{heroGender:'female',heroName:'Eleanor',baseStats:{maxHp:18,force:8,dexterity:13}},
