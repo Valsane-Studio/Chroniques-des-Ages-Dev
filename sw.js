@@ -1,6 +1,6 @@
 /* La Grotte de Valombre — Service Worker
    IMPORTANT : augmenter APP_VERSION à chaque nouvelle mise en ligne. */
-const APP_VERSION = 'reference-68.302-book02-page029-blue-lights-v112';
+const APP_VERSION = 'reference-68.303-book02-providence-hold-v113';
 const CACHE_PREFIX = 'chroniques-ages-dev-';
 const CACHE_NAME = `${CACHE_PREFIX}${APP_VERSION}`;
 
