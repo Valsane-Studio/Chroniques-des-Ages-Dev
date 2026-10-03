@@ -225,8 +225,42 @@
       margin-top: 12px !important;
       padding-top: 9px;
       border-top: 1px solid rgba(92, 62, 34, .25);
-      font-size: .92em;
-      opacity: .78;
+      font-size: 1.05em;
+      line-height: 1.45;
+      opacity: .9;
+    }
+
+    /* DEV — le résultat d'un échange doit être immédiatement lisible. */
+    .combat-roll-result .combat-outcome {
+      margin-top: 18px;
+      padding: 15px 17px;
+      border-left: 3px solid rgba(92, 62, 34, .72);
+      background: rgba(73, 48, 27, .075);
+      font-size: clamp(1.05rem, 2.2vw, 1.22rem);
+      line-height: 1.55;
+    }
+    .combat-roll-result .combat-outcome > strong:first-child {
+      font-size: 1.18em;
+      line-height: 1.3;
+    }
+    .combat-roll-result .combat-detail {
+      font-size: .82em;
+      opacity: .76;
+    }
+    .combat-roll-result .combat-life-line {
+      margin-top: 11px;
+      padding: 12px 14px;
+      border-top: 1px solid rgba(92, 62, 34, .28);
+      font-size: clamp(1rem, 2vw, 1.12rem);
+      line-height: 1.45;
+      font-weight: 500;
+    }
+    .combat-roll-result .combat-life-line strong {
+      font-size: 1.08em;
+    }
+    .shadow-tech-result p > strong {
+      font-size: 1.08em;
+      line-height: 1.45;
     }
   `;
   document.head.appendChild(style);
