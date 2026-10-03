@@ -29,7 +29,7 @@ BookManifestRegistry.register({
     statsTexture:'assets/textures/texture-caracteristiques.jpg',
     parchmentTexture:'assets/textures/texture-parchemin.jpg',
     icons:{
-      vie:'assets/icons/vie.png', dexterite:'assets/icons/dexterite.png', force:'--ui-icon-force',
+      vie:'assets/icons/vie.png', dexterite:'assets/icons/dexterite.png', force:'assets/icons/force.png',
       arme:'assets/icons/arme.png', protection:'assets/icons/protection.png', special:'assets/icons/special.png'
     }
   }
