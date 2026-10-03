@@ -6,7 +6,7 @@
   const scene = book?.story?.c26;
   if (!scene) return;
 
-  const VERSION = 2;
+  const VERSION = 3;
   const KEY = 'shadowMass';
   const MAX_HP = 8;
 
@@ -23,6 +23,16 @@
     return state.combats[KEY];
   }
 
+  function normalWeaponDamage(state) {
+    // Même formule que le combat normal du Livre 01 : 2 dégâts de base + puissance de l’arme.
+    const power =
+      state.weapon === 'heavy' ? 5 :
+      state.weapon === 'light' ? 2 :
+      state.weapon === 'black_blade' ? 6 :
+      state.weapon === 'sorcerer_sword' ? 8 : 0;
+    return 2 + power;
+  }
+
   function tech(state) {
     const c = combat(state);
     if (!c.shadowMassTechnique || c.shadowMassTechnique.version !== VERSION) {
@@ -32,6 +42,8 @@
         choice: null,
         enemyDamage: 0,
         heroDamage: 0,
+        baseWeaponDamage: 0,
+        bonusDamage: 0,
         resultVisible: false
       };
     }
@@ -49,17 +61,21 @@
     const t = tech(state);
     if (t.resolved || state.hp <= 0 || c.hp <= 0) return;
 
+    const baseWeaponDamage = normalWeaponDamage(state);
     let enemyDamage = 0;
     let heroDamage = 0;
+    let bonusDamage = 0;
 
     if (choice === 'dodge') {
+      // L’arme n’intervient pas : c’est la collision contre la roche qui blesse la créature.
       enemyDamage = 2;
     } else if (choice === 'brace') {
-      // La masse s’empale franchement, mais son poids projette le héros contre la paroi.
-      enemyDamage = 3;
+      bonusDamage = 2;
+      enemyDamage = baseWeaponDamage + bonusDamage;
       heroDamage = 1;
     } else if (choice === 'lateral') {
-      enemyDamage = 4;
+      bonusDamage = 1;
+      enemyDamage = baseWeaponDamage + bonusDamage;
     }
 
     c.hp = Math.max(0, c.hp - enemyDamage);
@@ -69,6 +85,8 @@
     t.choice = choice;
     t.enemyDamage = enemyDamage;
     t.heroDamage = heroDamage;
+    t.baseWeaponDamage = baseWeaponDamage;
+    t.bonusDamage = bonusDamage;
     t.resultVisible = true;
   }
 
@@ -97,12 +115,12 @@
       text = `
         <p>Tu plantes tes appuis et tends ton épée droit devant toi.</p>
         <p>La masse vient s’empaler sur la lame sans ralentir. Le choc t’arrache du sol et te projette brutalement contre la paroi.</p>
-        <p><strong>La Masse dans l’ombre perd 3 points de Vie. Tu perds 1 point de Vie.</strong></p>`;
+        <p><strong>Ton arme inflige ses ${t.baseWeaponDamage} dégâts habituels, auxquels s’ajoutent 2 dégâts bonus : la Masse dans l’ombre perd ${t.enemyDamage} points de Vie. Tu perds 1 point de Vie.</strong></p>`;
     } else if (t.choice === 'lateral') {
       text = `
         <p>Tu attends qu’elle soit presque sur toi et frappes de toutes tes forces sur le côté.</p>
         <p>La lame mord profondément dans son cou. La masse dévie dans son élan, trébuche et s’écrase lourdement au sol.</p>
-        <p><strong>La Masse dans l’ombre perd 4 points de Vie.</strong></p>`;
+        <p><strong>Ton arme inflige ses ${t.baseWeaponDamage} dégâts habituels, auxquels s’ajoute 1 dégât bonus : la Masse dans l’ombre perd ${t.enemyDamage} points de Vie.</strong></p>`;
     }
 
     const end = c.hp <= 0
@@ -120,7 +138,6 @@
   }
 
   function wrapNormalChoices(state, base) {
-    const t = tech(state);
     return (base || []).map(choice => {
       if (!choice || typeof choice.effect !== 'function') return choice;
       if (!choice.inlineCombat && !/lame de jet/i.test(choice.label || '')) return choice;
