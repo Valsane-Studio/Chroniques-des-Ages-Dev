@@ -1,4 +1,4 @@
-/* DEV — Prototype combat interactif : Masse dans l’ombre, page 26 uniquement. */
+/* DEV — Prototype combat interactif : événement technique unique de la Masse dans l’ombre, page 26. */
 (function () {
   'use strict';
 
@@ -6,196 +6,151 @@
   const scene = book?.story?.c26;
   if (!scene) return;
 
-  const VERSION = 1;
+  const VERSION = 2;
   const KEY = 'shadowMass';
+  const MAX_HP = 8;
 
   const originalText = scene.text;
   const originalChoices = scene.choices;
 
-  const INTENTS = {
-    charge: {
-      name: 'Elle va charger',
-      text: 'La masse s’abaisse brutalement. Tout son poids passe vers l’avant et son épaule se tourne vers toi. Si elle part maintenant, elle frappera de tout son élan — mais son flanc restera découvert.',
-      good: 'quick'
-    },
-    guard: {
-      name: 'Elle se referme',
-      text: 'La créature ralentit et ramène ses bras contre son torse. Elle ne cherche plus à avancer. Elle paraît vouloir encaisser ton prochain coup avant de répondre.',
-      good: 'power'
-    },
-    grab: {
-      name: 'Elle cherche à t’agripper',
-      text: 'La masse se redresse et avance les bras ouverts. Elle ne prépare pas un coup franc : elle cherche plutôt à réduire la distance et à t’enfermer dans son allonge.',
-      good: 'counter'
-    }
-  };
-
-  const ACTIONS = {
-    quick: {
-      name: 'Attaque rapide',
-      label: 'Attaque rapide — privilégier la Dextérité, mais frapper moins fort',
-      description: 'Tu restes mobile et cherches à toucher avant que la masse puisse refermer la distance.',
-      force: 0,
-      dex: 1,
-      dexPenalty: 0,
-      damage: -1
-    },
-    power: {
-      name: 'Frappe puissante',
-      label: 'Frappe puissante — privilégier la Force, au prix d’un peu de Dextérité',
-      description: 'Tu plantes tes appuis et engages tout ton poids dans le coup.',
-      force: 1,
-      dex: 0,
-      dexPenalty: 1,
-      damage: 1
-    },
-    counter: {
-      name: 'Attendre et contrer',
-      label: 'Attendre et contrer — aucun bonus fixe, mais très efficace si tu lis bien son mouvement',
-      description: 'Tu refuses de partir le premier et attends que la créature s’engage pour exploiter son ouverture.',
-      force: 0,
-      dex: 0,
-      dexPenalty: 0,
-      damage: 0
-    }
-  };
-
-  function randomIntent(except) {
-    const ids = Object.keys(INTENTS).filter(id => id !== except);
-    let index = 0;
-    try {
-      const a = new Uint32Array(1);
-      crypto.getRandomValues(a);
-      index = a[0] % ids.length;
-    } catch (e) {
-      index = Math.floor(Math.random() * ids.length);
-    }
-    return ids[index];
-  }
-
   function combat(state) {
-    // Appeler les choix d’origine initialise le combat via le moteur normal si nécessaire.
+    // Les choix d’origine initialisent normalement le combat via book.js.
     if (!state.combats?.[KEY]) {
       try { if (typeof originalChoices === 'function') originalChoices(state); } catch (e) {}
     }
     if (!state.combats) state.combats = {};
-    if (!state.combats[KEY]) state.combats[KEY] = { hp: 8, round: 0, last: null, lastBlade: null };
+    if (!state.combats[KEY]) state.combats[KEY] = { hp: MAX_HP, round: 0, last: null, lastBlade: null };
     return state.combats[KEY];
   }
 
-  function proto(state) {
+  function tech(state) {
     const c = combat(state);
-    if (!c.interactivePrototype || c.interactivePrototype.version !== VERSION) {
-      c.interactivePrototype = {
+    if (!c.shadowMassTechnique || c.shadowMassTechnique.version !== VERSION) {
+      c.shadowMassTechnique = {
         version: VERSION,
-        intent: randomIntent(null),
-        lastIntent: null,
-        lastAction: null,
-        lastMatched: null
+        resolved: false,
+        choice: null,
+        enemyDamage: 0,
+        heroDamage: 0,
+        resultVisible: false
       };
     }
-    return c.interactivePrototype;
+    return c.shadowMassTechnique;
   }
 
-  function saveProp(obj, key) {
-    return { exists: Object.prototype.hasOwnProperty.call(obj, key), value: obj[key] };
-  }
-
-  function restoreProp(obj, key, saved) {
-    if (saved.exists) obj[key] = saved.value;
-    else delete obj[key];
-  }
-
-  function executeAction(state, actionId, originalEffect) {
+  function eventIsPending(state) {
     const c = combat(state);
-    const p = proto(state);
-    const intentId = p.intent;
-    const intent = INTENTS[intentId];
-    const action = ACTIONS[actionId];
-    const matched = intent.good === actionId;
-
-    const savedForce = saveProp(state, 'forceBonus');
-    const savedDex = saveProp(state, 'dexBonus');
-    const savedPenalty = saveProp(state, 'dexPenalty');
-
-    state.forceBonus = Number(state.forceBonus || 0) + action.force;
-    state.dexBonus = Number(state.dexBonus || 0) + action.dex;
-    state.dexPenalty = Number(state.dexPenalty || 0) + action.dexPenalty;
-
-    // Lire correctement la posture donne un avantage supplémentaire sans changer les règles de base.
-    if (matched) {
-      if (actionId === 'quick') state.dexBonus += 2;
-      if (actionId === 'power') state.forceBonus += 2;
-      if (actionId === 'counter') {
-        state.forceBonus += 1;
-        state.dexBonus += 2;
-      }
-    }
-
-    const beforeEnemyHp = Number(c.hp || 0);
-
-    try {
-      originalEffect(state);
-    } finally {
-      restoreProp(state, 'forceBonus', savedForce);
-      restoreProp(state, 'dexBonus', savedDex);
-      restoreProp(state, 'dexPenalty', savedPenalty);
-    }
-
-    const after = combat(state);
-
-    // Les styles modifient légèrement les dégâts seulement si le héros a gagné l’échange.
-    if (after.last?.outcome === 'hero' && action.damage !== 0) {
-      if (action.damage > 0) {
-        const extra = Math.min(action.damage, after.hp);
-        after.hp = Math.max(0, after.hp - extra);
-        after.last.damage += extra;
-      } else {
-        const dealt = Math.max(0, beforeEnemyHp - after.hp);
-        const reduction = Math.min(Math.abs(action.damage), Math.max(0, dealt - 1));
-        after.hp = Math.min(8, after.hp + reduction);
-        after.last.damage = Math.max(1, after.last.damage - reduction);
-      }
-      after.last.enemyHp = after.hp;
-    }
-
-    p.lastIntent = intentId;
-    p.lastAction = actionId;
-    p.lastMatched = matched;
-    p.intent = randomIntent(intentId);
+    const t = tech(state);
+    return state.hp > 0 && c.hp > 0 && c.round >= 1 && !t.resolved;
   }
 
-  function resultStrategyHtml(state) {
-    const p = proto(state);
-    if (!p.lastAction || !p.lastIntent) return '';
-    const action = ACTIONS[p.lastAction];
-    const intent = INTENTS[p.lastIntent];
-    return `
-      <div class="interactive-combat-recap ${p.lastMatched ? 'is-read' : 'is-missed'}">
-        <strong>${action.name}</strong>
-        <span>${p.lastMatched
-          ? `Tu as correctement lu son mouvement : ${intent.name.toLowerCase()}. Ton choix t’a donné un avantage sur cet échange.`
-          : `Ton choix ne répondait pas directement à ce qu’elle préparait (${intent.name.toLowerCase()}). L’échange s’est joué sans avantage particulier.`}</span>
-      </div>`;
-  }
-
-  function intentHtml(state) {
+  function applyTechnique(state, choice) {
     const c = combat(state);
-    if (state.hp <= 0 || c.hp <= 0) return '';
-    const p = proto(state);
-    const intent = INTENTS[p.intent];
+    const t = tech(state);
+    if (t.resolved || state.hp <= 0 || c.hp <= 0) return;
+
+    let enemyDamage = 0;
+    let heroDamage = 0;
+
+    if (choice === 'dodge') {
+      enemyDamage = 2;
+    } else if (choice === 'brace') {
+      // La masse s’empale franchement, mais son poids projette le héros contre la paroi.
+      enemyDamage = 3;
+      heroDamage = 1;
+    } else if (choice === 'lateral') {
+      enemyDamage = 4;
+    }
+
+    c.hp = Math.max(0, c.hp - enemyDamage);
+    state.hp = Math.max(0, state.hp - heroDamage);
+
+    t.resolved = true;
+    t.choice = choice;
+    t.enemyDamage = enemyDamage;
+    t.heroDamage = heroDamage;
+    t.resultVisible = true;
+  }
+
+  function eventPromptHtml() {
     return `
-      <section class="interactive-combat-intent" aria-label="Mouvement de l’adversaire">
-        <div class="interactive-combat-kicker">Observe ton adversaire</div>
-        <strong>${intent.name}</strong>
-        <p>${intent.text}</p>
-      </section>
-      <p class="interactive-combat-help">Choisis ta manière d’engager l’échange, puis les dés départagent les deux combattants comme d’habitude. Une posture peut rendre l’une de tes réponses particulièrement efficace.</p>`;
+      <section class="shadow-tech-event" aria-label="Moment technique du combat">
+        <div class="shadow-tech-kicker">La créature change de comportement</div>
+        <p>La masse s’immobilise une fraction de seconde.</p>
+        <p>Puis son corps se tasse vers l’avant. Ses épaules s’abaissent, ses jambes se contractent.</p>
+        <p><strong>Elle semble chercher à se jeter sur toi de tout son poids.</strong></p>
+      </section>`;
+  }
+
+  function resultHtml(state) {
+    const c = combat(state);
+    const t = tech(state);
+    if (!t.resolved || !t.resultVisible) return '';
+
+    let text = '';
+    if (t.choice === 'dodge') {
+      text = `
+        <p>Tu te jettes sur le côté au dernier instant.</p>
+        <p>La masse passe devant toi et percute la paroi de plein fouet. La roche tremble sous le choc. Quand elle se redresse, son épaule pend plus bas qu’avant.</p>
+        <p><strong>La Masse dans l’ombre perd 2 points de Vie.</strong></p>`;
+    } else if (t.choice === 'brace') {
+      text = `
+        <p>Tu plantes tes appuis et tends ton épée droit devant toi.</p>
+        <p>La masse vient s’empaler sur la lame sans ralentir. Le choc t’arrache du sol et te projette brutalement contre la paroi.</p>
+        <p><strong>La Masse dans l’ombre perd 3 points de Vie. Tu perds 1 point de Vie.</strong></p>`;
+    } else if (t.choice === 'lateral') {
+      text = `
+        <p>Tu attends qu’elle soit presque sur toi et frappes de toutes tes forces sur le côté.</p>
+        <p>La lame mord profondément dans son cou. La masse dévie dans son élan, trébuche et s’écrase lourdement au sol.</p>
+        <p><strong>La Masse dans l’ombre perd 4 points de Vie.</strong></p>`;
+    }
+
+    const end = c.hp <= 0
+      ? '<p><strong>Cette fois, elle ne se relève pas.</strong></p>'
+      : state.hp <= 0
+        ? '<p>Le choc est trop violent. Tes jambes cèdent sous toi.</p>'
+        : '<p>Elle se remet pourtant en mouvement. Le combat reprend.</p>';
+
+    return `
+      <section class="shadow-tech-result">
+        ${text}
+        <p class="shadow-tech-life">Ta Vie : <strong>${state.hp}</strong> · Vie adverse : <strong>${c.hp} / ${MAX_HP}</strong></p>
+        ${end}
+      </section>`;
+  }
+
+  function wrapNormalChoices(state, base) {
+    const t = tech(state);
+    return (base || []).map(choice => {
+      if (!choice || typeof choice.effect !== 'function') return choice;
+      if (!choice.inlineCombat && !/lame de jet/i.test(choice.label || '')) return choice;
+      const originalEffect = choice.effect;
+      return {
+        ...choice,
+        effect: s => {
+          const current = tech(s);
+          current.resultVisible = false;
+          originalEffect(s);
+        }
+      };
+    });
   }
 
   scene.text = state => {
+    const c = combat(state);
+    const t = tech(state);
+
+    if (t.resolved && t.resultVisible) {
+      return resultHtml(state);
+    }
+
     const base = typeof originalText === 'function' ? originalText(state) : originalText;
-    return `${base}${resultStrategyHtml(state)}${intentHtml(state)}`;
+
+    if (eventIsPending(state)) {
+      return `${base}${eventPromptHtml()}`;
+    }
+
+    return base;
   };
 
   scene.choices = state => {
@@ -204,63 +159,58 @@
 
     if (state.hp <= 0 || c.hp <= 0) return base;
 
-    proto(state);
+    if (eventIsPending(state)) {
+      return [
+        {
+          label: 'Te jeter sur le côté pour esquiver',
+          stay: true,
+          inlineCombat: true,
+          effect: s => applyTechnique(s, 'dodge')
+        },
+        {
+          label: 'Tendre ton épée face à toi et tenir ta position',
+          stay: true,
+          inlineCombat: true,
+          effect: s => applyTechnique(s, 'brace')
+        },
+        {
+          label: 'Frapper de toutes tes forces latéralement',
+          stay: true,
+          inlineCombat: true,
+          effect: s => applyTechnique(s, 'lateral')
+        }
+      ];
+    }
 
-    const normalRoll = base.find(choice => choice && choice.inlineCombat && typeof choice.effect === 'function' && /Jeter les dés/i.test(choice.label || ''));
-    if (!normalRoll) return base;
-
-    const choices = Object.entries(ACTIONS).map(([id, action]) => ({
-      label: action.label,
-      stay: true,
-      inlineCombat: true,
-      effect: s => executeAction(s, id, normalRoll.effect)
-    }));
-
-    // Les lames de jet gardent leur comportement actuel : ressource consommable, jet de Dextérité, aucune riposte.
-    const blade = base.find(choice => choice && /lame de jet/i.test(choice.label || ''));
-    if (blade) choices.push(blade);
-
-    return choices;
+    return wrapNormalChoices(state, base);
   };
 
   const style = document.createElement('style');
   style.id = 'interactive-combat-shadowmass-dev-style';
   style.textContent = `
-    .interactive-combat-intent {
-      margin: 18px 0 10px;
+    .shadow-tech-event,
+    .shadow-tech-result {
+      margin: 18px 0 12px;
       padding: 14px 16px;
       border-left: 3px solid rgba(92, 62, 34, .72);
-      background: rgba(73, 48, 27, .075);
+      background: rgba(73, 48, 27, .07);
     }
-    .interactive-combat-intent .interactive-combat-kicker {
-      margin-bottom: 5px;
+    .shadow-tech-event p,
+    .shadow-tech-result p { margin: 7px 0; }
+    .shadow-tech-kicker {
+      margin-bottom: 7px;
       font-size: 11px;
       letter-spacing: .11em;
       text-transform: uppercase;
       opacity: .62;
     }
-    .interactive-combat-intent > strong {
-      display: block;
-      margin-bottom: 5px;
-      font-size: 1.02em;
+    .shadow-tech-life {
+      margin-top: 12px !important;
+      padding-top: 9px;
+      border-top: 1px solid rgba(92, 62, 34, .25);
+      font-size: .92em;
+      opacity: .78;
     }
-    .interactive-combat-intent p { margin: 0; }
-    .interactive-combat-help {
-      margin: 7px 0 15px;
-      font-size: .9em;
-      opacity: .72;
-    }
-    .interactive-combat-recap {
-      margin: 14px 0;
-      padding: 10px 13px;
-      border: 1px solid rgba(94, 70, 42, .32);
-      background: rgba(86, 60, 35, .055);
-    }
-    .interactive-combat-recap strong,
-    .interactive-combat-recap span { display: block; }
-    .interactive-combat-recap span { margin-top: 4px; font-size: .92em; }
-    .interactive-combat-recap.is-read { border-left: 3px solid rgba(71, 91, 52, .65); }
-    .interactive-combat-recap.is-missed { border-left: 3px solid rgba(108, 70, 43, .52); }
   `;
   document.head.appendChild(style);
 })();
