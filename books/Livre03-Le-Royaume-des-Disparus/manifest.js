@@ -9,10 +9,10 @@ BookManifestRegistry.register({
   status:'available',
   actionLabel:'Découvrir',
   access:{mode:'free'},
-  cover:'assets/bibliotheque.jpeg',
-  libraryImage:'assets/bibliotheque.jpeg',
+  cover:'Assets/bibliotheque.jpeg',
+  libraryImage:'Assets/bibliotheque.jpeg',
   preview:{
-    image:'assets/bibliotheque.jpeg',
+    image:'Assets/bibliotheque.jpeg',
     situation:'Chhokangparo, vallée de Tsum. Depuis ton enfance, les anciens parlent d’une zone reculée du Ganesh Himal où des hommes auraient disparu en cherchant un trésor.',
     adventure:'Aventure de haute montagne mêlant exploration, alpinisme, froid, perte de repères et découverte d’un monde enfoui sous la neige.',
     dangers:'Altitude, tempêtes, crevasses, isolement… et une Terreur qui peut peu à peu rendre tes propres perceptions incertaines.'
@@ -20,7 +20,7 @@ BookManifestRegistry.register({
   bookScript:'book.js',
   themeStylesheet:'../Livre02-Le-Secret-du-Providence/assets/theme.css',
   contentVersion:1,
-  assetVersion:2,
+  assetVersion:3,
   theme:{
     buttonTexture:'../Livre02-Le-Secret-du-Providence/assets/textures/texture-bouton.jpg',
     statsTexture:'../Livre02-Le-Secret-du-Providence/assets/textures/texture-caracteristiques.jpg',
