@@ -115,7 +115,7 @@
       text = `
         <p>Tu plantes tes appuis et tends ton épée droit devant toi.</p>
         <p>La masse vient s’empaler sur la lame sans ralentir. Le choc t’arrache du sol et te projette brutalement contre la paroi.</p>
-        <p><strong>Ton arme inflige ses ${t.baseWeaponDamage} dégâts habituels, auxquels s’ajoutent 2 dégâts bonus : la Masse dans l’ombre perd ${t.enemyDamage} points de Vie. Tu perds 1 point de Vie.</strong></p>`;
+        <p><strong>Ton arme inflige ses ${t.baseWeaponDamage} dégâts habituels, auxquels s’ajoutent 2 dégâts bonus : la Masse dans l’ombre perd ${t.enemyDamage} points de Vie. La violence du choc te projette contre la paroi : tu perds 1 point de Vie.</strong></p>`;
     } else if (t.choice === 'lateral') {
       text = `
         <p>Tu attends qu’elle soit presque sur toi et frappes de toutes tes forces sur le côté.</p>
