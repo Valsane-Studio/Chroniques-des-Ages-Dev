@@ -38,6 +38,7 @@
       .replace(/\s*[—-]\s*(?:test|épreuve) de (?:Force|Dextérité)\s*$/i, '')
       .replace(/\s*[—-]\s*tester (?:ta |la )?(?:Force|Dextérité)\s*$/i, '')
       .replace(/\s*[—-]\s*lancer les trois dés de (?:Force|Dextérité)\s*$/i, '')
+      .replace(/\s*[—-]\s*lancer les trois dés\s*$/i, '')
       .replace(/\s*\((?:test|épreuve) de (?:Force|Dextérité)\)\s*$/i, '')
       .trim();
     return text;
