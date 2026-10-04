@@ -14,12 +14,12 @@
 
     html = html.replace(
       '<p>L’un <strong>descend</strong> dans l’obscurité, et de ce passage monte une <strong>forte odeur de soufre</strong>.</p>',
-      '<p><button type="button" class="inline-story-choice" data-choice-index="0">L’un descend dans l’obscurité</button>, et de ce passage monte une forte odeur de soufre.</p>'
+      '<button type="button" class="inline-story-choice" data-choice-index="0"><span class="inline-story-choice-mark" aria-hidden="true">›</span><span class="inline-story-choice-copy">L’un descend dans l’obscurité, et de ce passage monte une forte odeur de soufre.</span></button>'
     );
 
     html = html.replace(
       '<p>L’autre continue tout droit et semble s’enfoncer dans un passage beaucoup plus étroit.</p>',
-      '<p><button type="button" class="inline-story-choice" data-choice-index="1">L’autre continue tout droit et semble s’enfoncer dans un passage beaucoup plus étroit.</button></p>'
+      '<button type="button" class="inline-story-choice" data-choice-index="1"><span class="inline-story-choice-mark" aria-hidden="true">›</span><span class="inline-story-choice-copy">L’autre continue tout droit et semble s’enfoncer dans un passage beaucoup plus étroit.</span></button>'
     );
 
     return html;
@@ -61,36 +61,50 @@
     .inline-story-choice {
       -webkit-appearance: none;
       appearance: none;
-      display: inline-block;
-      max-width: 100%;
-      margin: -4px 0;
-      padding: 7px 2px 6px;
-      border: 0;
-      border-bottom: 1px solid rgba(91, 64, 36, .62);
-      border-radius: 0;
-      background: transparent;
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr);
+      align-items: start;
+      gap: 10px;
+      width: 100%;
+      margin: 14px 0;
+      padding: 12px 14px 12px 10px;
+      border: 1px solid rgba(91, 64, 36, .22);
+      border-left: 3px solid rgba(91, 64, 36, .62);
+      border-radius: 3px;
+      background: rgba(91, 64, 36, .055);
       color: inherit;
       font: inherit;
       font-weight: inherit;
       line-height: 1.45;
       text-align: left;
-      vertical-align: baseline;
       cursor: pointer;
-      -webkit-tap-highlight-color: rgba(91, 64, 36, .16);
+      -webkit-tap-highlight-color: rgba(91, 64, 36, .18);
       touch-action: manipulation;
     }
 
-    .inline-story-choice::after {
-      content: '  ›';
-      display: inline;
-      font-size: .92em;
-      opacity: .68;
-      white-space: nowrap;
+    .inline-story-choice-mark {
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      margin-top: .08em;
+      border: 1px solid rgba(91, 64, 36, .48);
+      border-radius: 50%;
+      font-size: .95em;
+      line-height: 1;
+      opacity: .86;
+    }
+
+    .inline-story-choice-copy {
+      display: block;
+      min-width: 0;
     }
 
     .inline-story-choice:active {
-      background: rgba(91, 64, 36, .10);
-      border-bottom-color: rgba(91, 64, 36, .95);
+      background: rgba(91, 64, 36, .14);
+      border-color: rgba(91, 64, 36, .42);
+      border-left-color: rgba(91, 64, 36, .9);
+      transform: translateY(1px);
     }
 
     .inline-story-choice:focus-visible {
@@ -104,9 +118,17 @@
 
     @media (max-width: 700px) {
       .inline-story-choice {
-        padding-top: 9px;
-        padding-bottom: 8px;
-        line-height: 1.5;
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 9px;
+        min-height: 52px;
+        margin: 13px 0;
+        padding: 11px 12px 11px 9px;
+        line-height: 1.48;
+      }
+
+      .inline-story-choice-mark {
+        width: 23px;
+        height: 23px;
       }
     }
   `;
