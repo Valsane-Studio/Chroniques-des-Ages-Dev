@@ -1,15 +1,19 @@
-/* DEV — Contrôles de combat allégés : intégrés au flux de lecture. */
+/* DEV — Choix allégés : même langage graphique pour tout le flux de lecture. */
 (function () {
   'use strict';
 
   const style = document.createElement('style');
-  style.id = 'combat-controls-light-dev-style';
+  style.id = 'story-choice-flow-dev-style';
   style.textContent = `
-    #choices .choice-btn.combat-roll-btn,
-    #choices .choice-btn.combat-roll-btn:hover,
-    #choices .choice-btn.combat-roll-btn:focus,
-    #choices .choice-btn.combat-roll-btn:focus-visible,
-    #choices .choice-btn.combat-roll-btn:active {
+    /* ---------------------------------------------------------
+       Blocs de choix du lecteur : même rendu que les combats.
+       Fond transparent, filet discret, typo du récit, aligné à gauche.
+       --------------------------------------------------------- */
+    #choices .choice-btn,
+    #choices .choice-btn:hover,
+    #choices .choice-btn:focus,
+    #choices .choice-btn:focus-visible,
+    #choices .choice-btn:active {
       width: 100% !important;
       min-height: 44px !important;
       margin: 5px 0 !important;
@@ -40,8 +44,8 @@
       -webkit-tap-highlight-color: transparent !important;
     }
 
-    #choices .choice-btn.combat-roll-btn::before,
-    #choices .choice-btn.combat-roll-btn::after {
+    #choices .choice-btn::before,
+    #choices .choice-btn::after {
       content: none !important;
       display: none !important;
       border: 0 !important;
@@ -49,14 +53,13 @@
       box-shadow: none !important;
     }
 
-    #choices .choice-btn.combat-roll-btn .choice-arrow,
-    #choices .choice-btn.combat-roll-btn .choice-dest {
+    #choices .choice-btn .choice-arrow {
       display: none !important;
     }
 
-    #choices .choice-btn.combat-roll-btn .choice-copy,
-    #choices .choice-btn.combat-roll-btn .choice-copy > span,
-    #choices .choice-btn.combat-roll-btn .choice-copy * {
+    #choices .choice-btn .choice-copy,
+    #choices .choice-btn .choice-copy > span,
+    #choices .choice-btn .choice-copy * {
       position: static !important;
       inset: auto !important;
       width: 100% !important;
@@ -79,25 +82,115 @@
       letter-spacing: normal !important;
     }
 
-    #choices .choice-btn.combat-roll-btn:hover,
-    #choices .choice-btn.combat-roll-btn:focus-visible {
+    /* Le renvoi de page reste discret, en bas à droite du choix. */
+    #choices .choice-btn .choice-dest {
+      position: static !important;
+      inset: auto !important;
+      display: block !important;
+      width: 100% !important;
+      margin: 5px 0 0 !important;
+      padding: 0 !important;
+      text-align: right !important;
+      color: #806846 !important;
+      -webkit-text-fill-color: #806846 !important;
+      text-shadow: none !important;
+      font-family: var(--body-font, Georgia, 'Times New Roman', serif) !important;
+      font-size: .72em !important;
+      font-weight: 400 !important;
+      font-style: normal !important;
+      text-transform: none !important;
+      letter-spacing: .02em !important;
+      line-height: 1.2 !important;
+    }
+
+    /* Les choix de combat restent sans renvoi de page. */
+    #choices .choice-btn.combat-roll-btn .choice-dest {
+      display: none !important;
+    }
+
+    #choices .choice-btn:hover,
+    #choices .choice-btn:focus-visible {
       background: rgba(58, 46, 32, .03) !important;
       border-color: rgba(58, 46, 32, .84) !important;
     }
 
-    #choices .choice-btn.combat-roll-btn:active {
+    #choices .choice-btn:active {
       background: rgba(58, 46, 32, .055) !important;
       border-color: rgba(58, 46, 32, .9) !important;
     }
 
-    #choices .choice-btn.combat-roll-btn:disabled {
+    #choices .choice-btn:disabled {
       opacity: .48 !important;
     }
 
+    /* ---------------------------------------------------------
+       Choix déjà intégrés directement dans une phrase.
+       Même principe visuel, mais sans casser la ligne du récit.
+       --------------------------------------------------------- */
+    .story-text .inline-story-choice,
+    .story-text .inline-story-choice.inline-story-pill,
+    .story-text .inline-story-choice-in-text {
+      display: inline !important;
+      margin: 0 .03em !important;
+      padding: .04em .24em !important;
+      border: 1px solid rgba(58, 46, 32, .54) !important;
+      border-radius: 3px !important;
+      outline: none !important;
+      outline-offset: 0 !important;
+      background: transparent !important;
+      background-image: none !important;
+      box-shadow: none !important;
+      filter: none !important;
+      color: #2b2117 !important;
+      -webkit-text-fill-color: #2b2117 !important;
+      text-shadow: none !important;
+      font: inherit !important;
+      font-weight: inherit !important;
+      font-style: inherit !important;
+      font-variant: inherit !important;
+      text-transform: inherit !important;
+      line-height: inherit !important;
+      letter-spacing: inherit !important;
+      vertical-align: baseline !important;
+      cursor: pointer !important;
+      -webkit-box-decoration-break: clone;
+      box-decoration-break: clone;
+      -webkit-tap-highlight-color: transparent !important;
+      touch-action: manipulation;
+    }
+
+    .story-text .inline-story-choice:hover,
+    .story-text .inline-story-choice:focus,
+    .story-text .inline-story-choice:focus-visible {
+      outline: none !important;
+      background: rgba(58, 46, 32, .035) !important;
+      border-color: rgba(58, 46, 32, .7) !important;
+      color: #2b2117 !important;
+      -webkit-text-fill-color: #2b2117 !important;
+    }
+
+    .story-text .inline-story-choice:active,
+    .story-text .inline-story-choice-pressed {
+      background: rgba(58, 46, 32, .06) !important;
+      border-color: rgba(58, 46, 32, .82) !important;
+      color: #2b2117 !important;
+      -webkit-text-fill-color: #2b2117 !important;
+    }
+
+    .story-text .inline-story-choice[aria-disabled="true"] {
+      opacity: .52 !important;
+    }
+
     @media (max-width: 700px) {
-      #choices .choice-btn.combat-roll-btn {
+      #choices .choice-btn {
         min-height: 44px !important;
         padding: 9px 11px !important;
+      }
+
+      .story-text .inline-story-choice,
+      .story-text .inline-story-choice.inline-story-pill,
+      .story-text .inline-story-choice-in-text {
+        padding: .03em .18em !important;
       }
     }
   `;
