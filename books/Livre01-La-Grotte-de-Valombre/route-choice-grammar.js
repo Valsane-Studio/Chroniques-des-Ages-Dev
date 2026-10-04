@@ -55,9 +55,11 @@
 
     buttons.forEach((button, index) => {
       const route = isRouteChoice(labelOf(button));
-      button.classList.remove('route-choice-control');
 
-      if (!route) return;
+      if (!route) {
+        button.classList.remove('route-choice-control');
+        return;
+      }
 
       /* Si un ancien prototype avait intégré cette direction en bleu dans la
          phrase, elle redevient du texte normal. Le vrai choix réapparaît dessous. */
@@ -78,7 +80,9 @@
     }));
   }
 
-  new MutationObserver(schedule).observe(choicesRoot, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  /* On observe uniquement les reconstructions du contenu. Les changements de
+     classes sont volontaires et ne doivent pas relancer l'observateur. */
+  new MutationObserver(schedule).observe(choicesRoot, { childList: true, subtree: true });
   new MutationObserver(schedule).observe(storyText, { childList: true, subtree: true });
   schedule();
 
