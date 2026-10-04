@@ -27,23 +27,29 @@
     let html = typeof originalText === 'function' ? originalText(state) : originalText;
     if (!html) return html;
 
-    const actions = [
-      pill(state, 'Voir la forgeronne', 'aller voir la forgeronne'),
-      pill(state, 'Voir le marchand', 'passer voir le marchand'),
-      pill(state, 'Approcher la personne dans la ruelle', 'prendre le risque d’aller à la rencontre de la personne dans la ruelle')
-    ].filter(Boolean);
+    const merchant = pill(state, 'Voir le marchand', 'tu peux passer le voir');
+    const forge = pill(state, 'Voir la forgeronne', 'la forge est également ouverte');
+    const street = pill(state, 'Approcher la personne dans la ruelle', 'une silhouette attend dans la ruelle');
+    const leave = pill(state, 'Partir vers la grotte', 'tu peux quitter Valombre et prendre la route de la grotte');
 
-    const leave = pill(state, 'Partir vers la grotte', 'quitter le village et prendre la route de la grotte');
-    if (!leave) return html;
+    if (!forge || !leave) return html;
 
-    const sentence = actions.length
-      ? `<p class="inline-story-sentence">Tu peux encore prendre le temps de faire ce qui te semble utile : ${actions.join(', ')} — ou ${leave}.</p>`
-      : `<p class="inline-story-sentence">Tu décides finalement de ${leave}.</p>`;
+    let opportunities = '';
+    if (merchant) {
+      opportunities += `Le marchand se tient sous son auvent, ${merchant} ; il a souvent quelques potions à proposer. `;
+    }
+    opportunities += `${forge} : les flammes du fourneau sont visibles depuis l’extérieur`;
+    if (street) opportunities += `, tandis qu’${street}.`;
+    else opportunities += '.';
 
-    return html.replace(
-      '<p>Tu peux encore prendre le temps de faire ce qui te semble utile — ou quitter le village.</p>',
-      sentence
-    );
+    const replacement = `
+      <p class="inline-story-sentence">${opportunities}</p>
+      <p class="inline-story-sentence">Si rien d’autre ne te retient ici, ${leave}.</p>
+    `;
+
+    return html
+      .replace(/<p>[^<]*(?:Le marchand|La forge|Une silhouette)[\s\S]*?<\/p>\s*<p>Tu peux encore prendre le temps de faire ce qui te semble utile — ou quitter le village\.<\/p>/, replacement)
+      .replace('<p>Tu peux encore prendre le temps de faire ce qui te semble utile — ou quitter le village.</p>', replacement);
   };
 
   scene.__inlinePillsPrototype = true;
