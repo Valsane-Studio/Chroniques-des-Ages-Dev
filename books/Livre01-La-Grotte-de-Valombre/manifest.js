@@ -19,9 +19,9 @@ BookManifestRegistry.register({
   },
   bookScript:'book.js',
   journalScript:'journal.js',
-  extraScripts:['map.js','feedback-ui.js','dev-page-number.js','maze-prototype.js','combat-prototype.js','inline-choice-prototype.js','inline-page3-prototype.js','inline-page8-prototype.js','inline-pages0-9-prototype.js','inline-page10-prototype.js','inline-pages11-30-prototype.js','inline-page16-wording.js','inline-adventure-pass.js','combat-controls-prototype.js'],
+  extraScripts:['map.js','feedback-ui.js','dev-page-number.js','maze-prototype.js','combat-prototype.js','inline-choice-prototype.js','inline-page3-prototype.js','inline-page8-prototype.js','inline-pages0-9-prototype.js','inline-page10-prototype.js','inline-pages11-30-prototype.js','inline-page16-wording.js','inline-adventure-pass.js','narrative-transition-ink.js','combat-controls-prototype.js'],
   themeStylesheet:'assets/theme.css',
-  contentVersion:194,
+  contentVersion:195,
   assetVersion:187,
   theme:{
     buttonTexture:'assets/textures/texture-bouton.jpg',
@@ -29,7 +29,7 @@ BookManifestRegistry.register({
     statsTexture:'assets/textures/texture-caracteristiques.jpg',
     parchmentTexture:'assets/textures/texture-parchemin.jpg',
     icons:{
-      vie:'assets/icons/vie.png', dexterite:'assets/icons/dexterite.png', force:'assets/icons/force.png',
+      vie:'assets/icons/vie.png', dexterite:'assets/icons/dexterite.png', force:'--ui-icon-force',
       arme:'assets/icons/arme.png', protection:'assets/icons/protection.png', special:'assets/icons/special.png'
     }
   }
