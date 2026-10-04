@@ -82,29 +82,8 @@
       letter-spacing: normal !important;
     }
 
-    /* Le renvoi de page reste discret, en bas à droite du choix. */
+    /* Aucun renvoi technique de page dans les panneaux de choix. */
     #choices .choice-btn .choice-dest {
-      position: static !important;
-      inset: auto !important;
-      display: block !important;
-      width: 100% !important;
-      margin: 5px 0 0 !important;
-      padding: 0 !important;
-      text-align: right !important;
-      color: #806846 !important;
-      -webkit-text-fill-color: #806846 !important;
-      text-shadow: none !important;
-      font-family: var(--body-font, Georgia, 'Times New Roman', serif) !important;
-      font-size: .72em !important;
-      font-weight: 400 !important;
-      font-style: normal !important;
-      text-transform: none !important;
-      letter-spacing: .02em !important;
-      line-height: 1.2 !important;
-    }
-
-    /* Les choix de combat restent sans renvoi de page. */
-    #choices .choice-btn.combat-roll-btn .choice-dest {
       display: none !important;
     }
 
@@ -124,8 +103,8 @@
     }
 
     /* ---------------------------------------------------------
-       Choix déjà intégrés directement dans une phrase.
-       Même principe visuel, mais sans casser la ligne du récit.
+       Anciennes intégrations inline : conservées uniquement si une correction
+       éditoriale historique en contient encore, mais sans destination de page.
        --------------------------------------------------------- */
     .story-text .inline-story-choice,
     .story-text .inline-story-choice.inline-story-pill,
