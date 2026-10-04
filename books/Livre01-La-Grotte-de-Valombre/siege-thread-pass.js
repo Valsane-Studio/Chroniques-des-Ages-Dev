@@ -8,6 +8,7 @@
    - une trace fraîche apparaît dans la Cité morte ;
    - PAGE 113 rend la poursuite explicite et limite le temps d'exploration ;
    - plus bas, le joueur se sent pris entre une menace devant et une autre derrière ;
+   - les trois voies du dédale conservent la sensation d'être suivi ;
    - il aperçoit enfin brièvement la silhouette qui le suit ;
    - la caverne des condamnés referme l'étau et donne un payoff visuel au motif métallique.
 */
@@ -68,6 +69,46 @@
     `<p>À gauche, une fente étroite s’ouvre dans la roche. À droite, un renfoncement peut te dissimuler. La chose approche.</p>
      <p>Derrière toi, beaucoup plus loin dans le dédale, le raclement métallique retentit de nouveau.</p>
      <p>Il n’y a plus seulement quelque chose devant toi.</p>`
+  ));
+
+  /* VOIE 1 — affronter l'Errant. Quand ses pas cessent, le silence révèle que
+     le poursuivant est toujours là et qu'il s'est rapproché pendant le combat. */
+  wrapText('c153', html => html.replace(
+    '<p>Ton dernier coup abat la chose. Ses pas cessent de faire vibrer la galerie. Un grondement répond au loin.</p>',
+    `<p>Ton dernier coup abat la chose. Ses pas cessent de faire vibrer la galerie.</p>
+     <p>Dans le silence qui suit, un autre son apparaît derrière toi : le raclement du métal sur la pierre.</p>
+     <p>Plus proche qu’avant.</p>
+     <p>Le combat ne t’a pas débarrassé de ce qui te suit.</p>`
+  ));
+
+  /* Variante si l'Errant est achevé par une lame de jet. */
+  wrapText('c154', (html, state) => {
+    const dead = Number(state.combats?.labyrinthWanderer?.hp) <= 0;
+    if (!dead) return html;
+    return `${html}
+      <p>Les pas lourds de la créature cessent.</p>
+      <p>Presque aussitôt, un raclement métallique répond derrière toi, dans la galerie que tu viens de quitter.</p>
+      <p>Quelque chose a profité du combat pour se rapprocher.</p>`;
+  });
+
+  /* VOIE 2 — se cacher. Deux rythmes distincts permettent au joueur de comprendre
+     que la créature qui passe devant lui n'est pas celle qui le poursuit depuis la cité. */
+  wrapText('c155', html => html.replace(
+    '<p>Ta paume glisse sur la poignée. Tu la resserres. Le souffle de la chose passe tout près. Son flanc découvre une ouverture.</p>',
+    `<p>Ta paume glisse sur la poignée. Tu la resserres. Le souffle de la chose passe tout près. Son flanc découvre une ouverture.</p>
+     <p>Puis, au-delà de ses pas, un second bruit monte de la galerie.</p>
+     <p>Métal contre pierre. Lent. Régulier.</p>
+     <p>La chose devant toi n’est donc pas celle qui te suit depuis la cité.</p>`
+  ));
+
+  /* VOIE 3 — galerie étroite. Le passage arrête l'Errant, mais pas la menace :
+     le joueur comprend qu'un changement de route ne suffit pas à la semer. */
+  wrapText('c157', html => html.replace(
+    '<p>Tu te glisses de profil dans la fente. Derrière toi, le lourd pas s’arrête : la créature ne peut pas passer.</p>',
+    `<p>Tu te glisses de profil dans la fente. Derrière toi, le lourd pas s’arrête : la créature ne peut pas passer.</p>
+     <p>Quelques secondes de silence te laissent croire que tu les as semés.</p>
+     <p>Puis, plus loin derrière la créature, le raclement métallique reprend.</p>
+     <p>Même ce détour n’a pas arrêté l’autre présence.</p>`
   ));
 
   /* PAGE 196 — première confirmation visuelle. On reste volontairement vague :
