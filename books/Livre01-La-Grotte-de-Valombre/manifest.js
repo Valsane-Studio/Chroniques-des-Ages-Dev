@@ -19,9 +19,9 @@ BookManifestRegistry.register({
   },
   bookScript:'book.js',
   journalScript:'journal.js',
-  extraScripts:['map.js','feedback-ui.js','maze-prototype.js','combat-prototype.js','inline-choice-prototype.js','inline-page3-prototype.js','inline-page8-prototype.js','inline-pages0-9-prototype.js','inline-page10-prototype.js','inline-pages11-30-prototype.js','inline-page16-wording.js'],
+  extraScripts:['map.js','feedback-ui.js','maze-prototype.js','combat-prototype.js','combat-controls-prototype.js','inline-choice-prototype.js','inline-page3-prototype.js','inline-page8-prototype.js','inline-pages0-9-prototype.js','inline-page10-prototype.js','inline-pages11-30-prototype.js','inline-page16-wording.js'],
   themeStylesheet:'assets/theme.css',
-  contentVersion:188,
+  contentVersion:189,
   assetVersion:187,
   theme:{
     buttonTexture:'assets/textures/texture-bouton.jpg',
