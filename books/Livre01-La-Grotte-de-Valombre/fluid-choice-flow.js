@@ -145,7 +145,8 @@
       return;
     }
 
-    add('La suite se dessine devant toi : ', label, '.');
+    const sentence = label.charAt(0).toLocaleUpperCase('fr-FR') + label.slice(1);
+    add('', sentence, '.');
   }
 
   function appendFallback(entries) {
