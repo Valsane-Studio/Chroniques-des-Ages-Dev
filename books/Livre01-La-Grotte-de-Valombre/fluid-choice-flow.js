@@ -1,9 +1,11 @@
 /* DEV — Flux de choix intégral.
    Règle de DA :
    - toute décision / action / direction = encre bleue directement dans le récit ;
-   - seul le lancer de dés lui-même reste un contrôle encadré transparent.
+   - le lancer de dés lui-même reste un contrôle encadré transparent ;
+   - exception : pendant une phase d'interaction tactique de combat, les réactions
+     proposées restent elles aussi dans des cadres transparents.
    Les intégrations manuelles existantes (pages 003, 008, etc.) sont prioritaires.
-   Ce filet de sécurité place tous les choix restants dans la prose, de 000 à la fin. */
+   Ce filet de sécurité place tous les autres choix dans la prose, de 000 à la fin. */
 (function () {
   'use strict';
 
@@ -28,6 +30,14 @@
     const label = buttonLabel(button);
     if (storyText.querySelector('.dice-test-waiting')) return true;
     return DIRECT_ROLL_RE.test(label);
+  }
+
+  /* Convention commune pour les combats actuels et futurs :
+     une scène qui affiche .combat-interaction-prompt est une phase tactique où
+     le monstre annonce son comportement et où les réactions restent encadrées.
+     .shadow-tech-event maintient la compatibilité avec le prototype de la Masse. */
+  function isCombatInteractionPhase() {
+    return Boolean(storyText.querySelector('.combat-interaction-prompt, .shadow-tech-event'));
   }
 
   function cleanInlineLabel(label) {
@@ -106,15 +116,13 @@
   function chooseParagraph(paragraphs, label, order, count, used) {
     const labelTokens = tokens(label);
     let best = null;
-    let bestIndex = -1;
     let bestScore = -Infinity;
 
-    paragraphs.forEach((p, index) => {
+    paragraphs.forEach(p => {
       const score = paragraphScore(p, labelTokens) - (used.has(p) ? 3 : 0);
       if (score > bestScore) {
         bestScore = score;
         best = p;
-        bestIndex = index;
       }
     });
 
@@ -169,6 +177,8 @@
     const buttons = Array.from(choicesRoot.querySelectorAll('.choice-btn'));
     if (!buttons.length) return;
 
+    const interactionPhase = isCombatInteractionPhase();
+
     const existingIndexes = new Set(
       Array.from(storyText.querySelectorAll('.inline-story-choice[data-choice-index]'))
         .map(el => Number(el.dataset.choiceIndex))
@@ -178,16 +188,23 @@
     const narrative = [];
 
     buttons.forEach((button, index) => {
-      button.classList.remove('fluid-choice-source-hidden', 'fluid-roll-control');
+      button.classList.remove('fluid-choice-source-hidden', 'fluid-roll-control', 'fluid-combat-interaction-control');
 
       if (isDirectRollButton(button)) {
         button.classList.add('fluid-roll-control');
         return;
       }
 
-      /* Tout ce qui n'est pas le lancer de dés lui-même appartient au récit,
-         y compris une direction menant ensuite à une épreuve, une action de
-         combat, l'utilisation d'une lame, une décision morale ou une reprise. */
+      /* Pendant un moment tactique de combat, le comportement adverse est annoncé
+         dans le récit et les réactions du joueur restent volontairement séparées,
+         dans leurs cadres transparents. */
+      if (interactionPhase) {
+        button.classList.add('fluid-combat-interaction-control');
+        return;
+      }
+
+      /* Tout le reste appartient au récit : direction, interaction, action de
+         combat ordinaire, lame de jet, décision morale, objet, reprise, etc. */
       button.classList.add('fluid-choice-source-hidden');
 
       if (!existingIndexes.has(index)) {
@@ -295,12 +312,17 @@
       color: inherit;
     }
 
-    /* SEUL LE LANCER DE DÉS reste encadré. */
+    /* LANCER DE DÉS + INTERACTION TACTIQUE DE COMBAT : cadres transparents. */
     #choices .choice-btn.fluid-roll-control,
     #choices .choice-btn.fluid-roll-control:hover,
     #choices .choice-btn.fluid-roll-control:focus,
     #choices .choice-btn.fluid-roll-control:focus-visible,
-    #choices .choice-btn.fluid-roll-control:active {
+    #choices .choice-btn.fluid-roll-control:active,
+    #choices .choice-btn.fluid-combat-interaction-control,
+    #choices .choice-btn.fluid-combat-interaction-control:hover,
+    #choices .choice-btn.fluid-combat-interaction-control:focus,
+    #choices .choice-btn.fluid-combat-interaction-control:focus-visible,
+    #choices .choice-btn.fluid-combat-interaction-control:active {
       display: block !important;
       width: 100% !important;
       min-height: 44px !important;
@@ -309,6 +331,7 @@
       border: 1px solid rgba(58,46,32,.72) !important;
       border-radius: 3px !important;
       outline: none !important;
+      outline-offset: 0 !important;
       background: transparent !important;
       background-image: none !important;
       box-shadow: none !important;
@@ -327,7 +350,10 @@
 
     #choices .choice-btn.fluid-roll-control .choice-copy,
     #choices .choice-btn.fluid-roll-control .choice-copy *,
-    #choices .choice-btn.fluid-roll-control .choice-dest {
+    #choices .choice-btn.fluid-roll-control .choice-dest,
+    #choices .choice-btn.fluid-combat-interaction-control .choice-copy,
+    #choices .choice-btn.fluid-combat-interaction-control .choice-copy *,
+    #choices .choice-btn.fluid-combat-interaction-control .choice-dest {
       color: #2b2117 !important;
       -webkit-text-fill-color: #2b2117 !important;
       text-shadow: none !important;
@@ -338,7 +364,9 @@
     }
 
     #choices .choice-btn.fluid-roll-control .choice-arrow,
-    #choices .choice-btn.fluid-roll-control .choice-dest {
+    #choices .choice-btn.fluid-roll-control .choice-dest,
+    #choices .choice-btn.fluid-combat-interaction-control .choice-arrow,
+    #choices .choice-btn.fluid-combat-interaction-control .choice-dest {
       display: none !important;
     }
   `;
