@@ -20,7 +20,7 @@
   function pill(state, label, copy) {
     const index = choiceIndex(state, label);
     if (index < 0) return '';
-    return `<button type="button" class="inline-story-choice inline-story-choice-in-text inline-story-pill" data-choice-index="${index}"><span class="inline-story-choice-copy">${copy}</span></button>`;
+    return `<span class="inline-story-choice inline-story-choice-in-text inline-story-pill" data-choice-index="${index}" role="button" tabindex="0"><span class="inline-story-choice-copy">${copy}</span></span>`;
   }
 
   scene.text = state => {
@@ -54,35 +54,66 @@
 
   scene.__inlinePillsPrototype = true;
 
+  /* La convention est annoncée une seule fois dans les règles du livre. */
+  const rulesScene = book.story?.startRules;
+  if (rulesScene && !rulesScene.__interactiveInkHint) {
+    const originalRulesText = rulesScene.text;
+    rulesScene.text = state => {
+      let html = typeof originalRulesText === 'function' ? originalRulesText(state) : originalRulesText;
+      if (!html) return html;
+      const hint = `
+        <div class="interactive-ink-hint" role="note">
+          <p>Certains passages du récit apparaissent en <span class="interactive-ink-sample">bleu</span>. Ils indiquent une action possible : touche-les pour agir.</p>
+        </div>
+      `;
+      return html.includes('interactive-ink-hint')
+        ? html
+        : html.replace('<div class="hero-weapon">', `${hint}<div class="hero-weapon">`);
+    };
+    rulesScene.__interactiveInkHint = true;
+  }
+
+  function installKeyboardActivation() {
+    const storyText = document.getElementById('storyText');
+    if (!storyText || storyText.dataset.inlineInkKeyboard === '1') return;
+    storyText.dataset.inlineInkKeyboard = '1';
+    storyText.addEventListener('keydown', event => {
+      const target = event.target.closest('.inline-story-pill[data-choice-index]');
+      if (!target || (event.key !== 'Enter' && event.key !== ' ')) return;
+      event.preventDefault();
+      target.click();
+    });
+  }
+
   const style = document.createElement('style');
   style.id = 'inline-page3-prototype-style';
   style.textContent = `
     .inline-story-sentence {
-      line-height: 1.65;
+      line-height: inherit;
     }
 
     .inline-story-choice.inline-story-pill {
       -webkit-appearance: none;
       appearance: none;
-      display: inline-block;
+      display: inline;
       width: auto;
-      max-width: 100%;
+      max-width: none;
       min-height: 0;
-      margin: 0 1px;
-      padding: 0 .28em .04em;
-      border: 1px solid rgba(91, 64, 36, .24);
-      border-radius: 2px;
-      background: rgba(91, 64, 36, .018);
-      color: inherit;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: #365f79;
       font: inherit;
       font-weight: inherit;
-      line-height: 1.18;
-      text-align: left;
+      line-height: inherit;
+      text-align: inherit;
       vertical-align: baseline;
       white-space: normal;
       box-shadow: none;
       cursor: pointer;
-      -webkit-tap-highlight-color: rgba(91, 64, 36, .12);
+      -webkit-tap-highlight-color: rgba(54, 95, 121, .16);
       touch-action: manipulation;
     }
 
@@ -95,28 +126,46 @@
     }
 
     .inline-story-choice.inline-story-pill:active {
-      background: rgba(91, 64, 36, .10);
-      border-color: rgba(91, 64, 36, .42);
+      color: #203f55;
+      background: transparent;
+      border: 0;
       transform: none;
     }
 
     .inline-story-choice.inline-story-pill:focus-visible {
-      outline: 1px solid rgba(91, 64, 36, .58);
+      outline: 1px dotted rgba(54, 95, 121, .75);
       outline-offset: 2px;
+    }
+
+    .interactive-ink-hint {
+      margin: 14px 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+    }
+
+    .interactive-ink-hint p {
+      margin: 0;
+    }
+
+    .interactive-ink-sample {
+      color: #365f79;
     }
 
     @media (max-width: 700px) {
       .inline-story-sentence {
-        line-height: 1.7;
+        line-height: inherit;
       }
 
       .inline-story-choice.inline-story-pill {
-        min-height: 0;
-        margin: 0 1px;
-        padding: 0 .26em .04em;
-        line-height: 1.18;
+        margin: 0;
+        padding: 0;
+        line-height: inherit;
       }
     }
   `;
   document.head.appendChild(style);
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installKeyboardActivation, { once: true });
+  else installKeyboardActivation();
 })();
