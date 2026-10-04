@@ -52,38 +52,36 @@
   style.id = 'inline-page3-prototype-style';
   style.textContent = `
     .inline-story-sentence {
-      line-height: 1.9;
+      line-height: 1.65;
     }
 
     .inline-story-choice.inline-story-pill {
-      display: inline-flex;
-      align-items: center;
+      -webkit-appearance: none;
+      appearance: none;
+      display: inline-block;
       width: auto;
       max-width: 100%;
-      min-height: 34px;
-      margin: 2px 2px;
-      padding: 4px 9px 5px;
-      border: 1px solid rgba(91, 64, 36, .32);
-      border-left: 1px solid rgba(91, 64, 36, .32);
-      border-radius: 999px;
-      background: rgba(91, 64, 36, .075);
+      min-height: 0;
+      margin: 0 1px;
+      padding: 0 .28em .04em;
+      border: 1px solid rgba(91, 64, 36, .24);
+      border-radius: 2px;
+      background: rgba(91, 64, 36, .018);
       color: inherit;
       font: inherit;
-      font-weight: 600;
-      line-height: 1.25;
+      font-weight: inherit;
+      line-height: 1.18;
       text-align: left;
-      vertical-align: middle;
+      vertical-align: baseline;
       white-space: normal;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.10);
+      box-shadow: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: rgba(91, 64, 36, .12);
+      touch-action: manipulation;
     }
 
     .inline-story-choice.inline-story-pill::after {
-      content: '›';
-      margin-left: 7px;
-      font-size: .92em;
-      line-height: 1;
-      opacity: .58;
-      flex: 0 0 auto;
+      content: none;
     }
 
     .inline-story-choice.inline-story-pill .inline-story-choice-copy {
@@ -91,21 +89,26 @@
     }
 
     .inline-story-choice.inline-story-pill:active {
-      background: rgba(91, 64, 36, .16);
-      border-color: rgba(91, 64, 36, .52);
-      transform: translateY(1px);
+      background: rgba(91, 64, 36, .10);
+      border-color: rgba(91, 64, 36, .42);
+      transform: none;
+    }
+
+    .inline-story-choice.inline-story-pill:focus-visible {
+      outline: 1px solid rgba(91, 64, 36, .58);
+      outline-offset: 2px;
     }
 
     @media (max-width: 700px) {
       .inline-story-sentence {
-        line-height: 2.05;
+        line-height: 1.7;
       }
 
       .inline-story-choice.inline-story-pill {
-        min-height: 38px;
-        margin: 3px 1px;
-        padding: 5px 9px 6px;
-        line-height: 1.28;
+        min-height: 0;
+        margin: 0 1px;
+        padding: 0 .26em .04em;
+        line-height: 1.18;
       }
     }
   `;
