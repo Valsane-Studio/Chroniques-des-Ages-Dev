@@ -94,4 +94,10 @@
     html = html.replace(/<p>Le couloir se sépare devant .*?<\/p>/, '');
     return `<p>Le couloir débouche devant ${ink(2, 'un escalier qui s’enfonce vers les niveaux inférieurs')}. Avant de descendre, deux portes s’ouvrent encore sur le côté : l’une mène à ${ink(0, 'un poste de secours')}, l’autre à ${ink(1, 'une petite réserve')}.</p>` + html;
   });
+
+  /* PAGE 125 — une fois le rat abattu, le sac est directement l'interaction. */
+  patch('c192', html => html.replace(
+    '<p>La créature s’affaisse sur le sol. Le silence revient. Quelque chose brille dans le petit sac où elle se cachait.</p>',
+    `<p>La créature s’affaisse sur le sol. Le silence revient. Quelque chose brille ${ink(0, 'dans le petit sac où elle se cachait')}.</p>`
+  ));
 })();
