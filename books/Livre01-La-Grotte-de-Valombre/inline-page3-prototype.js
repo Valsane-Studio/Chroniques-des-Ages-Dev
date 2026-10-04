@@ -73,18 +73,6 @@
     rulesScene.__interactiveInkHint = true;
   }
 
-  function installKeyboardActivation() {
-    const storyText = document.getElementById('storyText');
-    if (!storyText || storyText.dataset.inlineInkKeyboard === '1') return;
-    storyText.dataset.inlineInkKeyboard = '1';
-    storyText.addEventListener('keydown', event => {
-      const target = event.target.closest('.inline-story-pill[data-choice-index]');
-      if (!target || (event.key !== 'Enter' && event.key !== ' ')) return;
-      event.preventDefault();
-      target.click();
-    });
-  }
-
   const style = document.createElement('style');
   style.id = 'inline-page3-prototype-style';
   style.textContent = `
@@ -165,7 +153,4 @@
     }
   `;
   document.head.appendChild(style);
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installKeyboardActivation, { once: true });
-  else installKeyboardActivation();
 })();
