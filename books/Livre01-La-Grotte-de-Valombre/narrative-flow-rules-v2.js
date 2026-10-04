@@ -85,4 +85,7 @@
       `<p>Des marques de coups autour du verrou montrent que quelqu'un a déjà essayé de forcer l'entrée.</p><p>Tu peux tenter ta chance, ou poursuivre les recherches d'Aldren. Tu peux ${ink(0, 'tenter d’enfoncer la porte')}.</p><p>Tu peux aussi ${ink(1, 'laisser la porte et gagner les appartements')}.</p>`
     );
   });
+
+  /* PAGE 112 — sortie simple, sans phrase d'introduction artificielle. */
+  patch('c105', html => `${html}<p>${ink(0, 'Quitter le registre')}.</p>`);
 })();
