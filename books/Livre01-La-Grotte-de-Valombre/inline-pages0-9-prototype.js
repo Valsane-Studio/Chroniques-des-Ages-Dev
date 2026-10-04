@@ -79,8 +79,7 @@
     }
 
     if (village || cave) {
-      const directions = `<p>Lorsque tu refermes la sacoche, ${village || 'le village'} sont encore tout proches derrière toi, tandis que ${cave || 'la route de la grotte'} s’élève déjà vers les collines.</p>`;
-      html += directions;
+      html += `<p>Lorsque tu refermes la sacoche, ${village || 'le village'} sont encore tout proches derrière toi, tandis que ${cave || 'la route de la grotte'} s’élève déjà vers les collines.</p>`;
     }
     return html;
   });
@@ -88,14 +87,14 @@
   /* c3 possède déjà sa réécriture spécifique : les actions sont dispersées dans la description de la place. */
 
   wrap('c4', (html, state, scene) => {
-    const buy = ink(scene, state, 'Acheter la potion de guérison', 'acheter la potion de guérison');
+    const buy = ink(scene, state, 'Acheter la potion de guérison', 'l’acheter');
     const leave = ink(scene, state, 'Ne rien acheter et repartir', 'repartir sans rien acheter');
-    const back = ink(scene, state, 'Retourner sur la place', 'retourner sur la place');
+    const back = ink(scene, state, 'Retourner sur la place', 'tu retournes sur la place');
 
     if (buy || leave) {
-      html += `<p>Les trois pièces d’Aldren suffiraient pour ${buy || 'cette potion'}${leave ? ` ; tu peux aussi ${leave}` : ''}.</p>`;
+      html += `<p>La fiole reste posée entre vous. ${buy ? `Les trois pièces d’Aldren suffisent pour ${buy}` : ''}${buy && leave ? '. Pourtant, rien ne t’oblige à dépenser cet argent : ' : ''}${leave || ''}.</p>`;
     } else if (back) {
-      html += `<p>Le marchand n’a rien d’autre à te proposer. Tu peux ${back}.</p>`;
+      html += `<p>Le marchand n’a plus rien à ajouter. ${back}.</p>`;
     }
     return html;
   });
