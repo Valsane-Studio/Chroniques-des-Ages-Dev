@@ -1,7 +1,7 @@
 /* DEV — Nettoyage éditorial du flux narratif.
    Les choix explicites sont intégrés au moment où le récit les rend possibles.
-   Ce fichier corrige aussi les répétitions créées par une action déjà racontée
-   puis proposée une seconde fois comme choix. */
+   Un prolongement unique est présenté comme la suite naturelle de la scène,
+   jamais comme un ordre adressé au joueur. */
 (function () {
   'use strict';
 
@@ -29,16 +29,16 @@
     ''
   ));
 
-  /* PAGE 044 — ne pas répéter le choix qui vient d’être fait. */
+  /* PAGE 044 — la difficulté elle-même introduit la suite. */
   wrap('c44', html => {
     html = html.replace('<p>Tu choisis l’escalier.</p>', '');
     if (!html.includes('data-choice-index="0"')) {
-      html += `<p>Pour continuer, tu dois ${ink(0, 'traverser la portion glissante')}.</p>`;
+      html += `<p>Devant toi, ${ink(0, 'la portion glissante')} barre encore le passage.</p>`;
     }
     return html;
   });
 
-  /* PAGE 049 — l’ascension est déjà racontée : le geste devient lui-même le lien. */
+  /* PAGE 049 — l’ascension déjà racontée devient directement le lien. */
   wrap('c49', html => {
     if (html.includes('data-choice-index="0"')) return html;
     html = html.replace(
@@ -52,21 +52,21 @@
     return html;
   });
 
-  /* PAGE 050 — toute la fresque doit être lue avant de proposer la suivante. */
+  /* PAGE 050 — toute la fresque est lue avant la suite. */
   wrap('c50', html => {
     if (html.includes('data-choice-index="0"')) return html;
     return html.replace(
       '<p>Tu ignores ce qui les attirait, et ce qu’ils ont trouvé au bout du chemin.</p>',
-      `<p>Tu ignores ce qui les attirait, et ce qu’ils ont trouvé au bout du chemin.</p><p>${ink(0, 'Tu peux examiner la gravure suivante')}.</p>`
+      `<p>Tu ignores ce qui les attirait, et ce qu’ils ont trouvé au bout du chemin.</p><p>La fresque se poursuit avec ${ink(0, 'la gravure suivante')}.</p>`
     );
   });
 
-  /* PAGE 051 — même logique : terminer la lecture avant de repartir. */
+  /* PAGE 051 — reprise naturelle du parcours. */
   wrap('c51', html => {
     if (html.includes('data-choice-index="0"')) return html;
     return html.replace(
       '<p>Mais la fresque ne montre ni ce qu’il en a fait, ni ce qui l’attendait derrière la porte.</p>',
-      `<p>Mais la fresque ne montre ni ce qu’il en a fait, ni ce qui l’attendait derrière la porte.</p><p>${ink(0, 'Tu peux reprendre l’ascension')}.</p>`
+      `<p>Mais la fresque ne montre ni ce qu’il en a fait, ni ce qui l’attendait derrière la porte.</p><p>Au-dessus de toi, ${ink(0, 'l’ascension se poursuit')}.</p>`
     );
   });
 
@@ -95,8 +95,7 @@
     return html;
   });
 
-  /* Répétitions évidentes repérées ailleurs dans le parcours : l’action déjà
-     racontée devient directement le choix, au lieu d’être répétée après coup. */
+  /* Répétitions évidentes repérées ailleurs : l’action déjà racontée porte le lien. */
   wrap('c70', html => html.includes('data-choice-index="0"') ? html : html.replace(
     '<p>Tu avances vers la scène suivante.</p>',
     `<p>${ink(0, 'Tu avances vers la scène suivante')}.</p>`
@@ -131,7 +130,7 @@
     if (html.includes('data-choice-index="0"')) return html;
     return html.replace(
       'tu l’ajustes à ton bras avant de franchir la porte du quartier haut.',
-      `tu l’ajustes à ton bras.</p><p>${ink(0, 'Tu franchis la porte du quartier haut')}.`
+      `tu l’ajustes à ton bras.</p><p>${ink(0, 'La porte du quartier haut')} s’ouvre devant toi.`
     );
   });
 
@@ -167,50 +166,4 @@
       `<p>Alors que tu viens de blesser le deuxième chevalier, un grincement retentit sur le côté.</p><p>${ink(0, 'Tu te retournes vers le bruit')}.</p>`
     );
   });
-
-  /* Garde-fou pour les choix encore générés automatiquement par fluid-choice-flow :
-     un lien de secours ne doit pas interrompre prématurément une scène. Si le
-     générateur l’a placé dans les 2/3 premiers du récit, on le déplace dans la
-     partie finale. Les intégrations écrites à la main ci-dessus ne sont jamais touchées. */
-  const storyText = document.getElementById('storyText');
-  if (!storyText) return;
-
-  let scheduled = false;
-  function guardGeneratedPlacement() {
-    scheduled = false;
-    const paragraphs = Array.from(storyText.querySelectorAll(':scope > p')).filter(p => p.textContent.trim());
-    if (paragraphs.length < 3) return;
-
-    const generated = Array.from(storyText.querySelectorAll('.fluid-choice-sentence')).filter(el => !el.dataset.flowGuarded);
-    if (!generated.length) return;
-
-    const minIndex = Math.floor((paragraphs.length - 1) * 0.68);
-    const fallbackTargets = paragraphs.slice(minIndex);
-    if (!fallbackTargets.length) return;
-
-    generated.forEach((holder, order) => {
-      const parent = holder.closest('p');
-      const currentIndex = paragraphs.indexOf(parent);
-      holder.dataset.flowGuarded = 'true';
-      if (currentIndex < 0 || currentIndex >= minIndex) return;
-
-      const targetIndex = Math.min(fallbackTargets.length - 1,
-        Math.round((order / Math.max(1, generated.length - 1)) * (fallbackTargets.length - 1)));
-      const target = fallbackTargets[targetIndex] || paragraphs[paragraphs.length - 1];
-      if (target === parent) return;
-
-      holder.remove();
-      target.appendChild(document.createTextNode(' '));
-      target.appendChild(holder);
-    });
-  }
-
-  function scheduleGuard() {
-    if (scheduled) return;
-    scheduled = true;
-    requestAnimationFrame(guardGeneratedPlacement);
-  }
-
-  new MutationObserver(scheduleGuard).observe(storyText, { childList: true, subtree: true });
-  scheduleGuard();
 })();
