@@ -88,4 +88,10 @@
 
   /* PAGE 112 — sortie simple, sans phrase d'introduction artificielle. */
   patch('c105', html => `${html}<p>${ink(0, 'Quitter le registre')}.</p>`);
+
+  /* PAGE 113 — les deux pièces sont des détours possibles avant la descente principale. */
+  patch('c106', html => {
+    html = html.replace(/<p>Le couloir se sépare devant .*?<\/p>/, '');
+    return `<p>Le couloir débouche devant ${ink(2, 'un escalier qui s’enfonce vers les niveaux inférieurs')}. Avant de descendre, deux portes s’ouvrent encore sur le côté : l’une mène à ${ink(0, 'un poste de secours')}, l’autre à ${ink(1, 'une petite réserve')}.</p>` + html;
+  });
 })();
