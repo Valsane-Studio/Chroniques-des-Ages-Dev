@@ -3,6 +3,7 @@
    - toute décision / action / direction = encre bleue dans le récit ;
    - les intégrations écrites explicitement dans une scène sont prioritaires ;
    - tout choix non intégré explicitement est placé APRES la dernière phrase du récit ;
+   - un choix unique est introduit par une phrase narrative, jamais par « tu dois » ;
    - le lancer de dés reste un contrôle encadré transparent ;
    - pendant une interaction tactique de combat, les réactions restent encadrées.
    Aucun placement automatique par ressemblance de mots n'est autorisé. */
@@ -55,6 +56,98 @@
     storyText.querySelectorAll('.fluid-choice-fallback-paragraph, .fluid-choice-sentence').forEach(el => el.remove());
   }
 
+  function appendNarrativeSingleChoice(p, entry) {
+    const label = cleanInlineLabel(entry.label);
+    let match;
+
+    function add(prefix, clickable, suffix) {
+      if (prefix) p.appendChild(document.createTextNode(prefix));
+      p.appendChild(inlineChoice(entry.index, clickable));
+      if (suffix) p.appendChild(document.createTextNode(suffix));
+    }
+
+    if ((match = label.match(/^consulter\s+(.+)$/i))) {
+      add('Plus loin se trouvent ', match[1], '.');
+      return;
+    }
+    if ((match = label.match(/^examiner\s+(.+)$/i))) {
+      add('Ton attention se porte sur ', match[1], '.');
+      return;
+    }
+    if ((match = label.match(/^lire\s+(.+)$/i))) {
+      add('Un peu plus loin, ', match[1], ' attire ton attention.');
+      return;
+    }
+    if ((match = label.match(/^regarder\s+(.+)$/i))) {
+      add('Ton regard se porte vers ', match[1], '.');
+      return;
+    }
+    if ((match = label.match(/^reprendre\s+(.+)$/i))) {
+      add('', match[1].charAt(0).toLocaleUpperCase('fr-FR') + match[1].slice(1), ' se poursuit devant toi.');
+      return;
+    }
+    if ((match = label.match(/^poursuivre\s+vers\s+(.+)$/i))) {
+      add('Le passage se poursuit vers ', match[1], '.');
+      return;
+    }
+    if ((match = label.match(/^poursuivre\s+dans\s+(.+)$/i))) {
+      add('Le chemin continue dans ', match[1], '.');
+      return;
+    }
+    if ((match = label.match(/^continuer\s+(?:vers|dans)\s+(.+)$/i))) {
+      add('Le chemin se prolonge vers ', match[1], '.');
+      return;
+    }
+    if ((match = label.match(/^continuer\s+(.+)$/i))) {
+      add('', match[1].charAt(0).toLocaleUpperCase('fr-FR') + match[1].slice(1), ' prolonge ton chemin.');
+      return;
+    }
+    if ((match = label.match(/^rejoindre\s+(.+)$/i))) {
+      add('Plus loin, ton chemin rejoint ', match[1], '.');
+      return;
+    }
+    if ((match = label.match(/^gagner\s+(.+)$/i))) {
+      add('Plus loin, le passage rejoint ', match[1], '.');
+      return;
+    }
+    if ((match = label.match(/^entrer\s+dans\s+(.+)$/i))) {
+      add('Devant toi s’ouvre ', match[1], '.');
+      return;
+    }
+    if ((match = label.match(/^passer\s+(?:dans|sous)\s+(.+)$/i))) {
+      add('Un passage mène vers ', match[1], '.');
+      return;
+    }
+    if ((match = label.match(/^franchir\s+(.+)$/i))) {
+      add('', match[1].charAt(0).toLocaleUpperCase('fr-FR') + match[1].slice(1), ' se dresse encore devant toi.');
+      return;
+    }
+    if ((match = label.match(/^suivre\s+(.+)$/i))) {
+      add('', match[1].charAt(0).toLocaleUpperCase('fr-FR') + match[1].slice(1), ' se poursuit devant toi.');
+      return;
+    }
+    if ((match = label.match(/^traverser\s+(.+)$/i))) {
+      add('', match[1].charAt(0).toLocaleUpperCase('fr-FR') + match[1].slice(1), ' s’étend devant toi.');
+      return;
+    }
+    if ((match = label.match(/^retourner\s+(?:dans|vers|à|au|aux)\s+(.+)$/i))) {
+      add('Le chemin te ramène vers ', match[1], '.');
+      return;
+    }
+    if ((match = label.match(/^remonter(?:\s+(.+))?$/i))) {
+      if (match[1]) add('Le passage remonte vers ', match[1], '.');
+      else add('', 'Le passage remonte devant toi', '.');
+      return;
+    }
+    if ((match = label.match(/^descendre(?:\s+(?:vers|dans)\s+)?(.+)?$/i))) {
+      if (match[1]) add('Le passage descend vers ', match[1], '.');
+      else add('', 'Le passage descend plus loin', '.');
+      return;
+    }
+
+    add('La suite se dessine devant toi : ', label, '.');
+  }
+
   function appendFallback(entries) {
     if (!entries.length) return;
 
@@ -62,9 +155,7 @@
     p.className = 'fluid-choice-fallback-paragraph';
 
     if (entries.length === 1) {
-      p.appendChild(document.createTextNode('Tu dois '));
-      p.appendChild(inlineChoice(entries[0].index, entries[0].label));
-      p.appendChild(document.createTextNode('.'));
+      appendNarrativeSingleChoice(p, entries[0]);
     } else {
       p.appendChild(document.createTextNode('Tu peux '));
       entries.forEach((entry, i) => {
