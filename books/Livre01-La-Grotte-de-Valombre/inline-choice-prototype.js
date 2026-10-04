@@ -87,9 +87,10 @@
   function install() {
     const storyText = document.getElementById('storyText');
     const choices = document.getElementById('choices');
+    const chapterNumber = document.getElementById('chapterNumber');
     if (!storyText || !choices) return;
 
-    let syncing = false;
+    let scheduled = false;
 
     function sourceButtons() {
       return Array.from(choices.querySelectorAll('.choice-btn'));
@@ -101,68 +102,69 @@
     }
 
     function buildGeneratedChoices() {
-      if (syncing) return;
-      syncing = true;
-      try {
-        const page = currentPageNumber();
-        const inRange = Number.isInteger(page) && page >= 1 && page <= 22;
-        const existingInText = storyText.querySelectorAll('.inline-story-choice-in-text');
+      scheduled = false;
+      const page = currentPageNumber();
+      const inRange = Number.isInteger(page) && page >= 1 && page <= 22;
+      const existingInText = storyText.querySelectorAll('.inline-story-choice-in-text');
 
-        removeGeneratedChoices();
+      removeGeneratedChoices();
 
-        if (!inRange) {
-          document.body.classList.remove('has-inline-story-choices');
-          return;
-        }
+      if (!inRange) {
+        document.body.classList.remove('has-inline-story-choices');
+        return;
+      }
 
-        const buttons = sourceButtons();
-        if (!buttons.length) {
-          document.body.classList.toggle('has-inline-story-choices', existingInText.length > 0);
-          return;
-        }
+      const buttons = sourceButtons();
+      if (!buttons.length) {
+        document.body.classList.toggle('has-inline-story-choices', existingInText.length > 0);
+        return;
+      }
 
-        /* Les actions mécaniques gardent leur vrai bouton. Les déplacements,
-           décisions et réactions narratives deviennent des phrases du récit. */
-        const narrativeIndexes = [];
-        buttons.forEach((btn, index) => {
-          const copy = btn.querySelector('.choice-copy > span')?.textContent?.trim() || btn.textContent.trim();
-          const mechanical = btn.classList.contains('combat-roll-btn') ||
-            /\b(jeter|lancer)\s+(?:les?|un|une)?\s*d[ée]s\b/i.test(copy) ||
-            /\bboire\b.*\bpotion\b/i.test(copy) ||
-            /\butiliser\b.*\b(objet|potion|lame|arme)\b/i.test(copy);
-          if (!mechanical) narrativeIndexes.push({ index, copy, btn });
+      /* Les actions mécaniques gardent leur vrai bouton. Les déplacements,
+         décisions et réactions narratives deviennent des phrases du récit. */
+      const narrativeIndexes = [];
+      buttons.forEach((btn, index) => {
+        const copy = btn.querySelector('.choice-copy > span')?.textContent?.trim() || btn.textContent.trim();
+        const mechanical = btn.classList.contains('combat-roll-btn') ||
+          /\b(jeter|lancer)\s+(?:les?|un|une)?\s*d[ée]s\b/i.test(copy) ||
+          /\bboire\b.*\bpotion\b/i.test(copy) ||
+          /\butiliser\b.*\b(objet|potion|lame|arme)\b/i.test(copy);
+        if (!mechanical) narrativeIndexes.push({ index, copy, btn });
+      });
+
+      /* Sur la page 020, les deux choix sont déjà insérés exactement à
+         l'endroit où les chemins sont décrits. */
+      const alreadyInline = new Set(
+        Array.from(existingInText).map(el => Number(el.dataset.choiceIndex)).filter(Number.isFinite)
+      );
+
+      const toGenerate = narrativeIndexes.filter(item => !alreadyInline.has(item.index));
+      if (toGenerate.length) {
+        const group = document.createElement('div');
+        group.className = 'inline-story-choices-generated';
+        group.setAttribute('aria-label', 'Choix possibles');
+
+        toGenerate.forEach(({ index, copy }) => {
+          const inline = document.createElement('button');
+          inline.type = 'button';
+          inline.className = 'inline-story-choice';
+          inline.dataset.choiceIndex = String(index);
+          inline.innerHTML = '<span class="inline-story-choice-mark" aria-hidden="true">›</span><span class="inline-story-choice-copy"></span>';
+          inline.querySelector('.inline-story-choice-copy').textContent = narrativeChoiceText(copy);
+          group.appendChild(inline);
         });
 
-        /* Sur la page 020, les deux choix sont déjà insérés exactement à
-           l'endroit où les chemins sont décrits. */
-        const alreadyInline = new Set(
-          Array.from(existingInText).map(el => Number(el.dataset.choiceIndex)).filter(Number.isFinite)
-        );
-
-        const toGenerate = narrativeIndexes.filter(item => !alreadyInline.has(item.index));
-        if (toGenerate.length) {
-          const group = document.createElement('div');
-          group.className = 'inline-story-choices-generated';
-          group.setAttribute('aria-label', 'Choix possibles');
-
-          toGenerate.forEach(({ index, copy }) => {
-            const inline = document.createElement('button');
-            inline.type = 'button';
-            inline.className = 'inline-story-choice';
-            inline.dataset.choiceIndex = String(index);
-            inline.innerHTML = `<span class="inline-story-choice-mark" aria-hidden="true">›</span><span class="inline-story-choice-copy"></span>`;
-            inline.querySelector('.inline-story-choice-copy').textContent = narrativeChoiceText(copy);
-            group.appendChild(inline);
-          });
-
-          storyText.appendChild(group);
-        }
-
-        narrativeIndexes.forEach(({ btn }) => btn.classList.add('inline-choice-source-hidden'));
-        document.body.classList.toggle('has-inline-story-choices', narrativeIndexes.length > 0 || existingInText.length > 0);
-      } finally {
-        syncing = false;
+        storyText.appendChild(group);
       }
+
+      narrativeIndexes.forEach(({ btn }) => btn.classList.add('inline-choice-source-hidden'));
+      document.body.classList.toggle('has-inline-story-choices', narrativeIndexes.length > 0 || existingInText.length > 0);
+    }
+
+    function scheduleBuild() {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(buildGeneratedChoices);
     }
 
     storyText.addEventListener('click', event => {
@@ -177,11 +179,15 @@
       source.click();
     });
 
-    const observer = new MutationObserver(buildGeneratedChoices);
-    observer.observe(storyText, { childList: true, subtree: true });
-    observer.observe(choices, { childList: true, subtree: true });
-    observer.observe(document.getElementById('chapterNumber') || document.body, { childList: true, subtree: true, characterData: true });
-    buildGeneratedChoices();
+    /* Important : ne pas observer storyText ici. Le prototype y ajoute lui-même
+       ses choix, ce qui créerait une boucle de MutationObserver. Les choix et le
+       numéro de page sont reconstruits par le lecteur à chaque navigation et
+       suffisent donc à déclencher la mise à jour. */
+    const observer = new MutationObserver(scheduleBuild);
+    observer.observe(choices, { childList: true });
+    if (chapterNumber) observer.observe(chapterNumber, { childList: true, characterData: true, subtree: true });
+
+    scheduleBuild();
   }
 
   const style = document.createElement('style');
