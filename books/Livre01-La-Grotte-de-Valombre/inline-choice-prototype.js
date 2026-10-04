@@ -1,15 +1,18 @@
-/* DEV — Prototype de choix narratifs intégrés au récit : pages 001 à 022. */
+/* DEV — Prototype "encre interactive" : prologue narratif + pages 000 à 020. */
 (function () {
   'use strict';
 
   const book = window.BookRegistry?.get?.('ecuyer-01');
   if (!book) return;
 
-  /* Page 020 est un cas particulier : les deux directions sont déjà décrites
-     dans le corps du récit. On transforme donc directement ces phrases au lieu
-     d'ajouter une seconde formulation en dessous. */
+  const INTERACTIVE_MIN_PAGE = 0;
+  const INTERACTIVE_MAX_PAGE = 20;
+
+  /* Page 020 : les directions sont déjà décrites dans le récit.
+     On ne recrée donc pas un bloc de choix en dessous : les morceaux de phrase
+     concernés deviennent eux-mêmes interactifs. */
   const scene20 = book.story?.c20;
-  if (scene20 && !scene20.__inlineNarrativePrototype) {
+  if (scene20 && !scene20.__interactiveInkPrototype) {
     const originalText20 = scene20.text;
     scene20.text = state => {
       let html = typeof originalText20 === 'function' ? originalText20(state) : originalText20;
@@ -17,17 +20,17 @@
 
       html = html.replace(
         '<p>L’un <strong>descend</strong> dans l’obscurité, et de ce passage monte une <strong>forte odeur de soufre</strong>.</p>',
-        '<button type="button" class="inline-story-choice inline-story-choice-in-text" data-choice-index="0"><span class="inline-story-choice-mark" aria-hidden="true">›</span><span class="inline-story-choice-copy">L’un descend dans l’obscurité, et de ce passage monte une forte odeur de soufre.</span></button>'
+        '<p><span class="inline-story-choice inline-story-choice-in-text inline-story-pill" data-choice-index="0" role="button" tabindex="0">L’un descend dans l’obscurité</span>, et de ce passage monte une forte odeur de soufre.</p>'
       );
 
       html = html.replace(
         '<p>L’autre continue tout droit et semble s’enfoncer dans un passage beaucoup plus étroit.</p>',
-        '<button type="button" class="inline-story-choice inline-story-choice-in-text" data-choice-index="1"><span class="inline-story-choice-mark" aria-hidden="true">›</span><span class="inline-story-choice-copy">L’autre continue tout droit et semble s’enfoncer dans un passage beaucoup plus étroit.</span></button>'
+        '<p><span class="inline-story-choice inline-story-choice-in-text inline-story-pill" data-choice-index="1" role="button" tabindex="0">L’autre continue tout droit et semble s’enfoncer dans un passage beaucoup plus étroit</span>.</p>'
       );
 
       return html;
     };
-    scene20.__inlineNarrativePrototype = true;
+    scene20.__interactiveInkPrototype = true;
   }
 
   function currentPageNumber() {
@@ -37,51 +40,105 @@
   }
 
   function lowerFirst(text) {
-    if (!text) return '';
-    return text.charAt(0).toLocaleLowerCase('fr-FR') + text.slice(1);
+    const value = String(text || '').trim();
+    if (!value) return '';
+    return value.charAt(0).toLocaleLowerCase('fr-FR') + value.slice(1);
   }
 
-  function deInfinitive(text) {
-    const lower = lowerFirst(text.trim());
-    return /^[aeiouyhàâäéèêëîïôöùûüœ]/i.test(lower) ? `d’${lower}` : `de ${lower}`;
+  function stripMechanicalSuffix(text) {
+    return String(text || '')
+      .replace(/\s*[—-]\s*\d+\s+restante?s?.*$/i, '')
+      .replace(/\s*\([^)]*(?:Dext[ée]rit[ée]|d[ée]g[âa]ts?|Protection|Vie)[^)]*\)\s*$/i, '')
+      .trim();
   }
 
-  /* Le libellé d'origine reste la source fonctionnelle. Ici on ne change que
-     sa formulation visible : chaque choix doit pouvoir se lire comme la phrase
-     suivante du récit, et non comme une commande de menu. */
-  function narrativeChoiceText(label) {
-    const raw = String(label || '').trim().replace(/[.\s]+$/, '');
-    if (!raw) return '';
-
+  /* Les libellés courts du moteur deviennent des fragments de prose.
+     On garde volontairement l'infinitif : il s'insère naturellement dans les
+     phrases qui entourent les choix, sans répéter "tu peux" à chaque fois. */
+  function proseFragment(label) {
+    const raw = stripMechanicalSuffix(String(label || '').trim().replace(/[.\s]+$/, ''));
     const exact = {
-      'Fouiller la sacoche de Sir Aldren': 'Tu t’approches de la selle et décides de fouiller la sacoche de Sir Aldren.',
-      'Aller au village demander de l’aide': 'Avant de partir, tu peux retourner au village et demander de l’aide.',
-      'Partir immédiatement vers la grotte': 'Tu peux aussi partir immédiatement vers la grotte, sans attendre davantage.',
-      'Rejoindre les écuries': 'Tu quittes ce que tu étais en train de faire et te diriges vers les écuries.'
+      'Rejoindre les écuries': 'rejoindre les écuries',
+      'Fouiller la sacoche de Sir Aldren': 'fouiller la sacoche de Sir Aldren',
+      'Aller au village demander de l’aide': 'retourner au village demander de l’aide',
+      'Partir immédiatement vers la grotte': 'partir immédiatement vers la grotte',
+      'Voir le marchand': 'passer voir le marchand',
+      'Voir la forgeronne': 'aller voir la forgeronne',
+      'Approcher la personne dans la ruelle': 'aller à la rencontre de la personne dans la ruelle',
+      'Partir vers la grotte': 'quitter Valombre et prendre la route de la grotte'
     };
-    if (exact[raw]) return exact[raw];
+    return exact[raw] || lowerFirst(raw);
+  }
 
-    let m;
-    if ((m = raw.match(/^Se\s+(.+)/i))) return `Tu peux décider de te ${lowerFirst(m[1])}.`;
-    if ((m = raw.match(/^S['’](.+)/i))) return `Tu peux décider de t’${lowerFirst(m[1])}.`;
+  function isMechanicalChoice(btn, copy) {
+    return btn.classList.contains('combat-roll-btn') ||
+      /\b(jeter|lancer)\s+(?:les?|un|une)?\s*d[ée]\b/i.test(copy) ||
+      /\b(jeter|lancer)\s+(?:les?|un|une)?\s*d[ée]s\b/i.test(copy) ||
+      /\brappeler\b.*\br[èe]gles\b/i.test(copy) ||
+      /\bvoir\b.*\br[èe]gles\b/i.test(copy) ||
+      /\bboire\b.*\bpotion\b/i.test(copy) ||
+      /\butiliser\b.*\b(objet|potion|lame|arme)\b/i.test(copy);
+  }
 
-    if (/^(Examiner|Inspecter|Fouiller|Observer|Chercher)\b/i.test(raw)) {
-      return `Tu peux prendre le temps ${deInfinitive(raw)}.`;
-    }
-    if (/^(Accepter|Refuser|Suivre|Choisir|Répondre)\b/i.test(raw)) {
-      return `Tu peux choisir ${deInfinitive(raw)}.`;
-    }
-    if (/^(Retourner|Revenir|Faire demi-tour|Fuir)\b/i.test(raw)) {
-      return `Tu peux décider ${deInfinitive(raw)}.`;
-    }
-    if (/^(Tenter|Essayer)\b/i.test(raw)) {
-      return `Tu peux ${lowerFirst(raw)}.`;
-    }
-    if (/^(Continuer|Poursuivre|Avancer|Descendre|Monter|Entrer|Traverser|Prendre|Rejoindre|Partir|Quitter|Aller|Ouvrir|Passer|Emprunter|S’approcher|S'approcher)\b/i.test(raw)) {
-      return `Tu peux ${lowerFirst(raw)}.`;
+  function inlineChoice(index, copy) {
+    const span = document.createElement('span');
+    span.className = 'inline-story-choice inline-story-pill inline-story-choice-generated';
+    span.dataset.choiceIndex = String(index);
+    span.setAttribute('role', 'button');
+    span.setAttribute('tabindex', '0');
+    span.textContent = proseFragment(copy);
+    return span;
+  }
+
+  function appendWithSeparators(container, items, conjunction) {
+    items.forEach((item, i) => {
+      if (i > 0) {
+        const last = i === items.length - 1;
+        container.appendChild(document.createTextNode(last ? ` ${conjunction} ` : ', '));
+      }
+      container.appendChild(item.node);
+    });
+  }
+
+  function buildDecisionParagraph(items, page) {
+    if (!items.length) return null;
+    const p = document.createElement('p');
+    p.className = 'inline-story-decision-generated';
+
+    if (items.length === 1) {
+      const openings = [
+        'Sans attendre davantage, tu décides de ',
+        'La suite s’impose : ',
+        'Tu poursuis en choisissant de ',
+        'Il ne te reste plus qu’à '
+      ];
+      p.appendChild(document.createTextNode(openings[Math.abs(page || 0) % openings.length]));
+      p.appendChild(items[0].node);
+      p.appendChild(document.createTextNode('.'));
+      return p;
     }
 
-    return `Tu peux choisir ${deInfinitive(raw)}.`;
+    if (items.length === 2) {
+      const openings = [
+        'Tu hésites encore entre ',
+        'Deux possibilités restent devant toi : ',
+        'À cet instant, deux voies te semblent possibles : '
+      ];
+      p.appendChild(document.createTextNode(openings[Math.abs(page || 0) % openings.length]));
+      appendWithSeparators(p, items, 'ou');
+      p.appendChild(document.createTextNode('.'));
+      return p;
+    }
+
+    const openings = [
+      'Avant d’aller plus loin, plusieurs possibilités s’offrent encore à toi : ',
+      'Tu prends un instant pour décider : ',
+      'Autour de toi, plusieurs pistes restent ouvertes : '
+    ];
+    p.appendChild(document.createTextNode(openings[Math.abs(page || 0) % openings.length]));
+    appendWithSeparators(p, items, 'ou');
+    p.appendChild(document.createTextNode('.'));
+    return p;
   }
 
   function install() {
@@ -96,93 +153,77 @@
       return Array.from(choices.querySelectorAll('.choice-btn'));
     }
 
-    function removeGeneratedChoices() {
-      storyText.querySelectorAll('.inline-story-choices-generated').forEach(node => node.remove());
+    function clearGenerated() {
+      storyText.querySelectorAll('.inline-story-decision-generated').forEach(node => node.remove());
       sourceButtons().forEach(btn => btn.classList.remove('inline-choice-source-hidden'));
     }
 
-    function buildGeneratedChoices() {
+    function buildInteractiveInk() {
       scheduled = false;
       const page = currentPageNumber();
-      const inRange = Number.isInteger(page) && page >= 1 && page <= 22;
-      const existingInText = storyText.querySelectorAll('.inline-story-choice-in-text');
+      const inRange = Number.isInteger(page) && page >= INTERACTIVE_MIN_PAGE && page <= INTERACTIVE_MAX_PAGE;
+      const existingInText = Array.from(storyText.querySelectorAll('.inline-story-choice-in-text[data-choice-index]'));
 
-      removeGeneratedChoices();
+      clearGenerated();
 
-      if (!inRange) {
-        document.body.classList.remove('has-inline-story-choices');
-        return;
-      }
+      if (!inRange) return;
 
       const buttons = sourceButtons();
-      if (!buttons.length) {
-        document.body.classList.toggle('has-inline-story-choices', existingInText.length > 0);
-        return;
-      }
+      if (!buttons.length) return;
 
-      /* Les actions mécaniques gardent leur vrai bouton. Les déplacements,
-         décisions et réactions narratives deviennent des phrases du récit. */
-      const narrativeIndexes = [];
+      const narrative = [];
       buttons.forEach((btn, index) => {
         const copy = btn.querySelector('.choice-copy > span')?.textContent?.trim() || btn.textContent.trim();
-        const mechanical = btn.classList.contains('combat-roll-btn') ||
-          /\b(jeter|lancer)\s+(?:les?|un|une)?\s*d[ée]s\b/i.test(copy) ||
-          /\bboire\b.*\bpotion\b/i.test(copy) ||
-          /\butiliser\b.*\b(objet|potion|lame|arme)\b/i.test(copy);
-        if (!mechanical) narrativeIndexes.push({ index, copy, btn });
+        if (!isMechanicalChoice(btn, copy)) narrative.push({ index, copy, btn });
       });
 
-      /* Sur la page 020, les deux choix sont déjà insérés exactement à
-         l'endroit où les chemins sont décrits. */
       const alreadyInline = new Set(
-        Array.from(existingInText).map(el => Number(el.dataset.choiceIndex)).filter(Number.isFinite)
+        existingInText.map(el => Number(el.dataset.choiceIndex)).filter(Number.isFinite)
       );
 
-      const toGenerate = narrativeIndexes.filter(item => !alreadyInline.has(item.index));
+      narrative.forEach(({ btn }) => btn.classList.add('inline-choice-source-hidden'));
+
+      const toGenerate = narrative
+        .filter(item => !alreadyInline.has(item.index))
+        .map(item => ({ ...item, node: inlineChoice(item.index, item.copy) }));
+
       if (toGenerate.length) {
-        const group = document.createElement('div');
-        group.className = 'inline-story-choices-generated';
-        group.setAttribute('aria-label', 'Choix possibles');
-
-        toGenerate.forEach(({ index, copy }) => {
-          const inline = document.createElement('button');
-          inline.type = 'button';
-          inline.className = 'inline-story-choice';
-          inline.dataset.choiceIndex = String(index);
-          inline.innerHTML = '<span class="inline-story-choice-mark" aria-hidden="true">›</span><span class="inline-story-choice-copy"></span>';
-          inline.querySelector('.inline-story-choice-copy').textContent = narrativeChoiceText(copy);
-          group.appendChild(inline);
-        });
-
-        storyText.appendChild(group);
+        const paragraph = buildDecisionParagraph(toGenerate, page);
+        if (paragraph) storyText.appendChild(paragraph);
       }
-
-      narrativeIndexes.forEach(({ btn }) => btn.classList.add('inline-choice-source-hidden'));
-      document.body.classList.toggle('has-inline-story-choices', narrativeIndexes.length > 0 || existingInText.length > 0);
     }
 
     function scheduleBuild() {
       if (scheduled) return;
       scheduled = true;
-      requestAnimationFrame(buildGeneratedChoices);
+      requestAnimationFrame(buildInteractiveInk);
+    }
+
+    function activateInlineChoice(target) {
+      const index = Number(target?.dataset?.choiceIndex);
+      if (!Number.isFinite(index)) return;
+      const source = sourceButtons()[index];
+      if (!source) return;
+      target.classList.add('inline-story-choice-pressed');
+      target.setAttribute('aria-disabled', 'true');
+      source.click();
     }
 
     storyText.addEventListener('click', event => {
-      const inlineChoice = event.target.closest('.inline-story-choice[data-choice-index]');
-      if (!inlineChoice) return;
-
-      const index = Number(inlineChoice.dataset.choiceIndex);
-      const source = sourceButtons()[index];
-      if (!source) return;
-
-      inlineChoice.disabled = true;
-      source.click();
+      const target = event.target.closest('.inline-story-choice[data-choice-index]');
+      if (!target) return;
+      activateInlineChoice(target);
     });
 
-    /* Important : ne pas observer storyText ici. Le prototype y ajoute lui-même
-       ses choix, ce qui créerait une boucle de MutationObserver. Les choix et le
-       numéro de page sont reconstruits par le lecteur à chaque navigation et
-       suffisent donc à déclencher la mise à jour. */
+    storyText.addEventListener('keydown', event => {
+      const target = event.target.closest('.inline-story-choice[data-choice-index]');
+      if (!target || (event.key !== 'Enter' && event.key !== ' ')) return;
+      event.preventDefault();
+      activateInlineChoice(target);
+    });
+
+    /* Le lecteur reconstruit #choices et le numéro de page à chaque navigation.
+       On n'observe volontairement pas storyText : le prototype y écrit lui-même. */
     const observer = new MutationObserver(scheduleBuild);
     observer.observe(choices, { childList: true });
     if (chapterNumber) observer.observe(chapterNumber, { childList: true, characterData: true, subtree: true });
@@ -191,99 +232,45 @@
   }
 
   const style = document.createElement('style');
-  style.id = 'inline-story-choice-prototype-style';
+  style.id = 'interactive-ink-prototype-style';
   style.textContent = `
     #choices .inline-choice-source-hidden {
       display: none !important;
     }
 
-    .inline-story-choices-generated {
-      display: grid;
-      gap: 12px;
-      margin: 22px 0 4px;
+    .inline-story-decision-generated {
+      margin-top: 1.05em;
     }
 
-    .inline-story-choice {
-      -webkit-appearance: none;
-      appearance: none;
-      display: grid;
-      grid-template-columns: 30px minmax(0, 1fr);
-      align-items: start;
-      gap: 10px;
-      width: 100%;
-      margin: 14px 0;
-      padding: 12px 14px 12px 10px;
-      border: 1px solid rgba(91, 64, 36, .22);
-      border-left: 3px solid rgba(91, 64, 36, .62);
-      border-radius: 3px;
-      background: rgba(91, 64, 36, .055);
-      color: inherit;
+    .inline-story-choice.inline-story-pill,
+    .inline-story-choice-in-text {
+      display: inline;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #365f79;
       font: inherit;
       font-weight: inherit;
-      line-height: 1.45;
-      text-align: left;
+      line-height: inherit;
+      text-align: inherit;
+      vertical-align: baseline;
+      box-shadow: none;
       cursor: pointer;
-      -webkit-tap-highlight-color: rgba(91, 64, 36, .18);
+      -webkit-tap-highlight-color: rgba(54, 95, 121, .16);
       touch-action: manipulation;
     }
 
-    .inline-story-choices-generated .inline-story-choice {
-      margin: 0;
+    .inline-story-choice.inline-story-pill:active,
+    .inline-story-choice-in-text:active,
+    .inline-story-choice-pressed {
+      color: #203f55;
     }
 
-    .inline-story-choice-mark {
-      display: grid;
-      place-items: center;
-      width: 24px;
-      height: 24px;
-      margin-top: .08em;
-      border: 1px solid rgba(91, 64, 36, .48);
-      border-radius: 50%;
-      font-size: .95em;
-      line-height: 1;
-      opacity: .86;
-    }
-
-    .inline-story-choice-copy {
-      display: block;
-      min-width: 0;
-    }
-
-    .inline-story-choice:active {
-      background: rgba(91, 64, 36, .14);
-      border-color: rgba(91, 64, 36, .42);
-      border-left-color: rgba(91, 64, 36, .9);
-      transform: translateY(1px);
-    }
-
-    .inline-story-choice:focus-visible {
-      outline: 2px solid rgba(91, 64, 36, .58);
-      outline-offset: 3px;
-    }
-
-    .inline-story-choice:disabled {
-      opacity: .62;
-    }
-
-    @media (max-width: 700px) {
-      .inline-story-choices-generated {
-        gap: 10px;
-        margin-top: 18px;
-      }
-
-      .inline-story-choice {
-        grid-template-columns: 28px minmax(0, 1fr);
-        gap: 9px;
-        min-height: 52px;
-        margin: 13px 0;
-        padding: 11px 12px 11px 9px;
-        line-height: 1.48;
-      }
-
-      .inline-story-choice-mark {
-        width: 23px;
-        height: 23px;
-      }
+    .inline-story-choice.inline-story-pill:focus-visible,
+    .inline-story-choice-in-text:focus-visible {
+      outline: 1px dotted rgba(54, 95, 121, .75);
+      outline-offset: 2px;
     }
   `;
   document.head.appendChild(style);
