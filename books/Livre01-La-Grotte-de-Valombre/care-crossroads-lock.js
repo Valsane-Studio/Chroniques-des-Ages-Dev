@@ -1,7 +1,8 @@
 /* DEV — PAGE 113 : le carrefour des soins devient un vrai choix de route.
    Le joueur peut explorer le poste de secours OU la réserve, ou descendre
-   immédiatement. Après une première exploration, un éboulement condamne
-   l'autre porte et force la poursuite vers les niveaux inférieurs. */
+   immédiatement. La fermeture ne vient pas d'un accident opportun : une présence
+   approche dans le couloir emprunté par le joueur. Après un détour, elle est trop
+   proche pour permettre une seconde exploration et pousse à descendre. */
 (function () {
   'use strict';
 
@@ -41,13 +42,15 @@
     };
   }
 
-  const COLLAPSE_AID = `
-    <p>À peine revenu au carrefour, un grondement sourd traverse la voûte. Des pierres se détachent du plafond et s’abattent devant la porte de la réserve.</p>
-    <p>En quelques secondes, l’accès disparaît sous un amas de blocs. L’escalier, lui, est encore libre. Mieux vaut descendre avant que la voûte ne cède davantage.</p>`;
+  const DISTANT_THREAT = `
+    <p>Un bruit sec résonne soudain dans le couloir derrière toi.</p>
+    <p>Un choc métallique. Puis un autre, à intervalles réguliers. Entre les deux, quelque chose frotte contre la pierre.</p>
+    <p>Le son est encore lointain, mais il se rapproche.</p>`;
 
-  const COLLAPSE_RESERVE = `
-    <p>À peine revenu au carrefour, un grondement sourd traverse la voûte. Des pierres se détachent du plafond et s’abattent devant la porte du poste de secours.</p>
-    <p>En quelques secondes, l’accès disparaît sous un amas de blocs. L’escalier, lui, est encore libre. Mieux vaut descendre avant que la voûte ne cède davantage.</p>`;
+  const CLOSE_THREAT = `
+    <p>Lorsque tu reviens au carrefour, le bruit a changé.</p>
+    <p>Les chocs métalliques résonnent maintenant beaucoup plus près dans le couloir derrière toi. Tu distingues le raclement lourd de quelque chose qui avance sur la pierre.</p>
+    <p>Tu as eu le temps pour un détour. Pas pour un second. L’escalier qui descend vers les niveaux inférieurs est encore libre.</p>`;
 
   const scene = STORY.c106;
   const originalText = scene.text;
@@ -56,16 +59,18 @@
   scene.text = state => {
     const html = typeof originalText === 'function' ? originalText(state) : originalText;
     const branch = chosenBranch(state);
-    if (branch === 'aid') return `${html || ''}${COLLAPSE_AID}`;
-    if (branch === 'reserve') return `${html || ''}${COLLAPSE_RESERVE}`;
-    return html;
+    if (branch === 'aid' || branch === 'reserve' || branch === 'legacy-both') {
+      return `${html || ''}${CLOSE_THREAT}`;
+    }
+    if (branch === 'stairs') return html;
+    return `${html || ''}${DISTANT_THREAT}`;
   };
 
   scene.choices = state => {
     const branch = chosenBranch(state);
     const source = choicesOf(originalChoices, state);
 
-    if (branch) {
+    if (branch === 'aid' || branch === 'reserve' || branch === 'legacy-both') {
       const descend = source.find(choice => choice?.to === 'c109');
       return [{
         ...(descend || {to:'c109'}),
