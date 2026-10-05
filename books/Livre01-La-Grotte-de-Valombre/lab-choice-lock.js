@@ -11,7 +11,7 @@
 
   const LEAK_START = `
     <p>Un craquement sec retentit du côté de la cuve. Le raccord qui alimente le bras articulé vient de se fendre. Une première goutte de terre noire tombe sur les dalles.</p>
-    <p>L’odeur de soufre devient aussitôt plus forte. Tu n’as plus le temps d’examiner le reste de la pièce.</p>`;
+    <p>L’odeur de soufre devient aussitôt plus forte. Tu n’as plus le temps de fouiller la pièce : si tu veux agir sur cette machine, c’est maintenant.</p>`;
 
   const LEAK_FULL = `
     <p>Un claquement sec retentit derrière toi.</p>
