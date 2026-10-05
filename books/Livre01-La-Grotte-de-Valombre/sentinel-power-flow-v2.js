@@ -51,7 +51,6 @@
       state.flags.sentinelPowerAwayExchanges = 0;
       state.flags.sentinelPowerOpeningSuccess = false;
       state.flags.sentinelPowerOpeningFailed = false;
-      /* Une ancienne sauvegarde en plein ancien prototype reprend en combat normal. */
       if (f.round > 0 && state.flags.sentinelTactic === 'power') state.flags.sentinelTactic = 'normal';
     }
     return f;
@@ -185,13 +184,12 @@
       const raw=heroDamage(state)+2;
       const dealt=Math.min(f.hp[0],raw);
       f.hp[0]=Math.max(0,f.hp[0]-dealt);
-      report.push(`Tu frappes de toutes tes forces : ${dealt} dégâts.`);
+      report.push(`Ton coup inflige ${dealt} dégât${dealt>1?'s':''}.`);
       state.flags.sentinelPowerOpeningSuccess=true;
       state.flags.sentinelPowerOpeningFailed=false;
       if (f.hp[0]>0) {
         state.flags.sentinelPowerAwayExchanges=2;
         state.flags.sentinelTactic='power_success';
-        report.push('Tu parviens à projeter la sentinelle 1 en arrière. Elle ne pourra pas intervenir pendant les deux prochains échanges.');
       } else {
         state.flags.sentinelPowerAwayExchanges=0;
         state.flags.sentinelTactic='normal';
@@ -204,7 +202,7 @@
       state.flags.sentinelPowerOpeningFailed=true;
       state.flags.sentinelPowerAwayExchanges=0;
       state.flags.sentinelTactic='power_failed';
-      report.push(`Malgré toute ta force, la sentinelle dévie ton coup et parvient à t’atteindre : ${res.absorbed||0} absorbé, ${res.hpLost||0} Vie perdue.`);
+      report.push(`Tu encaisses le contre : ${res.absorbed||0} absorbé, ${res.hpLost||0} Vie perdue.`);
     }
 
     state.flags.sentinelPowerOpeningResolved=true;
@@ -222,7 +220,6 @@
     state.flags.sentinelPowerAwayExchanges=remaining;
 
     if (f.hp[1]<=0 && f.hp[0]>0 && remaining>0) {
-      /* Eviter un tour vide si la seconde tombe avant la fin du délai. */
       remaining=0;
       state.flags.sentinelPowerAwayExchanges=0;
       state.flags.sentinelTactic='normal';
@@ -280,6 +277,7 @@
 
   function tacticalHtml(state) {
     const tactic=state.flags?.sentinelTactic;
+    const f=ensureFight(state);
     if (tactic==='alcove') {
       const target=activeAlcoveTarget(state);
       return `<p>Tu recules jusqu’à un renfoncement étroit du mur.</p><p>Les deux silhouettes ne peuvent plus passer de front. <strong>${target>=0?`La sentinelle ${target+1}`:'Aucune sentinelle'}</strong> peut t’atteindre ; l’autre reste bloquée derrière elle.</p><p>Les murs gênent tes mouvements : <strong>Dextérité −1 pendant tout le combat.</strong></p>${cardHtml(state)}`;
@@ -292,10 +290,13 @@
     }
     if (tactic==='power_success') {
       const remaining=Math.max(0,Number(state.flags?.sentinelPowerAwayExchanges||0));
-      return `<p><strong>Tu parviens à projeter la sentinelle 1 en arrière.</strong> Elle ne peut ni t’attaquer ni être atteinte pour le moment.</p><p>Tu as la sentinelle 2 seule face à toi${remaining?` pendant encore ${remaining} échange${remaining>1?'s':''}`:''}.</p>${cardHtml(state)}`;
+      const firstLine=f.last?.kind==='power'
+        ? '<p><strong>Tu parviens à projeter la sentinelle 1 en arrière. Elle ne pourra pas intervenir pendant les deux prochains échanges.</strong></p>'
+        : '<p><strong>La sentinelle 1 est encore trop loin pour intervenir.</strong></p>';
+      return `${firstLine}<p>Tu as la sentinelle 2 seule face à toi${remaining?` pendant encore ${remaining} échange${remaining>1?'s':''}`:''}.</p>${cardHtml(state)}`;
     }
     if (tactic==='normal') {
-      return `<p>Tu restes au centre du poste de garde, là où tu peux surveiller les deux adversaires.</p><p>Tant qu’elles restent toutes les deux debout, la seconde cherchera à te frapper pendant que tu affrontes l’autre.</p>${cardHtml(state)}`;
+      return `<p>Tu restes au centre du poste de garde, là où tu peux surveiller les adversaires encore debout.</p><p>Si elles sont toutes les deux face à toi, la seconde cherchera à te frapper pendant que tu affrontes l’autre.</p>${cardHtml(state)}`;
     }
     return introHtml(state);
   }
@@ -334,7 +335,7 @@
         return combatChoices(state);
       }
       const list=[{label:'Jeter les dés contre la sentinelle 2',stay:true,inlineCombat:true,effect:powerFollowupRound}];
-      if ((state.throwingBlades||0)>0) list.push({label:`Lancer une lame sur la sentinelle 2`,stay:true,inlineCombat:true,effect:s=>throwBlade(s,1)});
+      if ((state.throwingBlades||0)>0) list.push({label:'Lancer une lame sur la sentinelle 2',stay:true,inlineCombat:true,effect:s=>throwBlade(s,1)});
       return list;
     }
 
