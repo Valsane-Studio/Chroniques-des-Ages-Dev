@@ -1,11 +1,11 @@
 /* DEV — PAGE 28 : les alentours d'Anselme offrent deux détours seulement.
-   Le passage descendant devient ensuite la progression principale, après la crise. */
+   La galerie descendante devient ensuite la progression principale, après la crise. */
 (function () {
   'use strict';
 
   const book = window.BookRegistry?.get?.('ecuyer-01');
   const STORY = book?.story;
-  if (!STORY?.c28 || STORY.c28.__campPage28EntryV2) return;
+  if (!STORY?.c28 || STORY.c28.__campPage28EntryV3) return;
 
   function choicesOf(source, state) {
     return typeof source === 'function' ? (source(state) || []) : (source || []);
@@ -18,7 +18,7 @@
     return { ...choice, to: 'c34' };
   }
 
-  /* PAGE 28 : le tunnel n'est plus un troisième détour. */
+  /* PAGE 28 : la galerie descendante n'est plus un troisième détour. */
   const previousC28Text = STORY.c28.text;
   const previousC28Choices = STORY.c28.choices;
 
@@ -44,26 +44,43 @@
   };
 
   /* Dès que la crise a eu lieu, « poursuivre vers les profondeurs » mène
-     obligatoirement au passage descendant avant les fissures. */
+     obligatoirement à la galerie descendante avant les fissures. */
   ['campCrisis', 'campEscapeResult', 'c30'].forEach(id => {
     const scene = STORY[id];
-    if (!scene || scene.__depthReroutedV2) return;
+    if (!scene || scene.__depthReroutedV3) return;
     const oldChoices = scene.choices;
-    scene.choices = state => choicesOf(oldChoices, state).map(rerouteDepthChoice);
-    scene.__depthReroutedV2 = true;
+    scene.choices = state => choicesOf(oldChoices, state)
+      .map(rerouteDepthChoice)
+      /* Une ancienne option « explorer le tunnel voisin » ne doit jamais
+         réapparaître : seule la sortie vers les profondeurs peut mener à c34. */
+      .filter(choice => !(id === 'c30' && choice?.to === 'c34' && /explorer|tunnel voisin/i.test(choice.label || '')));
+    scene.__depthReroutedV3 = true;
   });
 
-  /* PAGE 34 devient la suite principale. */
+  /* Nettoyage du texte du vieux campement pour les anciennes sauvegardes. */
+  if (STORY.c30 && !STORY.c30.__descendingGalleryTextV3) {
+    const oldText = STORY.c30.text;
+    STORY.c30.text = state => {
+      let html = typeof oldText === 'function' ? oldText(state) : oldText;
+      return String(html || '')
+        .replace('La galerie condamnée et le tunnel voisin s’ouvrent de part et d’autre.', 'La galerie condamnée reste sur le côté. Plus loin, le passage principal descend vers les profondeurs.')
+        .replace('la galerie condamnée et le tunnel voisin', 'la galerie condamnée et le passage vers les profondeurs');
+    };
+    STORY.c30.__descendingGalleryTextV3 = true;
+  }
+
+  /* PAGE 34 devient la suite principale. L'ancien nom d'image est conservé
+     uniquement comme identifiant d'asset ; il n'est pas affiché au lecteur. */
   if (STORY.c34) {
-    STORY.c34.title = 'Le passage descendant';
+    STORY.c34.title = 'La galerie descendante';
     const oldText = STORY.c34.text;
     const oldChoices = STORY.c34.choices;
 
     STORY.c34.text = state => {
       let html = typeof oldText === 'function' ? oldText(state) : oldText;
       return String(html || '')
-        .replace('t’engages dans le tunnel voisin', 't’engages dans le passage descendant')
-        .replace('Le passage descend doucement.', 'Le passage s’enfonce doucement vers les profondeurs.');
+        .replace('t’engages dans le tunnel voisin', 't’engages dans la galerie descendante')
+        .replace('Le passage descend doucement.', 'La galerie s’enfonce doucement vers les profondeurs.');
     };
 
     STORY.c34.choices = state => choicesOf(oldChoices, state)
@@ -89,9 +106,9 @@
     const oldChoices = STORY.c38.choices;
     STORY.c38.choices = state => choicesOf(oldChoices, state).map(choice => {
       if (!choice || choice.to !== 'c30') return choice;
-      return { ...choice, label: 'Poursuivre dans le passage descendant', to: 'c37' };
+      return { ...choice, label: 'Poursuivre dans la galerie descendante', to: 'c37' };
     });
   }
 
-  STORY.c28.__campPage28EntryV2 = true;
+  STORY.c28.__campPage28EntryV3 = true;
 })();
