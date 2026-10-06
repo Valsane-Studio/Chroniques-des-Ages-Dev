@@ -20,10 +20,10 @@ BookManifestRegistry.register({
   coverCandidates:['assets/presentation.jpg'],
   bookScript:'book.js',
   journalScript:'journal.js',
-  extraScripts:['map.js','feedback-ui.js','combat-controls-prototype.js','combat-dice-system.js','prologue-parity.js','combat-visual-parity.js','tester-feedback-pass.js'],
+  extraScripts:['map.js','feedback-ui.js','combat-controls-prototype.js','combat-dice-system.js','prologue-parity.js','combat-visual-parity.js','tester-feedback-pass.js','dev-menu-sync.js'],
   themeStylesheet:'assets/theme.css',
-  contentVersion:151,
-  assetVersion:12,
+  contentVersion:152,
+  assetVersion:13,
   theme:{
     buttonTexture:'assets/textures/texture-bouton.jpg',
 
