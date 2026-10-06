@@ -150,3 +150,16 @@ window.LIBRARY_CONFIG={
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
   else install();
 })();
+
+/* Lecture : les numéros de pages techniques ne sont plus affichés en bas. */
+(function(){
+  const style=document.createElement('style');
+  style.id='reader-hide-page-numbers';
+  style.textContent=`
+    #chapterNumber,
+    .chapter-number{
+      display:none !important;
+    }
+  `;
+  document.head.appendChild(style);
+})();
