@@ -301,3 +301,24 @@
     letter-spacing:.08em !important;
   }
 }
+
+
+/* V189 — Parchemin extensible : haut et bas préservés, centre étirable. */
+.story-card{
+  box-sizing:border-box !important;
+  border-style:solid !important;
+  border-width:36px 0 42px !important;
+  border-image-source:var(--ui-parchment-texture) !important;
+  border-image-slice:14% 0 16% 0 fill !important;
+  border-image-width:1 !important;
+  border-image-outset:0 !important;
+  border-image-repeat:stretch !important;
+  background-color:#e8dcc4 !important;
+  background-image:none !important;
+}
+
+@media (max-width:700px){
+  .story-card{
+    border-width:28px 0 34px !important;
+  }
+}
