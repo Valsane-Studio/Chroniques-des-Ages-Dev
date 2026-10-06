@@ -151,14 +151,28 @@ window.LIBRARY_CONFIG={
   else install();
 })();
 
-/* Lecture : les numéros de pages techniques ne sont plus affichés en bas. */
+/* DEV : conserver le numéro technique de page, mais de façon très discrète. */
 (function(){
   const style=document.createElement('style');
-  style.id='reader-hide-page-numbers';
+  style.id='reader-dev-page-numbers';
   style.textContent=`
     #chapterNumber,
     .chapter-number{
-      display:none !important;
+      display:block !important;
+      margin:4px 2px 0 auto !important;
+      padding:0 !important;
+      font-size:10px !important;
+      line-height:1 !important;
+      font-weight:400 !important;
+      letter-spacing:.06em !important;
+      text-align:right !important;
+      color:rgba(67,49,31,.34) !important;
+      opacity:1 !important;
+      background:none !important;
+      border:0 !important;
+      box-shadow:none !important;
+      pointer-events:none !important;
+      user-select:none !important;
     }
   `;
   document.head.appendChild(style);
