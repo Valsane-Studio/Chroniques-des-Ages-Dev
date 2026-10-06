@@ -310,13 +310,10 @@
   box-sizing:border-box !important;
   border:0 !important;
   background-color:#e8dcc4 !important;
-  background-image:
-    linear-gradient(rgba(74,52,31,.02),rgba(74,52,31,.02)),
-    var(--ui-parchment-texture) !important;
-  background-position:center center,center center !important;
-  background-size:100% 100%,100% auto !important;
-  background-repeat:no-repeat,no-repeat !important;
-  background-blend-mode:multiply,normal !important;
+  background-image:var(--ui-parchment-texture) !important;
+  background-position:center center !important;
+  background-size:100% auto !important;
+  background-repeat:no-repeat !important;
   isolation:isolate !important;
 }
 
