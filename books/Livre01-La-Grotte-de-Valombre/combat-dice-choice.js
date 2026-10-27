@@ -14,7 +14,7 @@
   const VERSION = 1;
   const VALID = new Set(['white','blue','reaper']);
   const NO_CONTAMINATION = new Set(['reserveRat']);
-  const SENTINEL_SCENES = new Set(['c79','c80','c132','c133','c134','c135']);
+  const CUSTOM_COMBAT_SCENES = new Set(['c79','c80','c132','c133','c134','c135','campAidArrival','campAidTactics']);
 
   function d6() {
     const a = new Uint32Array(1);
@@ -245,7 +245,7 @@
   }
 
   for (const [sceneId, scene] of Object.entries(STORY)) {
-    if (SENTINEL_SCENES.has(sceneId)) continue;
+    if (CUSTOM_COMBAT_SCENES.has(sceneId)) continue;
     if (!scene || scene.__combatDiceChoiceV1) continue;
 
     if (typeof scene.text === 'function') {
