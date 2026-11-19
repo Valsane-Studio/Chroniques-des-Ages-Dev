@@ -14,7 +14,13 @@
   const VERSION = 1;
   const VALID = new Set(['white','blue','reaper']);
   const NO_CONTAMINATION = new Set(['reserveRat']);
-  const CUSTOM_COMBAT_SCENES = new Set(['c79','c80','c132','c133','c134','c135','campAidArrival','campAidTactics']);
+  const CUSTOM_COMBAT_SCENES = new Set([
+    'c79','c80','c132','c133','c134','c135','campAidArrival','campAidTactics',
+    // Ces scènes proposent des jets de statistiques, PAS des échanges de combat.
+    'fissureDexTest','fissureForceTest','isletCircleTest',
+    'diceAuditOfficeForce','diceAuditGalleryForce','diceAuditKnightDash',
+    'diceAuditCampForce','diceAuditCampDexterity'
+  ]);
 
   function d6() {
     const a = new Uint32Array(1);
@@ -116,13 +122,24 @@
   }
 
   function applySelectedCombatRoll(state, originalEffect) {
+    // lastCombatKey reste en mémoire après un affrontement. Sa présence ne
+    // signifie jamais que le choix actuel est un jet de combat.
+
     const simulated = clone(state);
     originalEffect(simulated);
     const key = simulated.lastCombatKey;
     const simCombat = key && simulated.combats?.[key];
     const simLast = simCombat?.last;
 
-    if (!key || !simCombat || !simLast || !Array.isArray(simLast.enemyDice) || !Number.isFinite(simLast.enemyAttack)) {
+    const previous = key ? state.combats?.[key] : null;
+    // Si la simulation n'a créé AUCUN nouvel échange, l'ancien adversaire
+    // ne doit pas détourner le lancer (ex. page 39, Force / Dextérité).
+    const freshCombatExchange = !previous ||
+      Number(simCombat?.round || 0) > Number(previous.round || 0) ||
+      JSON.stringify(simLast) !== JSON.stringify(previous.last || null);
+
+    if (!key || !simCombat || !simLast || !Array.isArray(simLast.enemyDice) ||
+        !Number.isFinite(simLast.enemyAttack) || !freshCombatExchange) {
       originalEffect(state);
       return;
     }
